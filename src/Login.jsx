@@ -5,7 +5,7 @@ import React, { useState } from 'react'
 import { useAuth } from './AuthContext'
 import { AlertCircle, CheckCircle } from 'lucide-react'
 
-export default function Login({ onSwitchToSignup }) {
+export default function Login({ onSwitchToSignup, onBack }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -137,6 +137,15 @@ export default function Login({ onSwitchToSignup }) {
           <p className="text-sm text-gray-600 mt-2">
             Sign in to manage your COI compliance
           </p>
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-sm text-green-600 hover:text-green-700 mt-2"
+            >
+              ← Back to home
+            </button>
+          )}
         </div>
 
         {error && (
