@@ -1,0 +1,374 @@
+import Anthropic from '@anthropic-ai/sdk';
+
+const anthropic = new Anthropic({
+  apiKey: process.env.REACT_APP_ANTHROPIC_API_KEY,
+  dangerouslyAllowBrowser: true // Required for client-side usage
+});
+
+/**
+ * Extract text from PDF file
+ * In production, you'd use a proper PDF parsing library
+ * For now, we'll work with PDFs that can be read as text
+ */
+async function pdfToText(file) {
+  // For demo purposes, we'll use a simple approach
+  // In production, use pdf.js or a backend service
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        // This is a simplified approach - real PDFs need proper parsing
+        const text = e.target.result;
+        resolve(text);
+      } catch (error) {
+        reject(error);
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+/**
+ * Extract COI data using Claude AI
+ */
+export async function extractCOIData(pdfFile) {
+  try {
+    console.log('Starting COI extraction...');
+    
+    // Step 1: Convert PDF to text (simplified for demo)
+    // In production, you'd use pdf.js or send to backend
+    const pdfText = await pdfToText(pdfFile);
+    
+    // Step 2: Send to Claude for extraction
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: `You are an expert at extracting data from Certificate of Insurance (COI) documents.
+
+Extract the following information from this COI document and return it as a JSON object:
+
+{
+  "companyName": "Full legal company name",
+  "dba": "Doing Business As name (if any, otherwise null)",
+  "expirationDate": "Earliest expiration date in YYYY-MM-DD format",
+  "generalLiability": {
+    "amount": number (e.g., 1000000 for $1M),
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "autoLiability": {
+    "amount": number,
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "workersComp": {
+    "amount": "Statutory" or number,
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "employersLiability": {
+    "amount": number,
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "additionalInsured": "Names listed as additional insured (if any)",
+  "certificateHolder": "Certificate holder name",
+  "insuranceCompany": "Insurance company/carrier name"
+}
+
+Important rules:
+- Extract amounts as pure numbers (e.g., 1000000 not "$1,000,000")
+- Use YYYY-MM-DD format for all dates
+- If a field is not found, use null
+- For Workers Comp, if it says "Statutory" use that as a string, otherwise use the number
+- The expirationDate at the top level should be the EARLIEST expiration date among all policies
+
+Here is the COI document text:
+
+${pdfText}
+
+Return ONLY the JSON object, no other text.`
+      }]
+    });
+
+    // Step 3: Parse Claude's response
+    const responseText = message.content[0].text;
+    console.log('Claude response:', responseText);
+    
+    // Extract JSON from response (Claude should return pure JSON)
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('Could not extract JSON from Claude response');
+    }
+    
+    const extractedData = JSON.parse(jsonMatch[0]);
+    
+    // Step 4: Transform to vendor format
+    const vendorData = {
+      name: extractedData.companyName || 'Unknown Company',
+      dba: extractedData.dba,
+      expirationDate: extractedData.expirationDate || new Date().toISOString().split('T')[0],
+      coverage: {
+        generalLiability: {
+          amount: extractedData.generalLiability?.amount || 0,
+          compliant: (extractedData.generalLiability?.amount || 0) >= 1000000
+        },
+        autoLiability: {
+          amount: extractedData.autoLiability?.amount || 0,
+          compliant: (extractedData.autoLiability?.amount || 0) >= 1000000
+        },
+        workersComp: {
+          amount: extractedData.workersComp?.amount || 'Statutory',
+          compliant: true
+        },
+        employersLiability: {
+          amount: extractedData.employersLiability?.amount || 0,
+          compliant: (extractedData.employersLiability?.amount || 0) >= 500000
+        }
+      },
+      rawData: extractedData
+    };
+
+    // Step 5: Calculate status and issues
+    const issues = [];
+    const today = new Date();
+    const expirationDate = new Date(vendorData.expirationDate);
+    const daysUntilExpiration = Math.floor((expirationDate - today) / (1000 * 60 * 60 * 24));
+    
+    // Check expiration
+    if (daysUntilExpiration < 0) {
+      vendorData.status = 'expired';
+      vendorData.daysOverdue = Math.abs(daysUntilExpiration);
+      issues.push({
+        type: 'critical',
+        message: `All policies expired ${vendorData.expirationDate} (${vendorData.daysOverdue} days overdue)`
+      });
+    } else if (daysUntilExpiration <= 30) {
+      vendorData.status = 'expiring';
+      vendorData.daysOverdue = 0;
+      issues.push({
+        type: 'warning',
+        message: `Policies expiring in ${daysUntilExpiration} days`
+      });
+    } else {
+      vendorData.status = 'compliant';
+      vendorData.daysOverdue = 0;
+    }
+
+    // Check coverage amounts
+    if (!vendorData.coverage.generalLiability.compliant) {
+      vendorData.status = 'non-compliant';
+      issues.push({
+        type: 'error',
+        message: `General Liability below requirement: $${(vendorData.coverage.generalLiability.amount / 1000000).toFixed(1)}M (requires $1.0M)`
+      });
+    }
+
+    if (!vendorData.coverage.autoLiability.compliant) {
+      vendorData.status = 'non-compliant';
+      issues.push({
+        type: 'error',
+        message: `Auto Liability below requirement: $${(vendorData.coverage.autoLiability.amount / 1000000).toFixed(1)}M (requires $1.0M)`
+      });
+    }
+
+    if (!vendorData.coverage.employersLiability.compliant) {
+      vendorData.status = 'non-compliant';
+      issues.push({
+        type: 'error',
+        message: `Employers Liability below requirement: $${(vendorData.coverage.employersLiability.amount / 1000).toFixed(1)}K (requires $500K)`
+      });
+    }
+
+    vendorData.issues = issues;
+
+    console.log('Extracted vendor data:', vendorData);
+    return { success: true, data: vendorData };
+
+  } catch (error) {
+    console.error('COI extraction error:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to extract COI data'
+    };
+  }
+}
+
+/**
+ * Extract COI data with file content as base64 (for actual PDF files)
+ */
+export async function extractCOIFromPDF(file) {
+  try {
+    console.log('Converting PDF to base64...');
+    
+    // Convert file to base64
+    const base64Data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    console.log('Sending to Claude for extraction...');
+
+    // Send PDF to Claude
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: base64Data
+            }
+          },
+          {
+            type: 'text',
+            text: `You are an expert at extracting data from Certificate of Insurance (COI) documents.
+
+Extract the following information from this COI PDF and return it as a JSON object:
+
+{
+  "companyName": "Full legal company name",
+  "dba": "Doing Business As name (if any, otherwise null)",
+  "expirationDate": "Earliest expiration date in YYYY-MM-DD format",
+  "generalLiability": {
+    "amount": number (e.g., 1000000 for $1M),
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "autoLiability": {
+    "amount": number,
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "workersComp": {
+    "amount": "Statutory" or number,
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "employersLiability": {
+    "amount": number,
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "additionalInsured": "Names listed as additional insured (if any)",
+  "certificateHolder": "Certificate holder name",
+  "insuranceCompany": "Insurance company/carrier name"
+}
+
+Important rules:
+- Extract amounts as pure numbers (e.g., 1000000 not "$1,000,000")
+- Use YYYY-MM-DD format for all dates
+- If a field is not found, use null
+- For Workers Comp, if it says "Statutory" use that as a string, otherwise use the number
+- The expirationDate at the top level should be the EARLIEST expiration date among all policies
+
+Return ONLY the JSON object, no other text.`
+          }
+        ]
+      }]
+    });
+
+    // Parse response
+    const responseText = message.content[0].text;
+    console.log('Claude response:', responseText);
+    
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('Could not extract JSON from Claude response');
+    }
+    
+    const extractedData = JSON.parse(jsonMatch[0]);
+    
+    // Transform to vendor format (same as above)
+    const vendorData = {
+      name: extractedData.companyName || 'Unknown Company',
+      dba: extractedData.dba,
+      expirationDate: extractedData.expirationDate || new Date().toISOString().split('T')[0],
+      coverage: {
+        generalLiability: {
+          amount: extractedData.generalLiability?.amount || 0,
+          compliant: (extractedData.generalLiability?.amount || 0) >= 1000000
+        },
+        autoLiability: {
+          amount: extractedData.autoLiability?.amount || 0,
+          compliant: (extractedData.autoLiability?.amount || 0) >= 1000000
+        },
+        workersComp: {
+          amount: extractedData.workersComp?.amount || 'Statutory',
+          compliant: true
+        },
+        employersLiability: {
+          amount: extractedData.employersLiability?.amount || 0,
+          compliant: (extractedData.employersLiability?.amount || 0) >= 500000
+        }
+      },
+      rawData: extractedData
+    };
+
+    // Calculate status and issues
+    const issues = [];
+    const today = new Date();
+    const expirationDate = new Date(vendorData.expirationDate);
+    const daysUntilExpiration = Math.floor((expirationDate - today) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilExpiration < 0) {
+      vendorData.status = 'expired';
+      vendorData.daysOverdue = Math.abs(daysUntilExpiration);
+      issues.push({
+        type: 'critical',
+        message: `All policies expired ${vendorData.expirationDate} (${vendorData.daysOverdue} days overdue)`
+      });
+    } else if (daysUntilExpiration <= 30) {
+      vendorData.status = 'expiring';
+      vendorData.daysOverdue = 0;
+      issues.push({
+        type: 'warning',
+        message: `Policies expiring in ${daysUntilExpiration} days`
+      });
+    } else {
+      vendorData.status = 'compliant';
+      vendorData.daysOverdue = 0;
+    }
+
+    // Check coverage compliance
+    if (!vendorData.coverage.generalLiability.compliant) {
+      vendorData.status = 'non-compliant';
+      issues.push({
+        type: 'error',
+        message: `General Liability below requirement: $${(vendorData.coverage.generalLiability.amount / 1000000).toFixed(1)}M (requires $1.0M)`
+      });
+    }
+
+    if (!vendorData.coverage.autoLiability.compliant) {
+      vendorData.status = 'non-compliant';
+      issues.push({
+        type: 'error',
+        message: `Auto Liability below requirement: $${(vendorData.coverage.autoLiability.amount / 1000000).toFixed(1)}M (requires $1.0M)`
+      });
+    }
+
+    if (!vendorData.coverage.employersLiability.compliant) {
+      vendorData.status = 'non-compliant';
+      issues.push({
+        type: 'error',
+        message: `Employers Liability below requirement: $${(vendorData.coverage.employersLiability.amount / 1000).toFixed(1)}K (requires $500K)`
+      });
+    }
+
+    vendorData.issues = issues;
+
+    console.log('Extracted vendor data:', vendorData);
+    return { success: true, data: vendorData };
+
+  } catch (error) {
+    console.error('PDF extraction error:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to extract data from PDF'
+    };
+  }
+}

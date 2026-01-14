@@ -151,8 +151,7 @@ export function UploadModal({ isOpen, onClose, onUploadComplete }) {
 
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>Note:</strong> AI extraction will be added in the next phase. 
-            For now, this will store the PDF for future processing.
+            <strong>🤖 AI-Powered Extraction!</strong> Upload your COI PDF and Claude will automatically extract all vendor data, check compliance, and create the vendor record for you.
           </p>
         </div>
 

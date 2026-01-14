@@ -4,6 +4,7 @@ import { useVendors } from './useVendors';
 import { UploadModal } from './UploadModal';
 import { Settings } from './Settings';
 import { supabase } from './supabaseClient';
+import { extractCOIFromPDF } from './extractCOI';
 
 // Initial vendor data
 const initialVendors = [
@@ -61,7 +62,7 @@ const initialVendors = [
 
 function ComplyApp({ user, onSignOut }) {
   // Use database hook instead of local state
-  const { vendors: dbVendors, loading, error, updateVendor, deleteVendor } = useVendors();
+  const { vendors: dbVendors, loading, error, addVendor, updateVendor, deleteVendor, refreshVendors } = useVendors();
   
   // Convert database format (snake_case) to app format (camelCase)
   const vendors = dbVendors.map(v => ({
@@ -192,32 +193,56 @@ function ComplyApp({ user, onSignOut }) {
     }
   };
 
-  // Handle file upload
+  // Handle file upload with AI extraction
   const handleFileUpload = async (file) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Generate unique filename
+      // Step 1: Extract data using AI
+      console.log('Extracting COI data with AI...');
+      const extractionResult = await extractCOIFromPDF(file);
+      
+      if (!extractionResult.success) {
+        throw new Error(extractionResult.error);
+      }
+
+      const vendorData = extractionResult.data;
+      console.log('Extracted vendor data:', vendorData);
+
+      // Step 2: Upload file to Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
+      const { data: storageData, error: storageError } = await supabase.storage
         .from('coi-documents')
         .upload(fileName, file);
 
-      if (error) throw error;
+      if (storageError) throw storageError;
 
-      alert('File uploaded successfully! AI extraction will be added in the next phase.');
-      
-      // TODO: In next phase, we'll:
-      // 1. Extract data from PDF using AI
-      // 2. Create vendor record with extracted data
-      // 3. Link document to vendor in documents table
+      // Step 3: Create vendor in database
+      const result = await addVendor({
+        ...vendorData,
+        rawData: {
+          ...vendorData.rawData,
+          documentPath: fileName,
+          documentUrl: storageData.path
+        }
+      });
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      // Step 4: Refresh vendor list
+      await refreshVendors();
+
+      // Success!
+      alert(`✅ Success! Created vendor: ${vendorData.name}\n\nStatus: ${vendorData.status.toUpperCase()}\nExpires: ${vendorData.expirationDate}\n\nThe vendor has been added to your dashboard.`);
       
     } catch (error) {
-      throw new Error(error.message || 'Failed to upload file');
+      console.error('Upload error:', error);
+      throw new Error(error.message || 'Failed to upload and process COI');
     }
   };
 
@@ -428,12 +453,27 @@ function ComplyApp({ user, onSignOut }) {
             {filteredVendors.length === 0 ? (
               <div className="p-8 text-center">
                 <AlertCircle className="mx-auto text-gray-400 mb-4" size={48} />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No vendors found</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {searchQuery || statusFilter !== 'all' 
+                    ? 'No vendors found'
+                    : 'Welcome to Comply!'}
+                </h3>
+                <p className="text-gray-600 mb-6">
                   {searchQuery || statusFilter !== 'all' 
                     ? 'Try adjusting your search or filters'
-                    : 'Upload your first vendor COI to get started'}
+                    : 'Get started by adding your first vendor'}
                 </p>
+                {!searchQuery && statusFilter === 'all' && (
+                  <div className="max-w-md mx-auto text-left bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <h4 className="font-semibold text-blue-900 mb-3">Quick Start:</h4>
+                    <ol className="space-y-2 text-sm text-blue-800">
+                      <li>1. Click <strong>"Settings"</strong> to customize your requirements</li>
+                      <li>2. Add vendors manually via Supabase Table Editor</li>
+                      <li>3. Click <strong>"Upload COI"</strong> to test file storage</li>
+                      <li>4. <strong>Phase 4</strong> will add AI extraction to auto-populate vendors from PDFs!</li>
+                    </ol>
+                  </div>
+                )}
               </div>
             ) : (
               filteredVendors.map((vendor) => (
@@ -657,6 +697,16 @@ function ComplyApp({ user, onSignOut }) {
                   </div>
                 </div>
               )}
+
+              {/* Quick Feature: Show that file upload is ready */}
+              <div>
+                <h4 className="font-semibold mb-2">Documents</h4>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>✅ File upload is ready!</strong> In Phase 4, we'll add AI extraction to automatically pull data from uploaded COIs and link them here.
+                  </p>
+                </div>
+              </div>
             </div>
             
             <button
