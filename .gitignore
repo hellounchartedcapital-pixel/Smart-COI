@@ -1,0 +1,30 @@
+# dependencies
+/node_modules
+
+# environment variables
+.env.local
+.env
+
+# build
+/build
+
+# misc
+.DS_Store
+npm-debug.log*
+
+cd C:\Users\tonyj\OneDrive\Desktop\Comply
+
+# Initialize (if not already done)
+git init
+
+# Add all files
+git add .
+
+# Commit
+git commit -m "Phase 3 Complete: Auth, Database, File Upload, Settings - Fully Working!"
+
+# Push to GitHub
+# (Create a new repo on GitHub, then:)
+git remote add origin https://github.com/YOUR-USERNAME/comply.git
+git branch -M main
+git push -u origin main
