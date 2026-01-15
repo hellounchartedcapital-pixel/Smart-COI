@@ -351,18 +351,22 @@ Return ONLY the JSON object, no other text.`
       coverage: {
         generalLiability: {
           amount: extractedData.generalLiability?.amount || 0,
+          expirationDate: extractedData.generalLiability?.expirationDate,
           compliant: (extractedData.generalLiability?.amount || 0) >= requirements.general_liability
         },
         autoLiability: {
           amount: extractedData.autoLiability?.amount || 0,
+          expirationDate: extractedData.autoLiability?.expirationDate,
           compliant: (extractedData.autoLiability?.amount || 0) >= requirements.auto_liability
         },
         workersComp: {
           amount: extractedData.workersComp?.amount || 'Statutory',
+          expirationDate: extractedData.workersComp?.expirationDate,
           compliant: true // Workers comp is typically statutory, so usually compliant
         },
         employersLiability: {
           amount: extractedData.employersLiability?.amount || 0,
+          expirationDate: extractedData.employersLiability?.expirationDate,
           compliant: (extractedData.employersLiability?.amount || 0) >= requirements.employers_liability
         }
       },
@@ -395,6 +399,35 @@ Return ONLY the JSON object, no other text.`
     } else {
       vendorData.status = 'compliant';
       vendorData.daysOverdue = 0;
+    }
+
+    // Check if individual coverages are expired
+    const checkCoverageExpiration = (coverage, name) => {
+      if (coverage.expirationDate) {
+        const expDate = new Date(coverage.expirationDate);
+        const daysUntil = Math.floor((expDate - today) / (1000 * 60 * 60 * 24));
+        if (daysUntil < 0) {
+          coverage.expired = true;
+        }
+      }
+    };
+
+    checkCoverageExpiration(vendorData.coverage.generalLiability, 'General Liability');
+    checkCoverageExpiration(vendorData.coverage.autoLiability, 'Auto Liability');
+    checkCoverageExpiration(vendorData.coverage.workersComp, 'Workers Comp');
+    checkCoverageExpiration(vendorData.coverage.employersLiability, 'Employers Liability');
+
+    // Check additional coverage expirations
+    if (vendorData.additionalCoverages) {
+      vendorData.additionalCoverages.forEach(cov => {
+        if (cov.expirationDate) {
+          const expDate = new Date(cov.expirationDate);
+          const daysUntil = Math.floor((expDate - today) / (1000 * 60 * 60 * 24));
+          if (daysUntil < 0) {
+            cov.expired = true;
+          }
+        }
+      });
     }
 
     // Check standard coverage compliance
