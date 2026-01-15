@@ -46,19 +46,40 @@ export function Settings({ onClose }) {
       }
 
       if (data) {
-        const additionalReqs = data.additional_requirements || {};
+        const additionalReqs = data.additional_requirements || [];
+
+        // Decode requirements: separate text requirements from encoded custom coverages
+        const textRequirements = [];
+        const decodedCoverages = [];
+
+        if (Array.isArray(additionalReqs)) {
+          additionalReqs.forEach(item => {
+            if (typeof item === 'string' && item.startsWith('__COVERAGE__')) {
+              // Decode custom coverage
+              try {
+                const coverage = JSON.parse(item.substring(12)); // Remove __COVERAGE__ prefix
+                decodedCoverages.push(coverage);
+              } catch (e) {
+                console.error('Failed to parse coverage:', e);
+              }
+            } else if (typeof item === 'string') {
+              // Regular text requirement
+              textRequirements.push(item);
+            }
+          });
+        }
 
         setSettings({
           generalLiability: data.general_liability || 1000000,
           autoLiability: data.auto_liability || 1000000,
           workersComp: data.workers_comp || 'Statutory',
           employersLiability: data.employers_liability || 500000,
-          additionalRequirements: Array.isArray(additionalReqs) ? additionalReqs : (additionalReqs.text_requirements || [])
+          additionalRequirements: textRequirements
         });
 
-        // Load custom coverages if they exist
-        if (additionalReqs.additional_coverages) {
-          setCustomCoverages(additionalReqs.additional_coverages);
+        // Load decoded custom coverages
+        if (decodedCoverages.length > 0) {
+          setCustomCoverages(decodedCoverages);
         }
       }
     } catch (err) {
@@ -148,17 +169,21 @@ export function Settings({ onClose }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Encode custom coverages into the array format for database compatibility
+      // Format: text requirements are strings, custom coverages are prefixed with __COVERAGE__
+      const encodedRequirements = [
+        ...settings.additionalRequirements,
+        // Encode custom coverages with a special prefix
+        ...customCoverages.map(cov => `__COVERAGE__${JSON.stringify(cov)}`)
+      ];
+
       const settingsData = {
         user_id: user.id,
         general_liability: settings.generalLiability,
         auto_liability: settings.autoLiability,
         workers_comp: settings.workersComp,
         employers_liability: settings.employersLiability,
-        additional_requirements: {
-          text_requirements: settings.additionalRequirements,
-          additional_coverages: customCoverages,
-          last_updated: new Date().toISOString()
-        }
+        additional_requirements: encodedRequirements
       };
 
       const { error } = await supabase
