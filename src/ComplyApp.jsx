@@ -798,11 +798,20 @@ function ComplyApp({ user, onSignOut }) {
                       {(!selectedVendor.coverage.generalLiability.compliant || selectedVendor.coverage.generalLiability.expired) && (
                         <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
                       )}
+                      {(!selectedVendor.coverage.generalLiability.expired && selectedVendor.coverage.generalLiability.expiringSoon) && (
+                        <AlertCircle size={16} className="text-yellow-600 flex-shrink-0" />
+                      )}
                       <div>
                         <p className="font-medium">General Liability:</p>
                         <p className="text-sm text-gray-600">{formatCurrency(selectedVendor.coverage.generalLiability.amount)}</p>
                         {selectedVendor.coverage.generalLiability.expirationDate && (
-                          <p className={`text-xs ${selectedVendor.coverage.generalLiability.expired ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                          <p className={`text-xs ${
+                            selectedVendor.coverage.generalLiability.expired
+                              ? 'text-red-600 font-semibold'
+                              : selectedVendor.coverage.generalLiability.expiringSoon
+                              ? 'text-yellow-600 font-semibold'
+                              : 'text-gray-500'
+                          }`}>
                             Exp: {formatDate(selectedVendor.coverage.generalLiability.expirationDate)}
                           </p>
                         )}
@@ -815,11 +824,20 @@ function ComplyApp({ user, onSignOut }) {
                       {(!selectedVendor.coverage.autoLiability.compliant || selectedVendor.coverage.autoLiability.expired) && (
                         <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
                       )}
+                      {(!selectedVendor.coverage.autoLiability.expired && selectedVendor.coverage.autoLiability.expiringSoon) && (
+                        <AlertCircle size={16} className="text-yellow-600 flex-shrink-0" />
+                      )}
                       <div>
                         <p className="font-medium">Auto Liability:</p>
                         <p className="text-sm text-gray-600">{formatCurrency(selectedVendor.coverage.autoLiability.amount)}</p>
                         {selectedVendor.coverage.autoLiability.expirationDate && (
-                          <p className={`text-xs ${selectedVendor.coverage.autoLiability.expired ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                          <p className={`text-xs ${
+                            selectedVendor.coverage.autoLiability.expired
+                              ? 'text-red-600 font-semibold'
+                              : selectedVendor.coverage.autoLiability.expiringSoon
+                              ? 'text-yellow-600 font-semibold'
+                              : 'text-gray-500'
+                          }`}>
                             Exp: {formatDate(selectedVendor.coverage.autoLiability.expirationDate)}
                           </p>
                         )}
@@ -832,11 +850,20 @@ function ComplyApp({ user, onSignOut }) {
                       {(!selectedVendor.coverage.workersComp.compliant || selectedVendor.coverage.workersComp.expired) && (
                         <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
                       )}
+                      {(!selectedVendor.coverage.workersComp.expired && selectedVendor.coverage.workersComp.expiringSoon) && (
+                        <AlertCircle size={16} className="text-yellow-600 flex-shrink-0" />
+                      )}
                       <div>
                         <p className="font-medium">Workers Comp:</p>
                         <p className="text-sm text-gray-600">{selectedVendor.coverage.workersComp.amount}</p>
                         {selectedVendor.coverage.workersComp.expirationDate && (
-                          <p className={`text-xs ${selectedVendor.coverage.workersComp.expired ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                          <p className={`text-xs ${
+                            selectedVendor.coverage.workersComp.expired
+                              ? 'text-red-600 font-semibold'
+                              : selectedVendor.coverage.workersComp.expiringSoon
+                              ? 'text-yellow-600 font-semibold'
+                              : 'text-gray-500'
+                          }`}>
                             Exp: {formatDate(selectedVendor.coverage.workersComp.expirationDate)}
                           </p>
                         )}
@@ -849,11 +876,20 @@ function ComplyApp({ user, onSignOut }) {
                       {(!selectedVendor.coverage.employersLiability.compliant || selectedVendor.coverage.employersLiability.expired) && (
                         <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
                       )}
+                      {(!selectedVendor.coverage.employersLiability.expired && selectedVendor.coverage.employersLiability.expiringSoon) && (
+                        <AlertCircle size={16} className="text-yellow-600 flex-shrink-0" />
+                      )}
                       <div>
                         <p className="font-medium">Employers Liability:</p>
                         <p className="text-sm text-gray-600">{formatCurrency(selectedVendor.coverage.employersLiability.amount)}</p>
                         {selectedVendor.coverage.employersLiability.expirationDate && (
-                          <p className={`text-xs ${selectedVendor.coverage.employersLiability.expired ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                          <p className={`text-xs ${
+                            selectedVendor.coverage.employersLiability.expired
+                              ? 'text-red-600 font-semibold'
+                              : selectedVendor.coverage.employersLiability.expiringSoon
+                              ? 'text-yellow-600 font-semibold'
+                              : 'text-gray-500'
+                          }`}>
                             Exp: {formatDate(selectedVendor.coverage.employersLiability.expirationDate)}
                           </p>
                         )}
@@ -872,11 +908,20 @@ function ComplyApp({ user, onSignOut }) {
                         {cov.expired && (
                           <AlertCircle size={16} className="text-red-600 flex-shrink-0 mt-1" />
                         )}
+                        {(!cov.expired && cov.expiringSoon) && (
+                          <AlertCircle size={16} className="text-yellow-600 flex-shrink-0 mt-1" />
+                        )}
                         <div className="flex-1">
                           <p className="font-medium">{cov.type}:</p>
                           <p className="text-sm text-gray-600">{formatCurrency(cov.amount || 0)}</p>
                           {cov.expirationDate && (
-                            <p className={`text-xs ${cov.expired ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                            <p className={`text-xs ${
+                              cov.expired
+                                ? 'text-red-600 font-semibold'
+                                : cov.expiringSoon
+                                ? 'text-yellow-600 font-semibold'
+                                : 'text-gray-500'
+                            }`}>
                               Exp: {formatDate(cov.expirationDate)}
                             </p>
                           )}

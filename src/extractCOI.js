@@ -407,7 +407,7 @@ Return ONLY the JSON object, no other text.`
       return new Date(year, month - 1, day);
     };
 
-    // Check if individual coverages are expired
+    // Check if individual coverages are expired or expiring soon
     const checkCoverageExpiration = (coverage, name) => {
       if (coverage.expirationDate) {
         const expDate = parseLocalDate(coverage.expirationDate);
@@ -417,6 +417,9 @@ Return ONLY the JSON object, no other text.`
         if (daysUntil < 0) {
           coverage.expired = true;
           console.log(`${name} is EXPIRED`);
+        } else if (daysUntil <= 30) {
+          coverage.expiringSoon = true;
+          console.log(`${name} is EXPIRING SOON (${daysUntil} days)`);
         }
       }
     };
@@ -437,6 +440,9 @@ Return ONLY the JSON object, no other text.`
           if (daysUntil < 0) {
             cov.expired = true;
             console.log(`${cov.type} is EXPIRED`);
+          } else if (daysUntil <= 30) {
+            cov.expiringSoon = true;
+            console.log(`${cov.type} is EXPIRING SOON (${daysUntil} days)`);
           }
         }
       });
