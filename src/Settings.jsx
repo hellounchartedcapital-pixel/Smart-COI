@@ -187,7 +187,9 @@ export function Settings({ onClose }) {
         auto_liability: settings.autoLiability,
         workers_comp: settings.workersComp,
         employers_liability: settings.employersLiability,
-        additional_requirements: encodedRequirements
+        additional_requirements: encodedRequirements,
+        company_name: settings.companyName,
+        require_additional_insured: settings.requireAdditionalInsured
       };
 
       const { error } = await supabase
@@ -434,6 +436,46 @@ export function Settings({ onClose }) {
                   <span className="text-gray-600 font-medium min-w-[140px]">
                     {formatCurrency(settings.employersLiability)}
                   </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Insured Settings */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">Additional Insured Verification</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Company Name
+                </label>
+                <input
+                  type="text"
+                  value={settings.companyName}
+                  onChange={(e) => setSettings({...settings, companyName: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="e.g., Acme Corporation LLC"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This name will be checked against the "Additional Insured" field on vendor COIs
+                </p>
+              </div>
+
+              <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="requireAdditionalInsured"
+                  checked={settings.requireAdditionalInsured}
+                  onChange={(e) => setSettings({...settings, requireAdditionalInsured: e.target.checked})}
+                  className="mt-1 w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                />
+                <div className="flex-1">
+                  <label htmlFor="requireAdditionalInsured" className="font-medium text-gray-900 cursor-pointer">
+                    Require as Additional Insured
+                  </label>
+                  <p className="text-sm text-gray-600 mt-1">
+                    When enabled, vendors will be marked as non-compliant if your company is not listed as an Additional Insured on their COI
+                  </p>
                 </div>
               </div>
             </div>

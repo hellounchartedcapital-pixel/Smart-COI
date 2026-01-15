@@ -48,7 +48,11 @@ export function useVendors() {
           issues: vendorData.issues,
           raw_data: vendorData.rawData || null,
           requirements: vendorData.requirements || null,
-          additional_coverages: vendorData.additionalCoverages || []
+          additional_coverages: vendorData.additionalCoverages || [],
+          additional_insured: vendorData.additionalInsured || '',
+          certificate_holder: vendorData.certificateHolder || '',
+          has_additional_insured: vendorData.hasAdditionalInsured || false,
+          missing_additional_insured: vendorData.missingAdditionalInsured || false
         }])
         .select()
         .single();

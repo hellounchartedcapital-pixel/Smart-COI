@@ -139,7 +139,9 @@ function ComplyApp({ user, onSignOut }) {
           auto_liability: data.auto_liability || 1000000,
           workers_comp: data.workers_comp || 'Statutory',
           employers_liability: data.employers_liability || 500000,
-          custom_coverages: customCoverages
+          custom_coverages: customCoverages,
+          company_name: data.company_name || '',
+          require_additional_insured: data.require_additional_insured !== false
         });
       }
     } catch (err) {
@@ -967,7 +969,51 @@ function ComplyApp({ user, onSignOut }) {
                   </div>
                 </div>
               )}
-              
+
+              {/* Additional Insured Status */}
+              {selectedVendor.additionalInsured && (
+                <div>
+                  <h4 className="font-semibold mb-2">Additional Insured</h4>
+                  <div className={`p-4 rounded-lg border ${
+                    selectedVendor.hasAdditionalInsured
+                      ? 'bg-green-50 border-green-200'
+                      : selectedVendor.missingAdditionalInsured
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}>
+                    <div className="flex items-start space-x-2">
+                      {selectedVendor.hasAdditionalInsured && (
+                        <CheckCircle size={18} className="text-green-600 flex-shrink-0 mt-0.5" />
+                      )}
+                      {selectedVendor.missingAdditionalInsured && (
+                        <AlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+                      )}
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${
+                          selectedVendor.hasAdditionalInsured
+                            ? 'text-green-900'
+                            : selectedVendor.missingAdditionalInsured
+                            ? 'text-red-900'
+                            : 'text-gray-900'
+                        }`}>
+                          {selectedVendor.additionalInsured}
+                        </p>
+                        {selectedVendor.hasAdditionalInsured && (
+                          <p className="text-xs text-green-700 mt-1">
+                            ✓ Your company is properly listed as Additional Insured
+                          </p>
+                        )}
+                        {selectedVendor.missingAdditionalInsured && (
+                          <p className="text-xs text-red-700 mt-1">
+                            ✗ Your company is NOT listed as Additional Insured
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {selectedVendor.issues.length > 0 && (
                 <div>
                   <h4 className="font-semibold mb-2">Issues</h4>
