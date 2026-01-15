@@ -304,7 +304,10 @@ Step-by-step extraction process:
 4. For WORKERS COMPENSATION row: Find the date in the POLICY EXP column → extract that date
 5. For EMPLOYERS LIABILITY row: Find the date in the POLICY EXP column → extract that date
 6. Convert all dates from MM/DD/YYYY to YYYY-MM-DD format
-7. For top-level expirationDate: Return the EARLIEST (soonest) of all POLICY EXP dates found
+7. For top-level expirationDate: Return the EARLIEST date from ONLY the 4 main coverages (GL, Auto, WC, EL)
+   - DO NOT include additional coverages (Crime, Cyber, Umbrella, etc.) in this calculation
+   - Only compare the expiration dates from generalLiability, autoLiability, workersComp, employersLiability
+   - Return the earliest date among those 4 main policies
 
 REMEMBER: In each policy row, there are TWO dates - the earlier one is the start date (POLICY EFF), the later one is the expiration date (POLICY EXP). Always choose the LATER date from each row.
 
