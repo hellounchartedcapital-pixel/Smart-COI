@@ -551,140 +551,147 @@ function ComplyApp({ user, onSignOut }) {
       </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-4 sm:mb-8">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Total Vendors</p>
-                <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-xs sm:text-sm text-gray-500">Total Vendors</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{stats.total}</p>
               </div>
-              <FileText className="text-gray-400" size={32} />
+              <FileText className="text-gray-400" size={24} />
             </div>
           </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
+
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Expired</p>
-                <p className="text-3xl font-bold text-red-600">{stats.expired}</p>
+                <p className="text-xs sm:text-sm text-gray-500">Expired</p>
+                <p className="text-2xl sm:text-3xl font-bold text-red-600">{stats.expired}</p>
               </div>
-              <XCircle className="text-red-400" size={32} />
+              <XCircle className="text-red-400" size={24} />
             </div>
           </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
+
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Non-Compliant</p>
-                <p className="text-3xl font-bold text-orange-600">{stats.nonCompliant}</p>
+                <p className="text-xs sm:text-sm text-gray-500">Non-Compliant</p>
+                <p className="text-2xl sm:text-3xl font-bold text-orange-600">{stats.nonCompliant}</p>
               </div>
-              <AlertCircle className="text-orange-400" size={32} />
+              <AlertCircle className="text-orange-400" size={24} />
             </div>
           </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
+
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Compliant</p>
-                <p className="text-3xl font-bold text-green-600">{stats.compliant}</p>
+                <p className="text-xs sm:text-sm text-gray-500">Compliant</p>
+                <p className="text-2xl sm:text-3xl font-bold text-green-600">{stats.compliant}</p>
               </div>
-              <CheckCircle className="text-green-400" size={32} />
+              <CheckCircle className="text-green-400" size={24} />
             </div>
           </div>
         </div>
 
         {/* Analytics Button */}
-        <div className="mb-6" data-onboarding="analytics-button">
+        <div className="mb-4 sm:mb-6" data-onboarding="analytics-button">
           <button
             onClick={() => setShowAnalytics(true)}
-            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg p-4 hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl"
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg p-3 sm:p-4 hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center space-x-2 sm:space-x-3 shadow-lg hover:shadow-xl"
           >
-            <BarChart3 size={24} />
-            <span className="text-lg font-semibold">View Detailed Analytics & Insights</span>
+            <BarChart3 size={20} className="sm:hidden" />
+            <BarChart3 size={24} className="hidden sm:block" />
+            <span className="text-base sm:text-lg font-semibold">View Detailed Analytics & Insights</span>
           </button>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-4 sm:mb-6">
           {/* Quick Filter Buttons */}
-          <div className="mb-6" data-onboarding="quick-filters">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Filters</h3>
-            <div className="flex flex-wrap gap-3">
+          <div className="mb-4 sm:mb-6" data-onboarding="quick-filters">
+            <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3">Quick Filters</h3>
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               <button
                 onClick={() => setQuickFilter('all')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   quickFilter === 'all'
                     ? 'bg-gray-800 text-white shadow-md'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                All Vendors ({vendors.length})
+                All ({vendors.length})
               </button>
               <button
                 onClick={() => setQuickFilter('expired')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   quickFilter === 'expired'
                     ? 'bg-red-600 text-white shadow-md'
                     : 'bg-red-50 text-red-700 hover:bg-red-100'
                 }`}
               >
-                <XCircle size={16} className="inline mr-1 mb-0.5" />
+                <XCircle size={14} className="inline mr-1 mb-0.5" />
                 Expired ({vendors.filter(v => v.status === 'expired').length})
               </button>
               <button
                 onClick={() => setQuickFilter('expiring')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   quickFilter === 'expiring'
                     ? 'bg-yellow-600 text-white shadow-md'
                     : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
                 }`}
               >
-                <AlertCircle size={16} className="inline mr-1 mb-0.5" />
-                Expiring Soon ({vendors.filter(v => v.status === 'expiring').length})
+                <AlertCircle size={14} className="inline mr-1 mb-0.5" />
+                <span className="hidden sm:inline">Expiring Soon</span>
+                <span className="sm:hidden">Expiring</span>
+                ({vendors.filter(v => v.status === 'expiring').length})
               </button>
               <button
                 onClick={() => setQuickFilter('non-compliant')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   quickFilter === 'non-compliant'
                     ? 'bg-orange-600 text-white shadow-md'
                     : 'bg-orange-50 text-orange-700 hover:bg-orange-100'
                 }`}
               >
-                <AlertCircle size={16} className="inline mr-1 mb-0.5" />
+                <AlertCircle size={14} className="inline mr-1 mb-0.5" />
                 Non-Compliant ({vendors.filter(v => v.status === 'non-compliant').length})
               </button>
               <button
                 onClick={() => setQuickFilter('compliant')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   quickFilter === 'compliant'
                     ? 'bg-green-600 text-white shadow-md'
                     : 'bg-green-50 text-green-700 hover:bg-green-100'
                 }`}
               >
-                <CheckCircle size={16} className="inline mr-1 mb-0.5" />
+                <CheckCircle size={14} className="inline mr-1 mb-0.5" />
                 Compliant ({vendors.filter(v => v.status === 'compliant').length})
               </button>
               <button
                 onClick={() => setQuickFilter('missing-additional-insured')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   quickFilter === 'missing-additional-insured'
                     ? 'bg-purple-600 text-white shadow-md'
                     : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
                 }`}
               >
-                Missing Add'l Insured ({vendors.filter(v => v.missingAdditionalInsured).length})
+                <span className="hidden sm:inline">Missing Add'l Insured</span>
+                <span className="sm:hidden">No AI</span>
+                ({vendors.filter(v => v.missingAdditionalInsured).length})
               </button>
               <button
                 onClick={() => setQuickFilter('missing-waiver')}
-                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   quickFilter === 'missing-waiver'
                     ? 'bg-pink-600 text-white shadow-md'
                     : 'bg-pink-50 text-pink-700 hover:bg-pink-100'
                 }`}
               >
-                Missing Waiver ({vendors.filter(v => v.missingWaiverOfSubrogation).length})
+                <span className="hidden sm:inline">Missing Waiver</span>
+                <span className="sm:hidden">No Waiver</span>
+                ({vendors.filter(v => v.missingWaiverOfSubrogation).length})
               </button>
             </div>
           </div>
@@ -789,33 +796,35 @@ function ComplyApp({ user, onSignOut }) {
               </div>
             ) : (
               filteredVendors.map((vendor) => (
-                <div key={vendor.id} className="p-6 hover:bg-gray-50">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4 flex-1">
-                      {getStatusIcon(vendor.status)}
+                <div key={vendor.id} className="p-4 sm:p-6 hover:bg-gray-50">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
+                    <div className="flex items-start space-x-3 sm:space-x-4 flex-1">
+                      <div className="flex-shrink-0">
+                        {getStatusIcon(vendor.status)}
+                      </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-base font-semibold text-gray-900">{vendor.name}</h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-3 mb-2">
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">{vendor.name}</h3>
                           {getStatusBadge(vendor.status, vendor.daysOverdue)}
                         </div>
                         {vendor.dba && (
-                          <p className="text-sm text-gray-500 mb-2">DBA: {vendor.dba}</p>
+                          <p className="text-xs sm:text-sm text-gray-500 mb-2 truncate">DBA: {vendor.dba}</p>
                         )}
-                        
+
                         {vendor.issues.length > 0 && (
-                          <div className="space-y-2 mt-3">
+                          <div className="space-y-2 mt-2 sm:mt-3">
                             {vendor.issues.map((issue, idx) => (
-                              <div key={idx} className={`flex items-start space-x-2 text-sm ${
+                              <div key={idx} className={`flex items-start space-x-2 text-xs sm:text-sm ${
                                 issue.type === 'critical' ? 'text-red-700' : 'text-orange-700'
                               }`}>
-                                <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-                                <span>{issue.message}</span>
+                                <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+                                <span className="break-words">{issue.message}</span>
                               </div>
                             ))}
                           </div>
                         )}
 
-                        <div className="mt-4 flex items-center space-x-6 text-xs text-gray-600">
+                        <div className="mt-3 sm:mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600">
                           <div>
                             <span className="font-medium">GL:</span> {formatCurrency(vendor.coverage.generalLiability.amount)}
                           </div>
@@ -828,30 +837,31 @@ function ComplyApp({ user, onSignOut }) {
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="ml-4 flex flex-col items-end space-y-2">
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Calendar size={14} className="mr-1" />
-                        Exp: {formatDate(vendor.expirationDate)}
+
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start space-x-2 sm:space-x-0 sm:space-y-2 sm:ml-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-200">
+                      <div className="flex items-center text-xs sm:text-sm text-gray-500">
+                        <Calendar size={12} className="mr-1 sm:hidden" />
+                        <Calendar size={14} className="mr-1 hidden sm:inline" />
+                        <span className="hidden sm:inline">Exp: </span>{formatDate(vendor.expirationDate)}
                       </div>
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleEdit(vendor)}
-                          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                          className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium"
                         >
                           Edit
                         </button>
                         <span className="text-gray-300">|</span>
                         <button
                           onClick={() => handleDelete(vendor)}
-                          className="text-sm text-red-600 hover:text-red-700 font-medium"
+                          className="text-xs sm:text-sm text-red-600 hover:text-red-700 font-medium"
                         >
                           Delete
                         </button>
                       </div>
                       <button
                         onClick={() => setSelectedVendor(vendor)}
-                        className="text-sm text-green-600 hover:text-green-700 font-medium"
+                        className="text-xs sm:text-sm text-green-600 hover:text-green-700 font-medium whitespace-nowrap"
                       >
                         View Details
                       </button>
@@ -867,8 +877,8 @@ function ComplyApp({ user, onSignOut }) {
 
       {/* Edit Modal */}
       {editingVendor && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Edit Vendor</h3>
               <button onClick={() => setEditingVendor(null)} className="text-gray-400 hover:text-gray-600">
@@ -928,8 +938,8 @@ function ComplyApp({ user, onSignOut }) {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-red-600">Confirm Delete</h3>
               <button onClick={() => setDeleteConfirm(null)} className="text-gray-400 hover:text-gray-600">
@@ -961,8 +971,8 @@ function ComplyApp({ user, onSignOut }) {
 
       {/* Vendor Details Modal */}
       {selectedVendor && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full p-4 sm:p-6 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-xl font-semibold">{selectedVendor.name}</h3>
