@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, CheckCircle, XCircle, AlertCircle, FileText, Calendar, X, Search, Download, Settings as SettingsIcon, Eye, Bell, BarChart3, FileDown, Users } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, AlertCircle, FileText, Calendar, X, Search, Download, Settings as SettingsIcon, Eye, Bell, BarChart3, FileDown, Users, Phone, Mail, User } from 'lucide-react';
 import { useVendors } from './useVendors';
 import { UploadModal } from './UploadModal';
 import { BulkUploadModal } from './BulkUploadModal';
@@ -88,6 +88,11 @@ function ComplyApp({ user, onSignOut }) {
     waiverOfSubrogation: v.waiver_of_subrogation,
     hasWaiverOfSubrogation: v.has_waiver_of_subrogation,
     missingWaiverOfSubrogation: v.missing_waiver_of_subrogation,
+    contactName: v.contact_name,
+    contactEmail: v.contact_email,
+    contactPhone: v.contact_phone,
+    contactNotes: v.contact_notes,
+    lastContactedAt: v.last_contacted_at,
     rawData: v.raw_data
   }));
   
@@ -944,8 +949,58 @@ function ComplyApp({ user, onSignOut }) {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                 />
               </div>
+
+              <div className="pt-4 border-t border-gray-200">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Contact Information (Optional)</h4>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Contact Name</label>
+                    <input
+                      type="text"
+                      value={editingVendor.contactName || ''}
+                      onChange={(e) => setEditingVendor({...editingVendor, contactName: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
+                      placeholder="John Doe"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={editingVendor.contactEmail || ''}
+                      onChange={(e) => setEditingVendor({...editingVendor, contactEmail: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
+                      placeholder="contact@vendor.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+                    <input
+                      type="tel"
+                      value={editingVendor.contactPhone || ''}
+                      onChange={(e) => setEditingVendor({...editingVendor, contactPhone: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
+                      placeholder="(555) 123-4567"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea
+                      value={editingVendor.contactNotes || ''}
+                      onChange={(e) => setEditingVendor({...editingVendor, contactNotes: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
+                      placeholder="Additional contact notes..."
+                      rows="2"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-            
+
             <div className="flex space-x-3 mt-6">
               <button
                 onClick={saveEdit}
@@ -1264,6 +1319,71 @@ function ComplyApp({ user, onSignOut }) {
                         <span className="text-sm">{issue.message}</span>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Contact Information */}
+              {(selectedVendor.contactName || selectedVendor.contactEmail || selectedVendor.contactPhone) && (
+                <div>
+                  <h4 className="font-semibold mb-3">Contact Information</h4>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                    {selectedVendor.contactName && (
+                      <div className="flex items-center space-x-3">
+                        <User size={18} className="text-blue-600 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs text-gray-600">Contact Person</p>
+                          <p className="font-medium text-gray-900">{selectedVendor.contactName}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {selectedVendor.contactEmail && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Mail size={18} className="text-blue-600 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs text-gray-600">Email</p>
+                            <p className="font-medium text-gray-900">{selectedVendor.contactEmail}</p>
+                          </div>
+                        </div>
+                        <a
+                          href={`mailto:${selectedVendor.contactEmail}`}
+                          className="px-3 py-1.5 bg-blue-500 text-white rounded text-xs font-medium hover:bg-blue-600 flex items-center space-x-1"
+                          title="Send email"
+                        >
+                          <Mail size={14} />
+                          <span>Email</span>
+                        </a>
+                      </div>
+                    )}
+
+                    {selectedVendor.contactPhone && (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Phone size={18} className="text-blue-600 flex-shrink-0" />
+                          <div>
+                            <p className="text-xs text-gray-600">Phone</p>
+                            <p className="font-medium text-gray-900">{selectedVendor.contactPhone}</p>
+                          </div>
+                        </div>
+                        <a
+                          href={`tel:${selectedVendor.contactPhone}`}
+                          className="px-3 py-1.5 bg-green-500 text-white rounded text-xs font-medium hover:bg-green-600 flex items-center space-x-1"
+                          title="Call"
+                        >
+                          <Phone size={14} />
+                          <span>Call</span>
+                        </a>
+                      </div>
+                    )}
+
+                    {selectedVendor.contactNotes && (
+                      <div className="pt-3 border-t border-blue-200">
+                        <p className="text-xs text-gray-600 mb-1">Notes</p>
+                        <p className="text-sm text-gray-700">{selectedVendor.contactNotes}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
