@@ -6,6 +6,7 @@ import { BulkUploadModal } from './BulkUploadModal';
 import { Settings } from './Settings';
 import { NotificationSettings } from './NotificationSettings';
 import { Analytics } from './Analytics';
+import { OnboardingTutorial } from './OnboardingTutorial';
 import { supabase } from './supabaseClient';
 import { extractCOIFromPDF } from './extractCOI';
 import { Logo } from './Logo';
@@ -100,11 +101,14 @@ function ComplyApp({ user, onSignOut }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [userRequirements, setUserRequirements] = useState(null);
 
-  // Load user requirements on mount
+  // Load user requirements and check onboarding status on mount
   React.useEffect(() => {
     loadUserRequirements();
+    checkOnboardingStatus();
   }, []);
 
   const loadUserRequirements = async () => {
@@ -155,6 +159,66 @@ function ComplyApp({ user, onSignOut }) {
     } catch (err) {
       console.error('Error loading user requirements:', err);
     }
+  };
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return;
+
+      const { data, error } = await supabase
+        .from('settings')
+        .select('onboarding_completed')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking onboarding status:', error);
+        setOnboardingChecked(true);
+        return;
+      }
+
+      // If no settings exist or onboarding not completed, show onboarding
+      if (!data || !data.onboarding_completed) {
+        setShowOnboarding(true);
+      }
+
+      setOnboardingChecked(true);
+    } catch (err) {
+      console.error('Error checking onboarding status:', err);
+      setOnboardingChecked(true);
+    }
+  };
+
+  const handleOnboardingComplete = async () => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return;
+
+      // Update or insert onboarding completion status
+      const { error } = await supabase
+        .from('settings')
+        .upsert({
+          user_id: currentUser.id,
+          onboarding_completed: true
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        console.error('Error saving onboarding status:', error);
+      }
+
+      setShowOnboarding(false);
+    } catch (err) {
+      console.error('Error completing onboarding:', err);
+      setShowOnboarding(false);
+    }
+  };
+
+  const handleOnboardingSkip = async () => {
+    // Same as complete - mark as done so they don't see it again
+    await handleOnboardingComplete();
   };
 
   // Helper functions
@@ -442,6 +506,7 @@ function ComplyApp({ user, onSignOut }) {
                 onClick={() => setShowSettings(true)}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center space-x-2"
                 title="Settings"
+                data-onboarding="settings-button"
               >
                 <SettingsIcon size={16} />
                 <span className="hidden sm:inline">Settings</span>
@@ -450,6 +515,7 @@ function ComplyApp({ user, onSignOut }) {
                 onClick={() => setShowNotifications(true)}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center space-x-2"
                 title="Notifications"
+                data-onboarding="notifications-button"
               >
                 <Bell size={16} />
                 <span className="hidden sm:inline">Notifications</span>
@@ -458,6 +524,7 @@ function ComplyApp({ user, onSignOut }) {
                 <button
                   onClick={() => setShowUploadModal(true)}
                   className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center space-x-2"
+                  data-onboarding="upload-button"
                 >
                   <Upload size={16} />
                   <span>Upload COI</span>
@@ -529,7 +596,7 @@ function ComplyApp({ user, onSignOut }) {
         </div>
 
         {/* Analytics Button */}
-        <div className="mb-6">
+        <div className="mb-6" data-onboarding="analytics-button">
           <button
             onClick={() => setShowAnalytics(true)}
             className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg p-4 hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl"
@@ -542,7 +609,7 @@ function ComplyApp({ user, onSignOut }) {
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           {/* Quick Filter Buttons */}
-          <div className="mb-6">
+          <div className="mb-6" data-onboarding="quick-filters">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">Quick Filters</h3>
             <div className="flex flex-wrap gap-3">
               <button
@@ -1231,6 +1298,14 @@ function ComplyApp({ user, onSignOut }) {
       {/* Analytics Modal */}
       {showAnalytics && (
         <Analytics vendors={vendors} onClose={() => setShowAnalytics(false)} />
+      )}
+
+      {/* Onboarding Tutorial */}
+      {onboardingChecked && showOnboarding && (
+        <OnboardingTutorial
+          onComplete={handleOnboardingComplete}
+          onSkip={handleOnboardingSkip}
+        />
       )}
     </div>
   );
