@@ -12,7 +12,7 @@ import { Loader2 } from 'lucide-react'
 function AppContent() {
   const { user, loading, signOut } = useAuth()
   const [showSignup, setShowSignup] = useState(false)
-  const [showAuth, setShowAuth] = useState(false) // New: track if user wants to sign in
+  const [showAuth, setShowAuth] = useState(false)
 
   // Show loading spinner while checking auth state
   if (loading) {
@@ -28,12 +28,17 @@ function AppContent() {
 
   // If not logged in, show Landing Page or Auth screens
   if (!user) {
-    // Show landing page unless user clicked "Get Started"
+    // Show landing page unless user clicked Login or Sign Up
     if (!showAuth) {
-      return <LandingPage onGetStarted={() => setShowAuth(true)} />
+      return (
+        <LandingPage
+          onLogin={() => { setShowSignup(false); setShowAuth(true); }}
+          onSignUp={() => { setShowSignup(true); setShowAuth(true); }}
+        />
+      )
     }
-    
-    // User clicked "Get Started" - show signup/login
+
+    // Show signup or login based on user choice
     if (showSignup) {
       return <Signup onSwitchToLogin={() => setShowSignup(false)} onBack={() => setShowAuth(false)} />
     }

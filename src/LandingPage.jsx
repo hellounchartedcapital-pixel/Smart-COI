@@ -2,7 +2,7 @@ import React from 'react';
 import { Logo } from './Logo';
 import { CheckCircle, Sparkles, Upload, Bell, FileText, ArrowRight, Zap, Shield, Clock } from 'lucide-react';
 
-export function LandingPage({ onGetStarted }) {
+export function LandingPage({ onLogin, onSignUp }) {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -12,7 +12,13 @@ export function LandingPage({ onGetStarted }) {
             <Logo size="default" />
             <div className="flex items-center space-x-4">
               <button
-                onClick={onGetStarted}
+                onClick={onLogin}
+                className="px-5 py-2.5 text-gray-700 hover:text-gray-900 font-medium transition-colors"
+              >
+                Log In
+              </button>
+              <button
+                onClick={onSignUp}
                 className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 font-medium transition-all shadow-sm hover:shadow-md"
               >
                 Get Started Free
@@ -49,7 +55,7 @@ export function LandingPage({ onGetStarted }) {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <button
-                onClick={onGetStarted}
+                onClick={onSignUp}
                 className="group px-8 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl hover:from-emerald-600 hover:to-emerald-700 font-semibold text-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center space-x-2"
               >
                 <span>Start Free Trial</span>
@@ -309,7 +315,7 @@ export function LandingPage({ onGetStarted }) {
             Join property managers who've already saved hundreds of hours with SmartCOI
           </p>
           <button
-            onClick={onGetStarted}
+            onClick={onSignUp}
             className="group px-10 py-5 bg-white text-emerald-600 rounded-xl hover:bg-gray-50 font-bold text-xl transition-all shadow-xl hover:shadow-2xl inline-flex items-center space-x-3"
           >
             <span>Start Free Trial</span>
