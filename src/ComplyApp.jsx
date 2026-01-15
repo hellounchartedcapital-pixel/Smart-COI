@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, CheckCircle, XCircle, AlertCircle, FileText, Calendar, X, Search, Download, Settings as SettingsIcon } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, AlertCircle, FileText, Calendar, X, Search, Download, Settings as SettingsIcon, Eye } from 'lucide-react';
 import { useVendors } from './useVendors';
 import { UploadModal } from './UploadModal';
 import { Settings } from './Settings';
@@ -75,7 +75,8 @@ function ComplyApp({ user, onSignOut }) {
     daysOverdue: v.days_overdue,
     coverage: v.coverage,
     issues: v.issues,
-    additionalCoverages: v.additional_coverages || []
+    additionalCoverages: v.additional_coverages || [],
+    rawData: v.raw_data
   }));
   
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -172,6 +173,61 @@ function ComplyApp({ user, onSignOut }) {
       currency: 'USD',
       minimumFractionDigits: 0
     }).format(amount);
+  };
+
+  // Get public URL for COI document
+  const getCOIDocumentUrl = async (documentPath) => {
+    if (!documentPath) return null;
+
+    const { data } = supabase.storage
+      .from('coi-documents')
+      .getPublicUrl(documentPath);
+
+    return data.publicUrl;
+  };
+
+  // View COI in new tab
+  const handleViewCOI = async (vendor) => {
+    if (!vendor.rawData?.documentPath) {
+      alert('No document available for this vendor');
+      return;
+    }
+
+    const url = await getCOIDocumentUrl(vendor.rawData.documentPath);
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      alert('Unable to retrieve document');
+    }
+  };
+
+  // Download COI
+  const handleDownloadCOI = async (vendor) => {
+    if (!vendor.rawData?.documentPath) {
+      alert('No document available for this vendor');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('coi-documents')
+        .download(vendor.rawData.documentPath);
+
+      if (error) throw error;
+
+      // Create download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${vendor.name}_COI.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading COI:', err);
+      alert('Failed to download document');
+    }
   };
 
   // Filter and sort
@@ -765,14 +821,34 @@ function ComplyApp({ user, onSignOut }) {
                 </div>
               )}
 
-              {/* Quick Feature: Show that file upload is ready */}
+              {/* COI Document Actions */}
               <div>
-                <h4 className="font-semibold mb-2">Documents</h4>
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>✅ File upload is ready!</strong> In Phase 4, we'll add AI extraction to automatically pull data from uploaded COIs and link them here.
-                  </p>
-                </div>
+                <h4 className="font-semibold mb-2">Certificate of Insurance</h4>
+                {selectedVendor.rawData?.documentPath ? (
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => handleViewCOI(selectedVendor)}
+                      className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium flex items-center justify-center space-x-2 transition-colors"
+                    >
+                      <Eye size={20} />
+                      <span>View COI</span>
+                    </button>
+                    <button
+                      onClick={() => handleDownloadCOI(selectedVendor)}
+                      className="flex-1 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium flex items-center justify-center space-x-2 transition-colors"
+                    >
+                      <Download size={20} />
+                      <span>Download COI</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p className="text-sm text-gray-600">
+                      <FileText className="inline mr-2" size={16} />
+                      No document uploaded for this vendor
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
             
