@@ -401,13 +401,25 @@ Return ONLY the JSON object, no other text.`
       vendorData.daysOverdue = 0;
     }
 
-    // Check if individual coverages are expired
+    // Helper to parse date string as local date (avoid timezone issues)
+    const parseLocalDate = (dateString) => {
+      const [year, month, day] = dateString.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    };
+
+    // Check if individual coverages are expired or expiring soon
     const checkCoverageExpiration = (coverage, name) => {
       if (coverage.expirationDate) {
-        const expDate = new Date(coverage.expirationDate);
-        const daysUntil = Math.floor((expDate - today) / (1000 * 60 * 60 * 24));
+        const expDate = parseLocalDate(coverage.expirationDate);
+        const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const daysUntil = Math.floor((expDate - todayLocal) / (1000 * 60 * 60 * 24));
+        console.log(`${name} expires ${coverage.expirationDate}, days until expiration: ${daysUntil}`);
         if (daysUntil < 0) {
           coverage.expired = true;
+          console.log(`${name} is EXPIRED`);
+        } else if (daysUntil <= 30) {
+          coverage.expiringSoon = true;
+          console.log(`${name} is EXPIRING SOON (${daysUntil} days)`);
         }
       }
     };
@@ -421,10 +433,16 @@ Return ONLY the JSON object, no other text.`
     if (vendorData.additionalCoverages) {
       vendorData.additionalCoverages.forEach(cov => {
         if (cov.expirationDate) {
-          const expDate = new Date(cov.expirationDate);
-          const daysUntil = Math.floor((expDate - today) / (1000 * 60 * 60 * 24));
+          const expDate = parseLocalDate(cov.expirationDate);
+          const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const daysUntil = Math.floor((expDate - todayLocal) / (1000 * 60 * 60 * 24));
+          console.log(`${cov.type} expires ${cov.expirationDate}, days until expiration: ${daysUntil}`);
           if (daysUntil < 0) {
             cov.expired = true;
+            console.log(`${cov.type} is EXPIRED`);
+          } else if (daysUntil <= 30) {
+            cov.expiringSoon = true;
+            console.log(`${cov.type} is EXPIRING SOON (${daysUntil} days)`);
           }
         }
       });
