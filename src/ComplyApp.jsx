@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Upload, CheckCircle, XCircle, AlertCircle, FileText, Calendar, X, Search, Download, Settings as SettingsIcon, Eye, Bell } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, AlertCircle, FileText, Calendar, X, Search, Download, Settings as SettingsIcon, Eye, Bell, BarChart3 } from 'lucide-react';
 import { useVendors } from './useVendors';
 import { UploadModal } from './UploadModal';
 import { Settings } from './Settings';
 import { NotificationSettings } from './NotificationSettings';
+import { Analytics } from './Analytics';
 import { supabase } from './supabaseClient';
 import { extractCOIFromPDF } from './extractCOI';
 import { Logo } from './Logo';
@@ -89,6 +90,7 @@ function ComplyApp({ user, onSignOut }) {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [userRequirements, setUserRequirements] = useState(null);
 
   // Load user requirements on mount
@@ -489,6 +491,17 @@ function ComplyApp({ user, onSignOut }) {
               <CheckCircle className="text-green-400" size={32} />
             </div>
           </div>
+        </div>
+
+        {/* Analytics Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => setShowAnalytics(true)}
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg p-4 hover:from-green-600 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl"
+          >
+            <BarChart3 size={24} />
+            <span className="text-lg font-semibold">View Detailed Analytics & Insights</span>
+          </button>
         </div>
 
         {/* Filters */}
@@ -1014,6 +1027,11 @@ function ComplyApp({ user, onSignOut }) {
       {/* Notification Settings Modal */}
       {showNotifications && (
         <NotificationSettings onClose={() => setShowNotifications(false)} />
+      )}
+
+      {/* Analytics Modal */}
+      {showAnalytics && (
+        <Analytics vendors={vendors} onClose={() => setShowAnalytics(false)} />
       )}
     </div>
   );
