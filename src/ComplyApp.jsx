@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, CheckCircle, XCircle, AlertCircle, FileText, Calendar, X, Search, Download, Settings as SettingsIcon } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, AlertCircle, FileText, Calendar, X, Search, Download, Settings as SettingsIcon, Eye } from 'lucide-react';
 import { useVendors } from './useVendors';
 import { UploadModal } from './UploadModal';
 import { Settings } from './Settings';
@@ -74,7 +74,9 @@ function ComplyApp({ user, onSignOut }) {
     expirationDate: v.expiration_date,
     daysOverdue: v.days_overdue,
     coverage: v.coverage,
-    issues: v.issues
+    issues: v.issues,
+    additionalCoverages: v.additional_coverages || [],
+    rawData: v.raw_data
   }));
   
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -85,6 +87,59 @@ function ComplyApp({ user, onSignOut }) {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [userRequirements, setUserRequirements] = useState(null);
+
+  // Load user requirements on mount
+  React.useEffect(() => {
+    loadUserRequirements();
+  }, []);
+
+  const loadUserRequirements = async () => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return;
+
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading requirements:', error);
+        return;
+      }
+
+      if (data) {
+        // Decode custom coverages from additional_requirements array
+        const additionalReqs = data.additional_requirements || [];
+        const customCoverages = [];
+
+        if (Array.isArray(additionalReqs)) {
+          additionalReqs.forEach(item => {
+            if (typeof item === 'string' && item.startsWith('__COVERAGE__')) {
+              try {
+                const coverage = JSON.parse(item.substring(12));
+                customCoverages.push(coverage);
+              } catch (e) {
+                console.error('Failed to parse coverage:', e);
+              }
+            }
+          });
+        }
+
+        setUserRequirements({
+          general_liability: data.general_liability || 1000000,
+          auto_liability: data.auto_liability || 1000000,
+          workers_comp: data.workers_comp || 'Statutory',
+          employers_liability: data.employers_liability || 500000,
+          custom_coverages: customCoverages
+        });
+      }
+    } catch (err) {
+      console.error('Error loading user requirements:', err);
+    }
+  };
 
   // Helper functions
   const getStatusIcon = (status) => {
@@ -118,6 +173,61 @@ function ComplyApp({ user, onSignOut }) {
       currency: 'USD',
       minimumFractionDigits: 0
     }).format(amount);
+  };
+
+  // Get public URL for COI document
+  const getCOIDocumentUrl = async (documentPath) => {
+    if (!documentPath) return null;
+
+    const { data } = supabase.storage
+      .from('coi-documents')
+      .getPublicUrl(documentPath);
+
+    return data.publicUrl;
+  };
+
+  // View COI in new tab
+  const handleViewCOI = async (vendor) => {
+    if (!vendor.rawData?.documentPath) {
+      alert('No document available for this vendor');
+      return;
+    }
+
+    const url = await getCOIDocumentUrl(vendor.rawData.documentPath);
+    if (url) {
+      window.open(url, '_blank');
+    } else {
+      alert('Unable to retrieve document');
+    }
+  };
+
+  // Download COI
+  const handleDownloadCOI = async (vendor) => {
+    if (!vendor.rawData?.documentPath) {
+      alert('No document available for this vendor');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('coi-documents')
+        .download(vendor.rawData.documentPath);
+
+      if (error) throw error;
+
+      // Create download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${vendor.name}_COI.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading COI:', err);
+      alert('Failed to download document');
+    }
   };
 
   // Filter and sort
@@ -203,7 +313,7 @@ function ComplyApp({ user, onSignOut }) {
       // Step 1: Extract data using AI
       if (progressCallback) progressCallback('🤖 AI extracting data...');
       console.log('Extracting COI data with AI...');
-      const extractionResult = await extractCOIFromPDF(file);
+      const extractionResult = await extractCOIFromPDF(file, userRequirements);
       
       if (!extractionResult.success) {
         throw new Error(extractionResult.error);
@@ -672,7 +782,7 @@ function ComplyApp({ user, onSignOut }) {
               </div>
               
               <div>
-                <h4 className="font-semibold mb-2">Coverage</h4>
+                <h4 className="font-semibold mb-2">Standard Coverage</h4>
                 <div className="space-y-2">
                   <p><strong>General Liability:</strong> {formatCurrency(selectedVendor.coverage.generalLiability.amount)}</p>
                   <p><strong>Auto Liability:</strong> {formatCurrency(selectedVendor.coverage.autoLiability.amount)}</p>
@@ -680,6 +790,20 @@ function ComplyApp({ user, onSignOut }) {
                   <p><strong>Employers Liability:</strong> {formatCurrency(selectedVendor.coverage.employersLiability.amount)}</p>
                 </div>
               </div>
+
+              {selectedVendor.additionalCoverages && selectedVendor.additionalCoverages.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Additional Coverage</h4>
+                  <div className="space-y-2">
+                    {selectedVendor.additionalCoverages.map((cov, idx) => (
+                      <p key={idx}>
+                        <strong>{cov.type}:</strong> {formatCurrency(cov.amount || 0)}
+                        {cov.expirationDate && ` (Expires: ${new Date(cov.expirationDate).toLocaleDateString()})`}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               {selectedVendor.issues.length > 0 && (
                 <div>
@@ -697,14 +821,34 @@ function ComplyApp({ user, onSignOut }) {
                 </div>
               )}
 
-              {/* Quick Feature: Show that file upload is ready */}
+              {/* COI Document Actions */}
               <div>
-                <h4 className="font-semibold mb-2">Documents</h4>
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>✅ File upload is ready!</strong> In Phase 4, we'll add AI extraction to automatically pull data from uploaded COIs and link them here.
-                  </p>
-                </div>
+                <h4 className="font-semibold mb-2">Certificate of Insurance</h4>
+                {selectedVendor.rawData?.documentPath ? (
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      onClick={() => handleViewCOI(selectedVendor)}
+                      className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium flex items-center justify-center space-x-2 transition-colors"
+                    >
+                      <Eye size={20} />
+                      <span>View COI</span>
+                    </button>
+                    <button
+                      onClick={() => handleDownloadCOI(selectedVendor)}
+                      className="flex-1 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium flex items-center justify-center space-x-2 transition-colors"
+                    >
+                      <Download size={20} />
+                      <span>Download COI</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p className="text-sm text-gray-600">
+                      <FileText className="inline mr-2" size={16} />
+                      No document uploaded for this vendor
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
             
