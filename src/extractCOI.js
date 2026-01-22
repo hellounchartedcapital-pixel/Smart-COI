@@ -1,8 +1,42 @@
 import { supabase } from './supabaseClient';
 
+const MAX_RETRIES = 3;
+const INITIAL_DELAY_MS = 1000;
+
+/**
+ * Retry wrapper with exponential backoff
+ */
+async function withRetry(fn, retries = MAX_RETRIES, delay = INITIAL_DELAY_MS) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+
+      // Don't retry on non-retriable errors
+      if (error.message?.includes('not configured') ||
+          error.message?.includes('Invalid') ||
+          error.message?.includes('Unauthorized')) {
+        throw error;
+      }
+
+      if (attempt < retries) {
+        const waitTime = delay * Math.pow(2, attempt);
+        console.log(`Attempt ${attempt + 1} failed, retrying in ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 /**
  * Extract COI data by calling the secure Edge Function
  * The API key is stored server-side, not exposed in the browser
+ * Includes retry logic with exponential backoff
  */
 export async function extractCOIFromPDF(file, userRequirements = null) {
   try {
@@ -30,12 +64,21 @@ export async function extractCOIFromPDF(file, userRequirements = null) {
 
     console.log('Calling extraction service...');
 
-    // Call the Edge Function
-    const { data, error } = await supabase.functions.invoke('extract-coi', {
-      body: {
-        pdfBase64: base64Data,
-        requirements: requirements
+    // Call the Edge Function with retry logic
+    const { data, error } = await withRetry(async () => {
+      const result = await supabase.functions.invoke('extract-coi', {
+        body: {
+          pdfBase64: base64Data,
+          requirements: requirements
+        }
+      });
+
+      // Throw on error to trigger retry
+      if (result.error) {
+        throw new Error(result.error.message || 'Failed to call extraction service');
       }
+
+      return result;
     });
 
     if (error) {
