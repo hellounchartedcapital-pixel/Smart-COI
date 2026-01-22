@@ -175,6 +175,7 @@ export function useVendors() {
   // Fetch vendors on mount
   useEffect(() => {
     fetchVendors(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
