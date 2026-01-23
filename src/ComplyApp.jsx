@@ -398,7 +398,10 @@ function ComplyApp({ user, onSignOut }) {
       });
 
       if (fnError) {
-        throw new Error(fnError.message || 'Failed to send email');
+        console.error('Edge Function error:', fnError);
+        // Try to get more details from the error
+        const errorMsg = fnError.message || fnError.context?.body || JSON.stringify(fnError);
+        throw new Error(errorMsg);
       }
 
       if (result && !result.success) {
