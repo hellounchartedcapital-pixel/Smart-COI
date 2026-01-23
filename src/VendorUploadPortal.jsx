@@ -265,7 +265,10 @@ export function VendorUploadPortal({ token, onBack }) {
         updateData.coverage = extractedData.coverage;
       }
       if (extractedData.issues && extractedData.issues.length > 0) {
-        updateData.issues = extractedData.issues;
+        // Normalize issues to strings before saving
+        updateData.issues = extractedData.issues.map(issue =>
+          typeof issue === 'string' ? issue : (issue?.message || issue?.description || JSON.stringify(issue))
+        );
       }
       if (extractedData.expirationDate) {
         updateData.expiration_date = extractedData.expirationDate;
@@ -302,10 +305,13 @@ export function VendorUploadPortal({ token, onBack }) {
         metadata: { fileName, fileSize: file.size, status: vendorStatus }
       });
 
-      // Save result for display
+      // Save result for display - normalize issues to strings
+      const normalizedIssues = (extractedData.issues || []).map(issue =>
+        typeof issue === 'string' ? issue : (issue?.message || issue?.description || JSON.stringify(issue))
+      );
       setUploadResult({
         status: vendorStatus,
-        issues: extractedData.issues || [],
+        issues: normalizedIssues,
         coverage: extractedData.coverage || {}
       });
       setUploadSuccess(true);
@@ -416,12 +422,18 @@ export function VendorUploadPortal({ token, onBack }) {
                     <span>One or more coverage types will expire within 30 days. Please provide an updated COI when renewed.</span>
                   </li>
                 )}
-                {issues.map((issue, index) => (
-                  <li key={index} className="flex items-start space-x-2 text-gray-700">
-                    <span className="text-red-500 mt-0.5">•</span>
-                    <span>{issue}</span>
-                  </li>
-                ))}
+                {issues.map((issue, index) => {
+                  // Ensure issue is a string (Edge Function might return objects)
+                  const issueText = typeof issue === 'string'
+                    ? issue
+                    : (issue?.message || issue?.description || JSON.stringify(issue));
+                  return (
+                    <li key={index} className="flex items-start space-x-2 text-gray-700">
+                      <span className="text-red-500 mt-0.5">•</span>
+                      <span>{issueText}</span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
