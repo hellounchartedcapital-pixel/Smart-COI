@@ -68,6 +68,16 @@ export function VendorUploadPortal({ token, onBack }) {
         return;
       }
 
+      // Fetch user's requirements settings
+      const { data: userSettings } = await supabase
+        .from('settings')
+        .select('general_liability, auto_liability, workers_comp, employers_liability, additional_requirements, require_additional_insured, require_waiver_of_subrogation')
+        .eq('user_id', data.user_id)
+        .single();
+
+      // Attach settings to vendor object for use during upload
+      data.userSettings = userSettings;
+
       setVendor(data);
     } catch (err) {
       console.error('Error loading vendor:', err);
@@ -141,17 +151,39 @@ export function VendorUploadPortal({ token, onBack }) {
         reader.readAsDataURL(file);
       });
 
+      // Build requirements from user's settings
+      const userSettings = vendor.userSettings || {};
+
+      // Decode custom coverages from additional_requirements if present
+      const customCoverages = [];
+      if (userSettings.additional_requirements && Array.isArray(userSettings.additional_requirements)) {
+        userSettings.additional_requirements.forEach(item => {
+          if (typeof item === 'string' && item.startsWith('__COVERAGE__')) {
+            try {
+              const coverageData = JSON.parse(item.replace('__COVERAGE__', ''));
+              customCoverages.push(coverageData);
+            } catch (e) {
+              // Skip invalid entries
+            }
+          }
+        });
+      }
+
+      const requirements = {
+        general_liability: userSettings.general_liability || 1000000,
+        auto_liability: userSettings.auto_liability || 1000000,
+        workers_comp: userSettings.workers_comp || 'Statutory',
+        employers_liability: userSettings.employers_liability || 500000,
+        custom_coverages: customCoverages,
+        require_additional_insured: userSettings.require_additional_insured || false,
+        require_waiver_of_subrogation: userSettings.require_waiver_of_subrogation || false
+      };
+
       // Call the extraction Edge Function
       const { data: extractionResult, error: extractionError } = await supabase.functions.invoke('extract-coi', {
         body: {
           pdfBase64: base64Data,
-          requirements: {
-            general_liability: 1000000,
-            auto_liability: 1000000,
-            workers_comp: 'Statutory',
-            employers_liability: 500000,
-            custom_coverages: []
-          }
+          requirements: requirements
         }
       });
 
@@ -193,6 +225,20 @@ export function VendorUploadPortal({ token, onBack }) {
           checkCoverageExpiration(extractedData.coverage.autoLiability);
           checkCoverageExpiration(extractedData.coverage.workersComp);
           checkCoverageExpiration(extractedData.coverage.employersLiability);
+        }
+
+        // Check for additional insured / waiver of subrogation requirements
+        if (requirements.require_additional_insured && !extractedData.hasAdditionalInsured) {
+          extractedData.issues = extractedData.issues || [];
+          if (!extractedData.issues.includes('Missing Additional Insured endorsement')) {
+            extractedData.issues.push('Missing Additional Insured endorsement');
+          }
+        }
+        if (requirements.require_waiver_of_subrogation && !extractedData.hasWaiverOfSubrogation) {
+          extractedData.issues = extractedData.issues || [];
+          if (!extractedData.issues.includes('Missing Waiver of Subrogation endorsement')) {
+            extractedData.issues.push('Missing Waiver of Subrogation endorsement');
+          }
         }
 
         vendorStatus = determineVendorStatus(extractedData);
