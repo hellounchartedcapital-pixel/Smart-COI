@@ -6,6 +6,36 @@ import { Upload, CheckCircle, AlertCircle, FileText, Loader2, Shield } from 'luc
 import { supabase } from './supabaseClient';
 import { Logo } from './Logo';
 
+// Helper to determine vendor status from extracted data
+function determineVendorStatus(vendorData) {
+  const coverage = vendorData.coverage || {};
+
+  // Check for expired coverages
+  const hasExpired =
+    coverage.generalLiability?.expired ||
+    coverage.autoLiability?.expired ||
+    coverage.workersComp?.expired ||
+    coverage.employersLiability?.expired;
+
+  if (hasExpired) return 'expired';
+
+  // Check for expiring soon
+  const hasExpiringSoon =
+    coverage.generalLiability?.expiringSoon ||
+    coverage.autoLiability?.expiringSoon ||
+    coverage.workersComp?.expiringSoon ||
+    coverage.employersLiability?.expiringSoon;
+
+  if (hasExpiringSoon) return 'expiring';
+
+  // Check compliance issues
+  if (vendorData.issues && vendorData.issues.length > 0) {
+    return 'non-compliant';
+  }
+
+  return 'compliant';
+}
+
 export function VendorUploadPortal({ token, onBack }) {
   const [loading, setLoading] = useState(true);
   const [vendor, setVendor] = useState(null);
@@ -13,6 +43,7 @@ export function VendorUploadPortal({ token, onBack }) {
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
 
   useEffect(() => {
     loadVendorFromToken();
@@ -83,9 +114,10 @@ export function VendorUploadPortal({ token, onBack }) {
     }
 
     setUploading(true);
+    setUploadStatus('Uploading file...');
 
     try {
-      // Upload file to storage
+      // Step 1: Upload file to storage
       const fileName = `${vendor.user_id}/${vendor.id}/${Date.now()}.pdf`;
 
       const { error: uploadError } = await supabase.storage
@@ -94,23 +126,94 @@ export function VendorUploadPortal({ token, onBack }) {
 
       if (uploadError) throw uploadError;
 
-      // Update vendor with new document path and reset status
-      // First get current raw_data
-      const { data: currentVendor } = await supabase
-        .from('vendors')
-        .select('raw_data')
-        .eq('id', vendor.id)
-        .single();
+      // Step 2: Extract COI data using AI
+      setUploadStatus('Analyzing your COI...');
 
-      const updatedRawData = {
-        ...(currentVendor?.raw_data || {}),
-        documentPath: fileName
-      };
+      // Convert file to base64
+      const base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Call the extraction Edge Function
+      const { data: extractionResult, error: extractionError } = await supabase.functions.invoke('extract-coi', {
+        body: {
+          pdfBase64: base64Data,
+          requirements: {
+            general_liability: 1000000,
+            auto_liability: 1000000,
+            workers_comp: 'Statutory',
+            employers_liability: 500000,
+            custom_coverages: []
+          }
+        }
+      });
+
+      let vendorStatus = 'compliant';
+      let extractedData = {};
+
+      if (extractionError) {
+        console.warn('Extraction warning:', extractionError);
+        // Continue without extraction - user will need to manually review
+      } else if (extractionResult?.success && extractionResult?.data) {
+        extractedData = extractionResult.data;
+
+        // Add expiration checks
+        const today = new Date();
+        const parseLocalDate = (dateString) => {
+          if (!dateString) return null;
+          const [year, month, day] = dateString.split('-').map(Number);
+          return new Date(year, month - 1, day);
+        };
+
+        const checkCoverageExpiration = (coverage) => {
+          if (coverage && coverage.expirationDate) {
+            const expDate = parseLocalDate(coverage.expirationDate);
+            if (expDate) {
+              const todayLocal = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+              const daysUntil = Math.floor((expDate - todayLocal) / (1000 * 60 * 60 * 24));
+              if (daysUntil < 0) {
+                coverage.expired = true;
+              } else if (daysUntil <= 30) {
+                coverage.expiringSoon = true;
+              }
+            }
+          }
+        };
+
+        // Check standard coverages
+        if (extractedData.coverage) {
+          checkCoverageExpiration(extractedData.coverage.generalLiability);
+          checkCoverageExpiration(extractedData.coverage.autoLiability);
+          checkCoverageExpiration(extractedData.coverage.workersComp);
+          checkCoverageExpiration(extractedData.coverage.employersLiability);
+        }
+
+        vendorStatus = determineVendorStatus(extractedData);
+      }
+
+      // Step 3: Update vendor with extracted data
+      setUploadStatus('Saving results...');
 
       const { error: updateError } = await supabase
         .from('vendors')
         .update({
-          raw_data: updatedRawData,
+          status: vendorStatus,
+          coverage: extractedData.coverage || null,
+          issues: extractedData.issues || [],
+          expiration_date: extractedData.expirationDate || null,
+          additional_coverages: extractedData.additionalCoverages || [],
+          has_additional_insured: extractedData.hasAdditionalInsured || false,
+          has_waiver_of_subrogation: extractedData.hasWaiverOfSubrogation || false,
+          raw_data: {
+            ...extractedData.rawData,
+            documentPath: fileName
+          },
           updated_at: new Date().toISOString()
         })
         .eq('id', vendor.id);
@@ -122,8 +225,8 @@ export function VendorUploadPortal({ token, onBack }) {
         vendor_id: vendor.id,
         user_id: vendor.user_id,
         activity_type: 'coi_uploaded',
-        description: 'Vendor uploaded a new COI via upload portal',
-        metadata: { fileName, fileSize: file.size }
+        description: `Vendor uploaded a new COI via upload portal. Status: ${vendorStatus}`,
+        metadata: { fileName, fileSize: file.size, status: vendorStatus }
       });
 
       setUploadSuccess(true);
@@ -133,6 +236,7 @@ export function VendorUploadPortal({ token, onBack }) {
       alert(`Failed to upload file: ${err.message || err.error || 'Unknown error'}. Please try again.`);
     } finally {
       setUploading(false);
+      setUploadStatus('');
     }
   };
 
@@ -239,7 +343,7 @@ export function VendorUploadPortal({ token, onBack }) {
             {uploading ? (
               <div>
                 <Loader2 className="w-12 h-12 text-green-500 animate-spin mx-auto mb-4" />
-                <p className="text-gray-600">Uploading your COI...</p>
+                <p className="text-gray-600">{uploadStatus || 'Processing...'}</p>
               </div>
             ) : (
               <div>
