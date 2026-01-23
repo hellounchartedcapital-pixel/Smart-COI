@@ -130,7 +130,8 @@ export function VendorUploadPortal({ token, onBack }) {
       setUploadSuccess(true);
     } catch (err) {
       console.error('Upload error:', err);
-      alert('Failed to upload file. Please try again.');
+      console.error('Error details:', JSON.stringify(err, null, 2));
+      alert(`Failed to upload file: ${err.message || err.error || 'Unknown error'}. Please try again.`);
     } finally {
       setUploading(false);
     }
