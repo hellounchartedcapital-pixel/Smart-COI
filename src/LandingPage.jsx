@@ -2,7 +2,7 @@ import React from 'react';
 import { Logo } from './Logo';
 import { CheckCircle, Sparkles, Upload, Bell, FileText, ArrowRight, Zap, Shield, Clock } from 'lucide-react';
 
-export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
+export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }) {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -11,6 +11,12 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
           <div className="flex items-center justify-between h-16">
             <Logo size="default" />
             <div className="flex items-center space-x-4">
+              <button
+                onClick={onPricing}
+                className="px-5 py-2.5 text-gray-700 hover:text-gray-900 font-medium transition-colors"
+              >
+                Pricing
+              </button>
               <button
                 onClick={onLogin}
                 className="px-5 py-2.5 text-gray-700 hover:text-gray-900 font-medium transition-colors"
@@ -335,6 +341,12 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
               <Logo size="small" className="opacity-80" />
             </div>
             <div className="flex items-center space-x-6">
+              <button
+                onClick={onPricing}
+                className="text-sm hover:text-white transition-colors"
+              >
+                Pricing
+              </button>
               <button
                 onClick={onPrivacy}
                 className="text-sm hover:text-white transition-colors"
