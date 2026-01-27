@@ -21,6 +21,7 @@ export function Settings({ onClose }) {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState(null);
   const [newRequirement, setNewRequirement] = useState('');
+  const [recheckingCompliance, setRecheckingCompliance] = useState(false);
 
   // AI Extraction states
   const [extracting, setExtracting] = useState(false);
@@ -201,13 +202,68 @@ export function Settings({ onClose }) {
 
       if (error) throw error;
 
+      setSaving(false);
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+
+      // Now recheck compliance for all vendors with new requirements
+      await recheckAllVendors(settingsData);
+
     } catch (err) {
       console.error('Error saving settings:', err);
       setError('Failed to save settings: ' + err.message);
-    } finally {
       setSaving(false);
+    }
+  };
+
+  const recheckAllVendors = async (settingsData) => {
+    try {
+      setRecheckingCompliance(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+
+      // Prepare requirements for the edge function
+      const requirements = {
+        general_liability: settingsData.general_liability,
+        auto_liability: settingsData.auto_liability,
+        workers_comp: settingsData.workers_comp,
+        employers_liability: settingsData.employers_liability,
+        company_name: settingsData.company_name,
+        require_additional_insured: settingsData.require_additional_insured,
+        require_waiver_of_subrogation: settingsData.require_waiver_of_subrogation,
+        custom_coverages: customCoverages.filter(c => c.type && c.amount > 0).map(c => ({
+          type: c.type,
+          amount: c.amount,
+          required: c.required !== false
+        }))
+      };
+
+      // Call the recheck-compliance edge function
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/recheck-compliance`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ requirements })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        console.error('Recheck compliance error:', result.error);
+      }
+
+      // Reload the page to show updated vendor compliance
+      window.location.reload();
+
+    } catch (err) {
+      console.error('Error rechecking compliance:', err);
+      // Still reload to show the saved settings
+      window.location.reload();
     }
   };
 
@@ -273,6 +329,42 @@ export function Settings({ onClose }) {
         <div className="bg-white rounded-lg max-w-2xl w-full p-6 sm:p-8 text-center">
           <div className="inline-block animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-green-500 mb-4"></div>
           <p className="text-sm sm:text-base text-gray-600">Loading settings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Full-screen loading overlay when rechecking compliance
+  if (recheckingCompliance) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-emerald-900/95 via-gray-900/95 to-teal-900/95 flex items-center justify-center z-50">
+        <div className="text-center max-w-md px-6">
+          {/* Animated AI Icon */}
+          <div className="relative mb-8">
+            <div className="absolute inset-0 w-24 h-24 mx-auto bg-emerald-500/30 rounded-full animate-ping"></div>
+            <div className="relative w-24 h-24 mx-auto bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-emerald-500/30">
+              <Sparkles className="w-12 h-12 text-white animate-pulse" />
+            </div>
+          </div>
+
+          {/* Loading text */}
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+            Updating Compliance
+          </h2>
+          <p className="text-emerald-200 text-lg mb-6">
+            A.I. is checking the updated requirements against all saved COIs
+          </p>
+
+          {/* Progress indicator */}
+          <div className="flex items-center justify-center space-x-2 mb-6">
+            <div className="w-3 h-3 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+            <div className="w-3 h-3 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+            <div className="w-3 h-3 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+          </div>
+
+          <p className="text-emerald-300/70 text-sm">
+            This may take a few moments...
+          </p>
         </div>
       </div>
     );
