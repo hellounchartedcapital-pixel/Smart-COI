@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { Logo } from './Logo';
 import { Check, X, Loader2, ArrowLeft, Zap, FileCheck } from 'lucide-react';
+import { AlertModal, useAlertModal } from './AlertModal';
 
 const plans = [
   {
@@ -72,6 +73,7 @@ const plans = [
 export function Pricing({ onBack, onSelectPlan, currentPlan, user }) {
   const [billingCycle, setBillingCycle] = useState('monthly');
   const [loading, setLoading] = useState(null);
+  const { alertModal, showAlert, hideAlert } = useAlertModal();
 
   const handleSelectPlan = async (plan) => {
     if (!user) {
@@ -84,7 +86,12 @@ export function Pricing({ onBack, onSelectPlan, currentPlan, user }) {
       await onSelectPlan?.(plan, 'checkout');
     } catch (error) {
       console.error('Error selecting plan:', error);
-      alert('Failed to start checkout. Please try again.');
+      showAlert({
+        type: 'error',
+        title: 'Checkout Failed',
+        message: 'Failed to start checkout.',
+        details: 'Please try again or contact support if the issue persists.'
+      });
     } finally {
       setLoading(null);
     }
@@ -378,6 +385,9 @@ export function Pricing({ onBack, onSelectPlan, currentPlan, user }) {
           </div>
         </div>
       </footer>
+
+      {/* Alert Modal */}
+      <AlertModal {...alertModal} onClose={hideAlert} />
     </div>
   );
 }

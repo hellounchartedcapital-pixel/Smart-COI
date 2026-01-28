@@ -5,6 +5,7 @@ import { UploadModal } from './UploadModal';
 import { Settings } from './Settings';
 import { NotificationSettings } from './NotificationSettings';
 import { OnboardingTutorial } from './OnboardingTutorial';
+import { AlertModal, useAlertModal } from './AlertModal';
 import { supabase } from './supabaseClient';
 import { extractCOIFromPDF } from './extractCOI';
 import { exportPDFReport } from './exportPDFReport';
@@ -58,6 +59,7 @@ function ComplyApp({ user, onSignOut }) {
   const [loadingActivity, setLoadingActivity] = useState(false);
   const [uploadingCOI, setUploadingCOI] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
+  const { alertModal, showAlert, hideAlert } = useAlertModal();
 
   // Load user requirements and check onboarding status on mount
   React.useEffect(() => {
@@ -232,7 +234,12 @@ function ComplyApp({ user, onSignOut }) {
   // View COI in new tab
   const handleViewCOI = async (vendor) => {
     if (!vendor.rawData?.documentPath) {
-      alert('No document available for this vendor');
+      showAlert({
+        type: 'warning',
+        title: 'No Document',
+        message: 'No document available for this vendor.',
+        details: 'This vendor was added without uploading a COI document.'
+      });
       return;
     }
 
@@ -240,14 +247,24 @@ function ComplyApp({ user, onSignOut }) {
     if (url) {
       window.open(url, '_blank');
     } else {
-      alert('Unable to retrieve document');
+      showAlert({
+        type: 'error',
+        title: 'Retrieval Failed',
+        message: 'Unable to retrieve the document.',
+        details: 'Please try again or contact support if the issue persists.'
+      });
     }
   };
 
   // Download COI
   const handleDownloadCOI = async (vendor) => {
     if (!vendor.rawData?.documentPath) {
-      alert('No document available for this vendor');
+      showAlert({
+        type: 'warning',
+        title: 'No Document',
+        message: 'No document available for this vendor.',
+        details: 'This vendor was added without uploading a COI document.'
+      });
       return;
     }
 
@@ -269,7 +286,12 @@ function ComplyApp({ user, onSignOut }) {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Error downloading COI:', err);
-      alert('Failed to download document');
+      showAlert({
+        type: 'error',
+        title: 'Download Failed',
+        message: 'Failed to download the document.',
+        details: err.message || 'Please try again or contact support.'
+      });
     }
   };
 
@@ -334,8 +356,18 @@ function ComplyApp({ user, onSignOut }) {
     const result = await updateVendor(editingVendor.id, editingVendor);
     if (result.success) {
       setEditingVendor(null);
+      showAlert({
+        type: 'success',
+        title: 'Vendor Updated',
+        message: 'The vendor information has been saved successfully.'
+      });
     } else {
-      alert('Error updating vendor: ' + result.error);
+      showAlert({
+        type: 'error',
+        title: 'Update Failed',
+        message: 'Failed to update vendor.',
+        details: result.error
+      });
     }
   };
 
@@ -345,14 +377,25 @@ function ComplyApp({ user, onSignOut }) {
   };
 
   const confirmDelete = async () => {
+    const vendorName = deleteConfirm.name;
     const result = await deleteVendor(deleteConfirm.id);
     if (result.success) {
       setDeleteConfirm(null);
       if (selectedVendor?.id === deleteConfirm.id) {
         setSelectedVendor(null);
       }
+      showAlert({
+        type: 'success',
+        title: 'Vendor Deleted',
+        message: `"${vendorName}" has been permanently removed.`
+      });
     } else {
-      alert('Error deleting vendor: ' + result.error);
+      showAlert({
+        type: 'error',
+        title: 'Delete Failed',
+        message: 'Failed to delete vendor.',
+        details: result.error
+      });
     }
   };
 
@@ -394,7 +437,11 @@ function ComplyApp({ user, onSignOut }) {
 
   const sendCOIRequest = async () => {
     if (!requestCOIEmail) {
-      alert('Please enter an email address');
+      showAlert({
+        type: 'warning',
+        title: 'Email Required',
+        message: 'Please enter an email address to send the COI request.'
+      });
       return;
     }
 
@@ -408,7 +455,12 @@ function ComplyApp({ user, onSignOut }) {
           contactEmail: requestCOIEmail
         });
         if (!result.success) {
-          alert('Error saving contact email: ' + result.error);
+          showAlert({
+            type: 'error',
+            title: 'Save Failed',
+            message: 'Failed to save contact email.',
+            details: result.error
+          });
           setSendingEmail(false);
           return;
         }
@@ -472,14 +524,24 @@ function ComplyApp({ user, onSignOut }) {
         lastContactedAt: new Date().toISOString()
       });
 
-      alert('Email sent successfully to ' + requestCOIEmail);
+      showAlert({
+        type: 'success',
+        title: 'Email Sent',
+        message: `COI request sent successfully to ${requestCOIEmail}`,
+        details: 'The vendor will receive an email with instructions to upload their updated certificate.'
+      });
 
       setRequestCOIVendor(null);
       setRequestCOIEmail('');
       refreshVendors();
     } catch (error) {
       console.error('Failed to send email:', error);
-      alert('Failed to send email: ' + error.message);
+      showAlert({
+        type: 'error',
+        title: 'Email Failed',
+        message: 'Failed to send the COI request email.',
+        details: error.message
+      });
     } finally {
       setSendingEmail(false);
     }
@@ -547,7 +609,12 @@ function ComplyApp({ user, onSignOut }) {
       setUploadStatus('');
 
       // Success!
-      alert(`Success! Created vendor: ${vendorData.name}\n\nStatus: ${vendorData.status.toUpperCase()}\nExpires: ${vendorData.expirationDate}\n\nThe vendor has been added to your dashboard.`);
+      showAlert({
+        type: 'success',
+        title: 'COI Uploaded Successfully',
+        message: `Vendor "${vendorData.name}" has been added to your dashboard.`,
+        details: `Status: ${vendorData.status.toUpperCase()}\nExpiration Date: ${vendorData.expirationDate}`
+      });
 
     } catch (error) {
       console.error('Upload error:', error);
@@ -585,7 +652,15 @@ function ComplyApp({ user, onSignOut }) {
 
   // Export to PDF
   const exportToPDF = () => {
-    exportPDFReport(filteredVendors, { email: user?.email });
+    const result = exportPDFReport(filteredVendors, { email: user?.email });
+    if (result && !result.success) {
+      showAlert({
+        type: 'warning',
+        title: 'Popup Blocked',
+        message: result.error,
+        details: 'Please enable popups for this site in your browser settings and try again.'
+      });
+    }
   };
 
   return (
@@ -1633,6 +1708,9 @@ function ComplyApp({ user, onSignOut }) {
           </div>
         </div>
       )}
+
+      {/* Alert Modal */}
+      <AlertModal {...alertModal} onClose={hideAlert} />
     </div>
   );
 }

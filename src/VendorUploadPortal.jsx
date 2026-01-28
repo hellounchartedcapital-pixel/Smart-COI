@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Upload, CheckCircle, AlertCircle, FileText, Loader2, Shield } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { Logo } from './Logo';
+import { AlertModal, useAlertModal } from './AlertModal';
 
 // Helper to determine vendor status from extracted data
 function determineVendorStatus(vendorData) {
@@ -45,6 +46,7 @@ export function VendorUploadPortal({ token, onBack }) {
   const [dragActive, setDragActive] = useState(false);
   const [uploadStatus, setUploadStatus] = useState('');
   const [uploadResult, setUploadResult] = useState(null); // { status, issues, coverage }
+  const { alertModal, showAlert, hideAlert } = useAlertModal();
 
   useEffect(() => {
     loadVendorFromToken();
@@ -115,12 +117,22 @@ export function VendorUploadPortal({ token, onBack }) {
 
   const handleFile = async (file) => {
     if (file.type !== 'application/pdf') {
-      alert('Please upload a PDF file');
+      showAlert({
+        type: 'warning',
+        title: 'Invalid File Type',
+        message: 'Please upload a PDF file.',
+        details: 'Only PDF documents are accepted for Certificate of Insurance uploads.'
+      });
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10MB');
+      showAlert({
+        type: 'warning',
+        title: 'File Too Large',
+        message: 'File size must be less than 10MB.',
+        details: 'Please compress your PDF or contact the requesting company for assistance.'
+      });
       return;
     }
 
@@ -310,7 +322,12 @@ export function VendorUploadPortal({ token, onBack }) {
     } catch (err) {
       console.error('Upload error:', err);
       console.error('Error details:', JSON.stringify(err, null, 2));
-      alert(`Failed to upload file: ${err.message || err.error || 'Unknown error'}. Please try again.`);
+      showAlert({
+        type: 'error',
+        title: 'Upload Failed',
+        message: 'Failed to upload your certificate.',
+        details: `${err.message || err.error || 'Unknown error'}. Please try again or contact the requesting company for assistance.`
+      });
     } finally {
       setUploading(false);
       setUploadStatus('');
@@ -533,6 +550,9 @@ export function VendorUploadPortal({ token, onBack }) {
       <footer className="max-w-3xl mx-auto px-4 py-8 text-center text-sm text-gray-500">
         <p>Powered by SmartCOI - AI-Powered Insurance Compliance</p>
       </footer>
+
+      {/* Alert Modal */}
+      <AlertModal {...alertModal} onClose={hideAlert} />
     </div>
   );
 }
