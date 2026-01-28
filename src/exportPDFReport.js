@@ -363,8 +363,7 @@ export function exportPDFReport(vendors, userInfo = {}) {
   // Open print dialog
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    alert('Please allow popups to export the PDF report');
-    return;
+    return { success: false, error: 'Please allow popups to export the PDF report' };
   }
 
   printWindow.document.write(htmlContent);
@@ -376,4 +375,6 @@ export function exportPDFReport(vendors, userInfo = {}) {
       printWindow.print();
     }, 250);
   };
+
+  return { success: true };
 }
