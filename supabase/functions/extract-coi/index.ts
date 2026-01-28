@@ -142,15 +142,17 @@ serve(async (req) => {
 Extract the following information from this COI PDF and return it as a JSON object:
 
 {
-  "companyName": "Full legal company name",
+  "companyName": "Full legal company name of the insured (not the insurance company)",
   "dba": "Doing Business As name (if any, otherwise null)",
   "expirationDate": "The EARLIEST policy expiration date among all coverages in YYYY-MM-DD format",
   "generalLiability": {
-    "amount": number (e.g., 1000000 for $1M),
+    "eachOccurrence": number (the per-occurrence limit, e.g., 1000000 for $1M),
+    "aggregate": number (the general aggregate limit, usually 2x occurrence),
+    "amount": number (same as eachOccurrence for backward compatibility),
     "expirationDate": "YYYY-MM-DD"
   },
   "autoLiability": {
-    "amount": number,
+    "amount": number (combined single limit),
     "expirationDate": "YYYY-MM-DD"
   },
   "workersComp": {
@@ -168,11 +170,17 @@ Extract the following information from this COI PDF and return it as a JSON obje
       "expirationDate": "YYYY-MM-DD"
     }
   ],
-  "additionalInsured": "Names listed as additional insured (if any)",
-  "certificateHolder": "Certificate holder name",
+  "additionalInsured": "Names listed as additional insured (check the description box or endorsements)",
+  "certificateHolder": "Certificate holder name and address (bottom section of COI)",
   "insuranceCompany": "Insurance company/carrier name",
-  "waiverOfSubrogation": "yes or no - Check if waiver of subrogation is indicated on the COI"
+  "waiverOfSubrogation": "yes or no - Check if waiver of subrogation is indicated"
 }
+
+CRITICAL INSTRUCTIONS FOR GENERAL LIABILITY:
+- Look for "EACH OCCURRENCE" limit - this is the per-incident coverage amount
+- Look for "GENERAL AGGREGATE" limit - this is the total policy limit
+- On standard ACORD forms, these are clearly labeled in the GL section
+- The aggregate is typically 2x the occurrence amount
 
 CRITICAL INSTRUCTIONS FOR EXPIRATION DATES:
 The COI document has a table with insurance policies. Look for columns like:
@@ -184,6 +192,10 @@ TYPE OF INSURANCE | POLICY NUMBER | POLICY EFF | POLICY EXP | LIMITS
 In each policy row, there are TWO dates - the earlier one is the start date (POLICY EFF), the later one is the expiration date (POLICY EXP). Always choose the LATER date from each row.
 
 For the top-level expirationDate: Return the EARLIEST date from ONLY the 4 main coverages (GL, Auto, WC, EL).
+
+CERTIFICATE HOLDER vs ADDITIONAL INSURED:
+- Certificate Holder: The entity requesting the certificate, shown at the bottom of the form
+- Additional Insured: Parties specifically named as additional insureds, often noted in the description box or via endorsement
 
 Other rules:
 - Extract amounts as pure numbers (e.g., 1000000 not "$1,000,000")
@@ -235,15 +247,21 @@ Return ONLY the JSON object, no other text.`
 });
 
 function buildVendorData(extractedData: any, requirements: Requirements) {
+  // Get GL amounts - support both new format (occurrence/aggregate) and old format (single amount)
+  const glOccurrence = extractedData.generalLiability?.eachOccurrence || extractedData.generalLiability?.amount || 0;
+  const glAggregate = extractedData.generalLiability?.aggregate || (glOccurrence * 2);
+
   const vendorData: any = {
     name: extractedData.companyName || 'Unknown Company',
     dba: extractedData.dba,
     expirationDate: extractedData.expirationDate || new Date().toISOString().split('T')[0],
     coverage: {
       generalLiability: {
-        amount: extractedData.generalLiability?.amount || 0,
+        eachOccurrence: glOccurrence,
+        aggregate: glAggregate,
+        amount: glOccurrence, // Keep for backward compatibility
         expirationDate: extractedData.generalLiability?.expirationDate,
-        compliant: (extractedData.generalLiability?.amount || 0) >= requirements.general_liability
+        compliant: glOccurrence >= requirements.general_liability
       },
       autoLiability: {
         amount: extractedData.autoLiability?.amount || 0,
