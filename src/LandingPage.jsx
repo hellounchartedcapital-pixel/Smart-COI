@@ -2,69 +2,213 @@ import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo';
 import {
   CheckCircle, Zap, Bell, Play, Menu, X,
-  FileCheck, FolderOpen, Cloud, Users, Check
+  FileCheck, FolderOpen, Cloud, Users, Check,
+  AlertCircle, XCircle, Calendar
 } from 'lucide-react';
 
-// Dashboard Mockup Component
+// Dashboard Mockup Component - Realistic preview of actual dashboard
 function DashboardMockup() {
-  const vendors = [
-    { name: "ABC Cleaning Services", status: "Compliant", statusType: "compliant" },
-    { name: "Pro Electric LLC", status: "Expiring in 14 days", statusType: "expiring" },
-    { name: "Metro HVAC Inc.", status: "Expired", statusType: "expired" },
+  // Fake vendor data for the mockup
+  const stats = { total: 58, compliant: 47, nonCompliant: 5, expired: 3, expiring: 3 };
+
+  const upcomingExpirations = [
+    { name: "Pro Electric LLC", date: "Feb 12, 2025", days: 14 },
+    { name: "Swift Plumbing Co.", date: "Feb 18, 2025", days: 20 },
+    { name: "Green Lawn Care", date: "Feb 25, 2025", days: 27 },
   ];
 
-  const statusColors = {
-    compliant: "bg-emerald-500/10 text-emerald-500",
-    expiring: "bg-amber-500/10 text-amber-500",
-    expired: "bg-red-500/10 text-red-500",
+  const vendors = [
+    {
+      name: "ABC Cleaning Services",
+      status: "compliant",
+      expDate: "08/15/2025",
+      gl: "$1,000,000",
+      auto: "$1,000,000",
+      wc: "Statutory",
+      issues: []
+    },
+    {
+      name: "Pro Electric LLC",
+      status: "expiring",
+      expDate: "02/12/2025",
+      gl: "$2,000,000",
+      auto: "$1,000,000",
+      wc: "Statutory",
+      issues: []
+    },
+    {
+      name: "Metro HVAC Inc.",
+      status: "expired",
+      expDate: "01/15/2025",
+      gl: "$1,000,000",
+      auto: "$500,000",
+      wc: "Statutory",
+      issues: ["Policy expired 13 days ago"]
+    },
+    {
+      name: "SafeGuard Security",
+      status: "non-compliant",
+      expDate: "06/30/2025",
+      gl: "$500,000",
+      auto: "$500,000",
+      wc: "Statutory",
+      issues: ["GL below minimum ($1M required)"]
+    },
+  ];
+
+  const statusConfig = {
+    compliant: { badge: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: "text-emerald-500" },
+    expiring: { badge: "bg-amber-100 text-amber-700 border-amber-200", icon: "text-amber-500" },
+    expired: { badge: "bg-red-100 text-red-700 border-red-200", icon: "text-red-500" },
+    "non-compliant": { badge: "bg-orange-100 text-orange-700 border-orange-200", icon: "text-orange-500" },
   };
 
   return (
     <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
       {/* Browser chrome */}
-      <div className="bg-gray-100 p-4">
+      <div className="bg-gray-100 px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-500" />
-          <div className="w-3 h-3 rounded-full bg-amber-500" />
-          <div className="w-3 h-3 rounded-full bg-emerald-500" />
+          <div className="w-3 h-3 rounded-full bg-red-400" />
+          <div className="w-3 h-3 rounded-full bg-amber-400" />
+          <div className="w-3 h-3 rounded-full bg-emerald-400" />
+          <div className="ml-4 flex-1 bg-white rounded-lg px-3 py-1.5 text-xs text-gray-400 border border-gray-200">
+            app.smartcoi.io/dashboard
+          </div>
         </div>
       </div>
 
       {/* Dashboard content */}
-      <div className="p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-5">
-          Compliance Dashboard
-        </h3>
+      <div className="p-4 bg-gray-50">
+        {/* Overview Row - Pie Chart & Upcoming */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          {/* Mini Pie Chart */}
+          <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
+            <p className="text-xs font-bold text-gray-900 mb-2">Compliance Overview</p>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <svg width="60" height="60" viewBox="0 0 60 60" className="transform -rotate-90">
+                  <circle cx="30" cy="30" r="22" fill="none" stroke="#10b981" strokeWidth="8"
+                    strokeDasharray={`${(stats.compliant / stats.total) * 138.23} 138.23`} strokeDashoffset="0" />
+                  <circle cx="30" cy="30" r="22" fill="none" stroke="#f97316" strokeWidth="8"
+                    strokeDasharray={`${(stats.nonCompliant / stats.total) * 138.23} 138.23`}
+                    strokeDashoffset={`${-(stats.compliant / stats.total) * 138.23}`} />
+                  <circle cx="30" cy="30" r="22" fill="none" stroke="#ef4444" strokeWidth="8"
+                    strokeDasharray={`${(stats.expired / stats.total) * 138.23} 138.23`}
+                    strokeDashoffset={`${-((stats.compliant + stats.nonCompliant) / stats.total) * 138.23}`} />
+                  <circle cx="30" cy="30" r="22" fill="none" stroke="#f59e0b" strokeWidth="8"
+                    strokeDasharray={`${(stats.expiring / stats.total) * 138.23} 138.23`}
+                    strokeDashoffset={`${-((stats.compliant + stats.nonCompliant + stats.expired) / stats.total) * 138.23}`} />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-sm font-bold text-gray-900">{stats.total}</span>
+                </div>
+              </div>
+              <div className="space-y-1 text-[10px]">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                  <span className="text-gray-600">{stats.compliant} Compliant</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                  <span className="text-gray-600">{stats.nonCompliant} Non-Compliant</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  <span className="text-gray-600">{stats.expired} Expired</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        {/* Stats cards */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          <div className="bg-gray-50 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-emerald-500">47</div>
-            <div className="text-xs text-gray-500">Compliant</div>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-amber-500">8</div>
-            <div className="text-xs text-gray-500">Expiring Soon</div>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-red-500">3</div>
-            <div className="text-xs text-gray-500">Expired</div>
+          {/* Upcoming Expirations */}
+          <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold text-gray-900">Upcoming Expirations</p>
+              <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-semibold">30 Days</span>
+            </div>
+            <div className="space-y-1.5">
+              {upcomingExpirations.map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between bg-gray-50 rounded-lg px-2 py-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-1.5 h-1.5 rounded-full ${item.days <= 14 ? 'bg-amber-500' : 'bg-yellow-400'}`}></div>
+                    <span className="text-[10px] font-medium text-gray-900 truncate max-w-[80px]">{item.name}</span>
+                  </div>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                    item.days <= 14 ? 'bg-amber-100 text-amber-700' : 'bg-yellow-100 text-yellow-700'
+                  }`}>{item.days}d</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Vendor list */}
-        <div className="space-y-0">
+        {/* Stats Cards Row */}
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm">
+            <p className="text-[9px] text-gray-500 font-medium">Total</p>
+            <p className="text-lg font-bold text-gray-900">{stats.total}</p>
+          </div>
+          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm">
+            <p className="text-[9px] text-gray-500 font-medium">Expired</p>
+            <p className="text-lg font-bold text-red-600">{stats.expired}</p>
+          </div>
+          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm">
+            <p className="text-[9px] text-gray-500 font-medium">Non-Compliant</p>
+            <p className="text-lg font-bold text-orange-600">{stats.nonCompliant}</p>
+          </div>
+          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm">
+            <p className="text-[9px] text-gray-500 font-medium">Compliant</p>
+            <p className="text-lg font-bold text-emerald-600">{stats.compliant}</p>
+          </div>
+        </div>
+
+        {/* Vendor List */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {vendors.map((vendor, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0"
-            >
-              <span className="text-sm font-medium text-gray-900">
-                {vendor.name}
-              </span>
-              <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusColors[vendor.statusType]}`}>
-                {vendor.status}
-              </span>
+            <div key={index} className={`p-3 ${index !== vendors.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-gray-50`}>
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-2 flex-1 min-w-0">
+                  <div className="mt-0.5">
+                    {vendor.status === 'compliant' && (
+                      <CheckCircle className="text-emerald-500" size={14} />
+                    )}
+                    {vendor.status === 'expiring' && (
+                      <AlertCircle className="text-amber-500" size={14} />
+                    )}
+                    {vendor.status === 'expired' && (
+                      <XCircle className="text-red-500" size={14} />
+                    )}
+                    {vendor.status === 'non-compliant' && (
+                      <AlertCircle className="text-orange-500" size={14} />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-semibold text-gray-900 truncate">{vendor.name}</span>
+                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${statusConfig[vendor.status].badge}`}>
+                        {vendor.status.toUpperCase().replace('-', ' ')}
+                      </span>
+                    </div>
+                    {vendor.issues.length > 0 && (
+                      <p className="text-[9px] text-red-600 mb-1 flex items-center gap-1">
+                        <AlertCircle size={9} />
+                        {vendor.issues[0]}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                      <span className="bg-gray-100 px-1.5 py-0.5 rounded">GL: {vendor.gl}</span>
+                      <span className="bg-gray-100 px-1.5 py-0.5 rounded">Auto: {vendor.auto}</span>
+                      <span className="bg-gray-100 px-1.5 py-0.5 rounded">WC: {vendor.wc}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right ml-2 flex-shrink-0">
+                  <div className="text-[9px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded flex items-center gap-1">
+                    <Calendar size={9} />
+                    {vendor.expDate}
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
         </div>
