@@ -779,10 +779,27 @@ function ComplyApp({ user, onSignOut }) {
                     </>
                   )}
                 </svg>
-                {/* Center text */}
+                {/* Center text - Compliance Percentage */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-bold text-gray-900">{stats.total}</span>
-                  <span className="text-xs text-gray-500 font-medium">Total</span>
+                  {stats.total === 0 ? (
+                    <>
+                      <span className="text-3xl font-bold text-gray-400">0%</span>
+                      <span className="text-xs text-gray-500 font-medium">Compliant</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={`text-3xl font-bold ${
+                        Math.round((stats.compliant / stats.total) * 100) >= 80
+                          ? 'text-emerald-600'
+                          : Math.round((stats.compliant / stats.total) * 100) >= 50
+                            ? 'text-amber-500'
+                            : 'text-red-500'
+                      }`}>
+                        {Math.round((stats.compliant / stats.total) * 100)}%
+                      </span>
+                      <span className="text-xs text-gray-500 font-medium">Compliant</span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -979,7 +996,7 @@ function ComplyApp({ user, onSignOut }) {
 
             <button
               onClick={exportToCSV}
-              className="px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 flex items-center space-x-2 text-sm font-semibold transition-all"
+              className="px-4 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 flex items-center space-x-2 text-sm font-semibold transition-all"
               title="Export CSV"
             >
               <Download size={16} />
