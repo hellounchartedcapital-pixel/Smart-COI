@@ -392,7 +392,7 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
           ? "bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm"
           : "bg-transparent"
       }`}>
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Logo size="default" />
@@ -464,7 +464,7 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+      <section className="relative pt-32 pb-20 px-4 sm:px-6 overflow-hidden">
         {/* Background gradients */}
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-teal-500/10 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/4 pointer-events-none" />
@@ -527,8 +527,10 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
             </div>
 
             {/* Dashboard Mockup */}
-            <div className="animate-fade-in-up animation-delay-300 lg:animate-float">
-              <DashboardMockup />
+            <div className="animate-fade-in-up animation-delay-300 lg:animate-float flex justify-center lg:justify-end">
+              <div className="w-full max-w-md lg:max-w-none">
+                <DashboardMockup />
+              </div>
             </div>
           </div>
         </div>
