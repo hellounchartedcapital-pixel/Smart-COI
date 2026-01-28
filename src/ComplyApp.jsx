@@ -588,6 +588,31 @@ function ComplyApp({ user, onSignOut }) {
   // Handle file upload with AI extraction
   const handleFileUpload = async (file, progressCallback, vendorEmail = null) => {
     try {
+      // Check if a property is selected - require property for compliance checking
+      if (!selectedProperty && properties.length > 0) {
+        setUploadingCOI(false);
+        showAlert({
+          type: 'warning',
+          title: 'Select a Property',
+          message: 'Please select a property before uploading a COI.',
+          details: 'Each property has its own insurance requirements. Select a property from the dropdown in the header.'
+        });
+        return;
+      }
+
+      // If no properties exist, prompt to create one
+      if (properties.length === 0) {
+        setUploadingCOI(false);
+        showAlert({
+          type: 'warning',
+          title: 'Create a Property First',
+          message: 'You need to create a property before uploading COIs.',
+          details: 'Click "Add Property" in the header to create your first property with insurance requirements.'
+        });
+        setShowProperties(true);
+        return;
+      }
+
       // Show full-screen loading overlay
       setUploadingCOI(true);
       setUploadStatus('Reading PDF...');
@@ -596,8 +621,8 @@ function ComplyApp({ user, onSignOut }) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Determine which requirements to use (property-specific or global)
-      const requirementsToUse = selectedProperty ? {
+      // Use property-specific requirements
+      const requirementsToUse = {
         general_liability: selectedProperty.general_liability || 1000000,
         gl_aggregate: selectedProperty.gl_aggregate || 2000000,
         auto_liability: selectedProperty.auto_liability || 1000000,
@@ -608,7 +633,7 @@ function ComplyApp({ user, onSignOut }) {
         require_additional_insured: selectedProperty.require_additional_insured !== false,
         require_waiver_of_subrogation: selectedProperty.require_waiver_of_subrogation || false,
         custom_coverages: selectedProperty.custom_coverages || []
-      } : userRequirements;
+      };
 
       // Step 1: Extract data using AI
       setUploadStatus('AI analyzing certificate...');
