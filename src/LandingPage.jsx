@@ -194,12 +194,12 @@ function DashboardMockup() {
       name: "Riverside Cleaning Co.",
       dba: "Riverside Services",
       status: "expired",
-      expDate: "9/25/2025",
-      daysInfo: "126 days",
+      expDate: "1/21/2026",
+      daysInfo: "8 days",
       gl: "$1,000,000",
       auto: "$1,000,000",
       wc: "Statutory",
-      issue: "Coverage expired 2025-09-25 (126 days overdue)"
+      issue: "Coverage expired 2026-01-21 (8 days overdue)"
     },
     {
       name: "Summit HVAC Solutions",
