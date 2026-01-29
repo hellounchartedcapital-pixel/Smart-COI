@@ -309,8 +309,8 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
       popular: false,
     },
     {
-      name: "Basic",
-      price: "$49",
+      name: "Starter",
+      price: "$79",
       period: "/month",
       description: "For small property managers",
       vendors: "Up to 25 vendors",
@@ -324,12 +324,12 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
     },
     {
       name: "Professional",
-      price: "$99",
+      price: "$149",
       period: "/month",
       description: "For growing companies",
       vendors: "Up to 100 vendors",
       features: [
-        "Everything in Basic",
+        "Everything in Starter",
         "Analytics & reports",
         "Priority support",
       ],
@@ -338,7 +338,7 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
     },
     {
       name: "Enterprise",
-      price: "$199",
+      price: "$299",
       period: "/month",
       description: "For large-scale operations",
       vendors: "Up to 500 vendors",

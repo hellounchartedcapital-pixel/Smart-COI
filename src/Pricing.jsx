@@ -28,8 +28,8 @@ const plans = [
     ],
   },
   {
-    name: 'Basic',
-    price: 49,
+    name: 'Starter',
+    price: 79,
     priceId: '',
     description: 'For small property managers',
     vendors: 25,
@@ -49,7 +49,7 @@ const plans = [
   },
   {
     name: 'Professional',
-    price: 99,
+    price: 149,
     priceId: '',
     description: 'For growing property management companies',
     vendors: 100,
@@ -70,7 +70,7 @@ const plans = [
   },
   {
     name: 'Enterprise',
-    price: 199,
+    price: 299,
     priceId: '',
     description: 'For large-scale operations',
     vendors: 500,
@@ -250,7 +250,7 @@ export function Pricing({ onBack, onSelectPlan, currentPlan, user }) {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
                           </svg>
                         )}
-                        {plan.name === 'Basic' && (
+                        {plan.name === 'Starter' && (
                           <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
                           </svg>
