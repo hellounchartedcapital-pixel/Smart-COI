@@ -715,26 +715,36 @@ function ComplyApp({ user, onSignOut }) {
   const exportToCSV = () => {
     const headers = ['Company Name', 'DBA', 'Status', 'Expiration Date', 'Days Overdue', 'General Liability', 'Auto Liability', 'Workers Comp', 'Employers Liability', 'Issues'];
 
+    // Helper to escape CSV fields (handle commas, quotes, newlines)
+    const escapeCSV = (field) => {
+      const str = String(field ?? '');
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
     const rows = filteredVendors.map(v => [
-      v.name,
-      v.dba || '',
+      escapeCSV(v.name),
+      escapeCSV(v.dba || ''),
       v.status.toUpperCase(),
       new Date(v.expirationDate).toLocaleDateString(),
       v.daysOverdue || 0,
-      formatCurrency(v.coverage.generalLiability.amount),
-      formatCurrency(v.coverage.autoLiability.amount),
+      escapeCSV(formatCurrency(v.coverage.generalLiability.amount)),
+      escapeCSV(formatCurrency(v.coverage.autoLiability.amount)),
       v.coverage.workersComp.amount,
-      formatCurrency(v.coverage.employersLiability.amount),
-      v.issues.map(i => i.message).join('; ')
+      escapeCSV(formatCurrency(v.coverage.employersLiability.amount)),
+      escapeCSV(v.issues.map(i => i.message).join('; '))
     ]);
 
-    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvContent = [headers.map(escapeCSV), ...rows].map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `smartcoi-vendor-report-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
+    URL.revokeObjectURL(url); // Clean up
   };
 
   // Export to PDF
