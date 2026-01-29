@@ -294,17 +294,30 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
 
   const pricingTiers = [
     {
-      name: "Basic",
-      price: "$49",
-      period: "/month",
-      description: "Perfect for small property managers",
-      vendors: "Up to 25 vendors",
+      name: "Free",
+      price: "Free",
+      period: "forever",
+      description: "Perfect for getting started",
+      vendors: "Up to 10 vendors",
       features: [
         "AI-powered COI extraction",
         "Compliance dashboard",
         "Expiration alerts",
         "Email COI requests",
+      ],
+      cta: "Get Started Free",
+      popular: false,
+    },
+    {
+      name: "Basic",
+      price: "$49",
+      period: "/month",
+      description: "For small property managers",
+      vendors: "Up to 25 vendors",
+      features: [
+        "Everything in Free",
         "CSV export",
+        "Automated follow-ups",
       ],
       cta: "Start Free Trial",
       popular: false,
@@ -319,7 +332,6 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
         "Everything in Basic",
         "Analytics & reports",
         "Priority support",
-        "Multi-property management",
       ],
       cta: "Start Free Trial",
       popular: true,
@@ -334,7 +346,6 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
         "Everything in Professional",
         "API access",
         "Dedicated support",
-        "Custom integrations",
       ],
       cta: "Start Free Trial",
       popular: false,
@@ -351,8 +362,8 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms }) {
       answer: "SmartCOI automatically identifies compliance gaps and can send follow-up emails to vendors explaining exactly what coverage is missing or insufficient. Vendors receive clear, actionable guidance.",
     },
     {
-      question: "Is there a free trial?",
-      answer: "Yes! All plans include a 14-day free trial with full access to all features. No credit card required to get started.",
+      question: "Is there really a free plan?",
+      answer: "Yes! Our Free plan is free forever and includes up to 10 vendors with full AI extraction capabilities. No credit card required to get started.",
     },
     {
       question: "How do expiration alerts work?",
