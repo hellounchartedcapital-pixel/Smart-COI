@@ -4,7 +4,7 @@ import {
   CheckCircle, Zap, Bell, Menu, X,
   FileCheck, FolderOpen, Cloud, Users, Check,
   AlertCircle, XCircle, Calendar, Send, Mail, User, MessageSquare, Loader2,
-  Building2, ChevronDown, Upload, Search, Sparkles
+  Building2, ChevronDown, Upload, Search, FileText
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
@@ -184,59 +184,40 @@ function ContactModal({ isOpen, onClose }) {
 
 // Dashboard Mockup Component - Realistic preview of actual dashboard
 function DashboardMockup() {
-  // Fake property and vendor data for the mockup
-  const currentProperty = "The Metropolitan";
-  const stats = { total: 24, compliant: 18, nonCompliant: 3, expired: 1, expiring: 2 };
+  // Fake data matching the actual dashboard layout
+  const stats = { total: 5, compliant: 3, nonCompliant: 1, expired: 1, expiring: 0 };
+  const compliancePercent = Math.round((stats.compliant / stats.total) * 100);
 
   const vendors = [
     {
-      name: "Elite Cleaning Services",
-      status: "compliant",
-      expDate: "09/15/2026",
-      gl: "$1,000,000",
-      auto: "$1,000,000",
-      wc: "Statutory",
-      issues: [],
-      hasAI: true
-    },
-    {
-      name: "Apex Landscaping Co.",
-      status: "expiring",
-      expDate: "02/14/2026",
-      gl: "$2,000,000",
-      auto: "$1,000,000",
-      wc: "Statutory",
-      issues: [],
-      hasAI: false
-    },
-    {
-      name: "Premier HVAC Solutions",
+      name: "Captivate Holdings, LLC",
+      dba: "Captivate, LLC",
       status: "expired",
-      expDate: "01/10/2026",
+      expDate: "9/25/2025",
+      daysInfo: "126 days",
       gl: "$1,000,000",
-      auto: "$500,000",
+      auto: "$1,000,000",
       wc: "Statutory",
-      issues: ["Policy expired 19 days ago"],
-      hasAI: true
+      issue: "Coverage expired 2025-09-25 (126 days overdue)"
     },
     {
-      name: "Guardian Security Inc.",
-      status: "non-compliant",
-      expDate: "07/30/2026",
-      gl: "$500,000",
-      auto: "$500,000",
-      wc: "Statutory",
-      issues: ["GL below minimum ($1M required)"],
-      hasAI: false
+      name: "Everon, LLC",
+      status: "compliant",
+      expDate: "10/2/2026",
+      gl: "$1,000,000",
+      auto: "$3,000,000",
+      wc: "Statutory"
+    },
+    {
+      name: "GroundMasters Landscape Services, LLC",
+      dba: "Snow Management Services LLC",
+      status: "compliant",
+      expDate: "3/1/2026",
+      gl: "$1,000,000",
+      auto: "$1,000,000",
+      wc: "Statutory"
     },
   ];
-
-  const statusConfig = {
-    compliant: { badge: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: "text-emerald-500" },
-    expiring: { badge: "bg-amber-100 text-amber-700 border-amber-200", icon: "text-amber-500" },
-    expired: { badge: "bg-red-100 text-red-700 border-red-200", icon: "text-red-500" },
-    "non-compliant": { badge: "bg-orange-100 text-orange-700 border-orange-200", icon: "text-orange-500" },
-  };
 
   return (
     <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
@@ -264,12 +245,12 @@ function DashboardMockup() {
           {/* Property Selector */}
           <div className="flex items-center gap-1.5 bg-gray-100 rounded-lg px-2.5 py-1.5 ml-2">
             <Building2 className="w-3.5 h-3.5 text-gray-500" />
-            <span className="text-[10px] font-medium text-gray-700">{currentProperty}</span>
+            <span className="text-[10px] font-medium text-gray-700">All Properties</span>
             <ChevronDown className="w-3 h-3 text-gray-400" />
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-2.5 py-1 bg-emerald-500 text-white rounded-md text-[10px] font-semibold flex items-center gap-1">
+          <button className="px-2.5 py-1.5 bg-emerald-500 text-white rounded-lg text-[10px] font-semibold flex items-center gap-1">
             <Upload className="w-3 h-3" />
             Upload COI
           </button>
@@ -277,53 +258,82 @@ function DashboardMockup() {
       </div>
 
       {/* Dashboard content */}
-      <div className="p-4 bg-gray-50">
-        {/* Compliance Overview with Pie Chart */}
-        <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm mb-3">
-          <p className="text-xs font-bold text-gray-900 mb-2">Compliance Overview</p>
-          <div className="flex items-center justify-center gap-6">
-            {/* Pie Chart */}
-            <div className="relative">
-              <svg width="70" height="70" viewBox="0 0 70 70" className="transform -rotate-90">
-                {/* Compliant slice (green) - 75% */}
-                <circle cx="35" cy="35" r="26" fill="none" stroke="#10b981" strokeWidth="10"
-                  strokeDasharray={`${(stats.compliant / stats.total) * 163.36} 163.36`} strokeDashoffset="0" />
-                {/* Non-compliant slice (orange) */}
-                <circle cx="35" cy="35" r="26" fill="none" stroke="#f97316" strokeWidth="10"
-                  strokeDasharray={`${(stats.nonCompliant / stats.total) * 163.36} 163.36`}
-                  strokeDashoffset={`${-(stats.compliant / stats.total) * 163.36}`} />
-                {/* Expired slice (red) */}
-                <circle cx="35" cy="35" r="26" fill="none" stroke="#ef4444" strokeWidth="10"
-                  strokeDasharray={`${(stats.expired / stats.total) * 163.36} 163.36`}
-                  strokeDashoffset={`${-((stats.compliant + stats.nonCompliant) / stats.total) * 163.36}`} />
-                {/* Expiring slice (amber) */}
-                <circle cx="35" cy="35" r="26" fill="none" stroke="#f59e0b" strokeWidth="10"
-                  strokeDasharray={`${(stats.expiring / stats.total) * 163.36} 163.36`}
-                  strokeDashoffset={`${-((stats.compliant + stats.nonCompliant + stats.expired) / stats.total) * 163.36}`} />
-              </svg>
-              {/* Center percentage */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-base font-bold text-emerald-600">{Math.round((stats.compliant / stats.total) * 100)}%</span>
-                <span className="text-[8px] text-gray-500">Compliant</span>
+      <div className="p-3 bg-gray-50">
+        {/* Overview Row - Pie Chart & Upcoming Expirations */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          {/* Compliance Overview */}
+          <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
+            <p className="text-xs font-bold text-gray-900 mb-3">Compliance Overview</p>
+            <div className="flex items-center gap-4">
+              {/* Donut Chart */}
+              <div className="relative">
+                <svg width="80" height="80" viewBox="0 0 80 80" className="transform -rotate-90">
+                  {/* Background circle */}
+                  <circle cx="40" cy="40" r="30" fill="none" stroke="#e5e7eb" strokeWidth="12" />
+                  {/* Compliant (green) */}
+                  <circle cx="40" cy="40" r="30" fill="none" stroke="#10b981" strokeWidth="12"
+                    strokeDasharray={`${(stats.compliant / stats.total) * 188.5} 188.5`} strokeDashoffset="0" />
+                  {/* Non-compliant (orange) */}
+                  <circle cx="40" cy="40" r="30" fill="none" stroke="#f97316" strokeWidth="12"
+                    strokeDasharray={`${(stats.nonCompliant / stats.total) * 188.5} 188.5`}
+                    strokeDashoffset={`${-(stats.compliant / stats.total) * 188.5}`} />
+                  {/* Expired (red) */}
+                  <circle cx="40" cy="40" r="30" fill="none" stroke="#ef4444" strokeWidth="12"
+                    strokeDasharray={`${(stats.expired / stats.total) * 188.5} 188.5`}
+                    strokeDashoffset={`${-((stats.compliant + stats.nonCompliant) / stats.total) * 188.5}`} />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg font-bold text-amber-500">{compliancePercent}%</span>
+                  <span className="text-[8px] text-gray-500">Compliant</span>
+                </div>
+              </div>
+              {/* Legend */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-gray-900">{stats.compliant} Compliant</span>
+                    <span className="text-[9px] text-gray-500 ml-1">{Math.round((stats.compliant/stats.total)*100)}%</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-gray-900">{stats.nonCompliant} Non-Compliant</span>
+                    <span className="text-[9px] text-gray-500 ml-1">{Math.round((stats.nonCompliant/stats.total)*100)}%</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-gray-900">{stats.expired} Expired</span>
+                    <span className="text-[9px] text-gray-500 ml-1">{Math.round((stats.expired/stats.total)*100)}%</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                  <div>
+                    <span className="text-[10px] font-semibold text-gray-900">{stats.expiring} Expiring Soon</span>
+                    <span className="text-[9px] text-gray-500 ml-1">0%</span>
+                  </div>
+                </div>
               </div>
             </div>
-            {/* Legend */}
-            <div className="space-y-1.5 text-[10px]">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                <span className="text-gray-700 font-medium">{stats.compliant} Compliant</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
-                <span className="text-gray-700 font-medium">{stats.nonCompliant} Non-Compliant</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-                <span className="text-gray-700 font-medium">{stats.expired} Expired</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-                <span className="text-gray-700 font-medium">{stats.expiring} Expiring</span>
+          </div>
+
+          {/* Upcoming Expirations */}
+          <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold text-gray-900">Upcoming Expirations</p>
+              <span className="text-[9px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Next 30 Days</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                <div>
+                  <p className="text-[10px] font-medium text-gray-900">GroundMasters Landsca...</p>
+                  <p className="text-[9px] text-gray-500">3/1/2026</p>
+                </div>
+                <span className="text-[9px] font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">30 days</span>
               </div>
             </div>
           </div>
@@ -331,76 +341,86 @@ function DashboardMockup() {
 
         {/* Stats Cards Row */}
         <div className="grid grid-cols-4 gap-2 mb-3">
-          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm">
-            <p className="text-[9px] text-gray-500 font-medium">Total Vendors</p>
-            <p className="text-lg font-bold text-gray-900">{stats.total}</p>
+          <div className="bg-white rounded-xl p-2.5 border-2 border-emerald-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[9px] text-gray-500 font-medium">Total Vendors</p>
+              <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+            </div>
+            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 text-gray-400" />
+            </div>
           </div>
-          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm cursor-pointer hover:border-red-300 transition-colors">
-            <p className="text-[9px] text-gray-500 font-medium">Expired</p>
-            <p className="text-lg font-bold text-red-600">{stats.expired}</p>
+          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[9px] text-gray-500 font-medium">Expired</p>
+              <p className="text-xl font-bold text-red-500">{stats.expired}</p>
+            </div>
+            <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center">
+              <XCircle className="w-4 h-4 text-red-500" />
+            </div>
           </div>
-          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm cursor-pointer hover:border-orange-300 transition-colors">
-            <p className="text-[9px] text-gray-500 font-medium">Non-Compliant</p>
-            <p className="text-lg font-bold text-orange-600">{stats.nonCompliant}</p>
+          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[9px] text-gray-500 font-medium">Non-Compliant</p>
+              <p className="text-xl font-bold text-orange-500">{stats.nonCompliant}</p>
+            </div>
+            <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
+              <AlertCircle className="w-4 h-4 text-orange-500" />
+            </div>
           </div>
-          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm cursor-pointer hover:border-emerald-300 transition-colors">
-            <p className="text-[9px] text-gray-500 font-medium">Compliant</p>
-            <p className="text-lg font-bold text-emerald-600">{stats.compliant}</p>
+          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-[9px] text-gray-500 font-medium">Compliant</p>
+              <p className="text-xl font-bold text-emerald-500">{stats.compliant}</p>
+            </div>
+            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
+              <CheckCircle className="w-4 h-4 text-emerald-500" />
+            </div>
           </div>
         </div>
 
-        {/* Search and Filter Row */}
-        <div className="flex items-center gap-2 mb-3">
+        {/* Search Row */}
+        <div className="flex items-center gap-2 mb-2">
           <div className="flex-1 relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <div className="w-full bg-white border border-gray-200 rounded-lg pl-8 pr-3 py-2 text-[10px] text-gray-400">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+            <div className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-[10px] text-gray-400">
               Search vendors...
             </div>
           </div>
-          <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-1">
-            <button className="px-2 py-1 text-[9px] font-medium bg-emerald-100 text-emerald-700 rounded">All</button>
-            <button className="px-2 py-1 text-[9px] font-medium text-gray-500 hover:bg-gray-100 rounded">Expired</button>
-            <button className="px-2 py-1 text-[9px] font-medium text-gray-500 hover:bg-gray-100 rounded">Expiring</button>
-          </div>
+          <button className="px-3 py-2 bg-emerald-500 text-white rounded-lg text-[9px] font-semibold">Export PDF</button>
+          <button className="px-3 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-[9px] font-semibold">Export CSV</button>
         </div>
+        <p className="text-[9px] text-gray-500 mb-2">Showing {stats.total} of {stats.total} vendors</p>
 
         {/* Vendor List */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           {vendors.map((vendor, index) => (
-            <div key={index} className={`p-3 ${index !== vendors.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-gray-50 cursor-pointer`}>
+            <div key={index} className={`p-3 ${index !== vendors.length - 1 ? 'border-b border-gray-100' : ''}`}>
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-2 flex-1 min-w-0">
                   <div className="mt-0.5">
-                    {vendor.status === 'compliant' && (
-                      <CheckCircle className="text-emerald-500" size={14} />
-                    )}
-                    {vendor.status === 'expiring' && (
-                      <AlertCircle className="text-amber-500" size={14} />
-                    )}
-                    {vendor.status === 'expired' && (
-                      <XCircle className="text-red-500" size={14} />
-                    )}
-                    {vendor.status === 'non-compliant' && (
-                      <AlertCircle className="text-orange-500" size={14} />
-                    )}
+                    {vendor.status === 'compliant' && <CheckCircle className="text-emerald-500" size={16} />}
+                    {vendor.status === 'expired' && <XCircle className="text-red-500" size={16} />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-semibold text-gray-900 truncate">{vendor.name}</span>
-                      <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border ${statusConfig[vendor.status].badge}`}>
-                        {vendor.status.toUpperCase().replace('-', ' ')}
-                      </span>
-                      {vendor.hasAI && (
-                        <span className="text-[8px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5">
-                          <Sparkles size={7} />
-                          AI
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <span className="text-[11px] font-semibold text-gray-900">{vendor.name}</span>
+                      {vendor.dba && <span className="text-[11px] text-gray-500">/ {vendor.dba}</span>}
+                      {vendor.status === 'expired' && (
+                        <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-red-500 text-white">
+                          Expired ({vendor.daysInfo})
+                        </span>
+                      )}
+                      {vendor.status === 'compliant' && (
+                        <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500 text-white">
+                          COMPLIANT
                         </span>
                       )}
                     </div>
-                    {vendor.issues.length > 0 && (
+                    {vendor.issue && (
                       <p className="text-[9px] text-red-600 mb-1 flex items-center gap-1">
-                        <AlertCircle size={9} />
-                        {vendor.issues[0]}
+                        <AlertCircle size={10} />
+                        {vendor.issue}
                       </p>
                     )}
                     <div className="flex items-center gap-2 text-[9px] text-gray-500">
@@ -410,11 +430,23 @@ function DashboardMockup() {
                     </div>
                   </div>
                 </div>
-                <div className="text-right ml-2 flex-shrink-0">
-                  <div className="text-[9px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded flex items-center gap-1">
+                <div className="text-right ml-2 flex-shrink-0 space-y-1">
+                  <div className="text-[9px] text-gray-500 flex items-center gap-1 justify-end">
                     <Calendar size={9} />
                     {vendor.expDate}
                   </div>
+                  <div className="text-[9px] space-x-1">
+                    <span className="text-gray-500 hover:text-gray-700 cursor-pointer">Edit</span>
+                    <span className="text-gray-300">|</span>
+                    <span className="text-red-500 hover:text-red-600 cursor-pointer">Delete</span>
+                  </div>
+                  <div className="text-[9px] text-emerald-600 hover:text-emerald-700 cursor-pointer">View Details</div>
+                  {vendor.status === 'expired' && (
+                    <button className="text-[8px] bg-red-500 text-white px-2 py-1 rounded flex items-center gap-1 ml-auto">
+                      <Mail size={8} />
+                      Request COI
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
