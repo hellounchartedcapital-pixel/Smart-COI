@@ -293,7 +293,7 @@ export function Pricing({ onBack, onSignUp, user }) {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
           {plans.map((plan) => {
             const planKey = plan.name.toLowerCase();
             const isCurrentPlan = currentPlan === planKey;
@@ -302,7 +302,7 @@ export function Pricing({ onBack, onSignUp, user }) {
             return (
               <div
                 key={plan.name}
-                className={`relative group ${isProfessional ? 'lg:-mt-4 lg:mb-4' : ''}`}
+                className={`relative group ${isProfessional ? 'xl:-mt-4 xl:mb-4' : ''}`}
               >
                 {/* Glow effect for popular */}
                 {isProfessional && (
