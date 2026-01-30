@@ -10,6 +10,7 @@ import ComplyApp from './ComplyApp'
 import { PrivacyPolicy } from './PrivacyPolicy'
 import { TermsOfService } from './TermsOfService'
 import { VendorUploadPortal } from './VendorUploadPortal'
+import { TenantUploadPortal } from './TenantUploadPortal'
 import { Pricing } from './Pricing'
 import { Loader2 } from 'lucide-react'
 
@@ -21,6 +22,7 @@ function AppContent() {
   const [showTerms, setShowTerms] = useState(false)
   const [showPricing, setShowPricing] = useState(false)
   const [uploadToken, setUploadToken] = useState(null)
+  const [tenantUploadToken, setTenantUploadToken] = useState(null)
 
   // Check URL for upload token or pricing page on mount
   useEffect(() => {
@@ -28,6 +30,11 @@ function AppContent() {
     const token = params.get('upload')
     if (token) {
       setUploadToken(token)
+    }
+    // Check for tenant upload token
+    const tenantToken = params.get('tenant_upload')
+    if (tenantToken) {
+      setTenantUploadToken(tenantToken)
     }
     // Check if coming back from checkout
     const checkoutResult = params.get('checkout')
@@ -55,6 +62,19 @@ function AppContent() {
         token={uploadToken}
         onBack={() => {
           setUploadToken(null)
+          window.history.pushState({}, '', window.location.pathname)
+        }}
+      />
+    )
+  }
+
+  // Show Tenant Upload Portal if tenant upload token is present
+  if (tenantUploadToken) {
+    return (
+      <TenantUploadPortal
+        token={tenantUploadToken}
+        onBack={() => {
+          setTenantUploadToken(null)
           window.history.pushState({}, '', window.location.pathname)
         }}
       />
