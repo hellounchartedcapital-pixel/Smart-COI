@@ -57,10 +57,26 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties, units }) {
     lease_start: '',
     lease_end: '',
     status: 'active',
+    // General Liability
     required_liability_min: 100000,
     required_property_damage_min: 0,
+    // Business Auto Liability
+    required_auto_liability_min: 0,
+    // Workers Compensation
+    required_workers_comp: false,
+    workers_comp_exempt: false,
+    // Employer's Liability
+    required_employers_liability_min: 0,
+    // Additional Insured (Alturas defaults)
     requires_additional_insured: true,
-    additional_insured_text: '',
+    additional_insured_text: 'A. Alturas Stanford, LLC.\nB. Alturas Capital Partners, LLC.',
+    // Certificate Holder (Alturas defaults)
+    certificate_holder_name: 'Alturas Stanford, LLC. c/o Alturas Capital Partners, LLC.',
+    certificate_holder_address: '250 East Eagles Gate Dr., Suite 340, Eagle, Idaho 83616',
+    // Other requirements
+    cancellation_notice_days: 30,
+    requires_declarations_page: true,
+    requires_endorsement_pages: true,
   });
   const [saving, setSaving] = useState(false);
   const [filteredUnits, setFilteredUnits] = useState([]);
@@ -78,8 +94,17 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties, units }) {
         status: tenant.status || 'active',
         required_liability_min: tenant.required_liability_min || 100000,
         required_property_damage_min: tenant.required_property_damage_min || 0,
+        required_auto_liability_min: tenant.required_auto_liability_min || 0,
+        required_workers_comp: tenant.required_workers_comp || false,
+        workers_comp_exempt: tenant.workers_comp_exempt || false,
+        required_employers_liability_min: tenant.required_employers_liability_min || 0,
         requires_additional_insured: tenant.requires_additional_insured !== false,
-        additional_insured_text: tenant.additional_insured_text || '',
+        additional_insured_text: tenant.additional_insured_text || 'A. Alturas Stanford, LLC.\nB. Alturas Capital Partners, LLC.',
+        certificate_holder_name: tenant.certificate_holder_name || 'Alturas Stanford, LLC. c/o Alturas Capital Partners, LLC.',
+        certificate_holder_address: tenant.certificate_holder_address || '250 East Eagles Gate Dr., Suite 340, Eagle, Idaho 83616',
+        cancellation_notice_days: tenant.cancellation_notice_days || 30,
+        requires_declarations_page: tenant.requires_declarations_page !== false,
+        requires_endorsement_pages: tenant.requires_endorsement_pages !== false,
       });
     } else {
       setFormData({
@@ -93,8 +118,17 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties, units }) {
         status: 'active',
         required_liability_min: 100000,
         required_property_damage_min: 0,
+        required_auto_liability_min: 0,
+        required_workers_comp: false,
+        workers_comp_exempt: false,
+        required_employers_liability_min: 0,
         requires_additional_insured: true,
-        additional_insured_text: '',
+        additional_insured_text: 'A. Alturas Stanford, LLC.\nB. Alturas Capital Partners, LLC.',
+        certificate_holder_name: 'Alturas Stanford, LLC. c/o Alturas Capital Partners, LLC.',
+        certificate_holder_address: '250 East Eagles Gate Dr., Suite 340, Eagle, Idaho 83616',
+        cancellation_notice_days: 30,
+        requires_declarations_page: true,
+        requires_endorsement_pages: true,
       });
     }
   }, [tenant, isOpen]);
@@ -282,39 +316,108 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties, units }) {
                 <Shield size={16} className="text-emerald-600" />
                 Insurance Requirements (Per Lease)
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Minimum Liability Coverage
-                  </label>
-                  <select
-                    value={formData.required_liability_min}
-                    onChange={(e) => setFormData({ ...formData, required_liability_min: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  >
-                    <option value={50000}>$50,000</option>
-                    <option value={100000}>$100,000</option>
-                    <option value={200000}>$200,000</option>
-                    <option value={300000}>$300,000</option>
-                    <option value={500000}>$500,000</option>
-                  </select>
+
+              {/* Coverage Limits */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">Required Coverage Limits</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      General Liability
+                    </label>
+                    <select
+                      value={formData.required_liability_min}
+                      onChange={(e) => setFormData({ ...formData, required_liability_min: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    >
+                      <option value={0}>Per Lease</option>
+                      <option value={100000}>$100,000</option>
+                      <option value={300000}>$300,000</option>
+                      <option value={500000}>$500,000</option>
+                      <option value={1000000}>$1,000,000</option>
+                      <option value={2000000}>$2,000,000</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Business Auto Liability
+                    </label>
+                    <select
+                      value={formData.required_auto_liability_min}
+                      onChange={(e) => setFormData({ ...formData, required_auto_liability_min: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    >
+                      <option value={0}>Per Lease</option>
+                      <option value={100000}>$100,000</option>
+                      <option value={300000}>$300,000</option>
+                      <option value={500000}>$500,000</option>
+                      <option value={1000000}>$1,000,000</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Employer's Liability
+                    </label>
+                    <select
+                      value={formData.required_employers_liability_min}
+                      onChange={(e) => setFormData({ ...formData, required_employers_liability_min: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    >
+                      <option value={0}>Per Lease</option>
+                      <option value={100000}>$100,000</option>
+                      <option value={500000}>$500,000</option>
+                      <option value={1000000}>$1,000,000</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Property Damage
+                    </label>
+                    <select
+                      value={formData.required_property_damage_min}
+                      onChange={(e) => setFormData({ ...formData, required_property_damage_min: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    >
+                      <option value={0}>Not Required</option>
+                      <option value={25000}>$25,000</option>
+                      <option value={50000}>$50,000</option>
+                      <option value={100000}>$100,000</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Property Damage Coverage
-                  </label>
-                  <select
-                    value={formData.required_property_damage_min}
-                    onChange={(e) => setFormData({ ...formData, required_property_damage_min: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  >
-                    <option value={0}>Not Required</option>
-                    <option value={25000}>$25,000</option>
-                    <option value={50000}>$50,000</option>
-                    <option value={100000}>$100,000</option>
-                  </select>
+
+                {/* Workers Compensation */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.required_workers_comp}
+                        onChange={(e) => setFormData({ ...formData, required_workers_comp: e.target.checked, workers_comp_exempt: false })}
+                        className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                      />
+                      <span className="text-sm text-gray-700">Workers' Compensation Required</span>
+                    </label>
+                    {formData.required_workers_comp && (
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.workers_comp_exempt}
+                          onChange={(e) => setFormData({ ...formData, workers_comp_exempt: e.target.checked })}
+                          className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
+                        />
+                        <span className="text-sm text-gray-600">Exemption Allowed</span>
+                      </label>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">* Tenant must provide proof of insurance OR proof of exemption</p>
                 </div>
-                <div className="md:col-span-2">
+              </div>
+
+              {/* Additional Insured */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">Additional Insured</h4>
+                <div className="space-y-3">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -322,23 +425,95 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties, units }) {
                       onChange={(e) => setFormData({ ...formData, requires_additional_insured: e.target.checked })}
                       className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
                     />
-                    <span className="text-sm text-gray-700">Require landlord as additional insured</span>
+                    <span className="text-sm text-gray-700">Require owner as additional insured</span>
                   </label>
+                  {formData.requires_additional_insured && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Additional Insured Entities
+                      </label>
+                      <textarea
+                        value={formData.additional_insured_text}
+                        onChange={(e) => setFormData({ ...formData, additional_insured_text: e.target.value })}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                        placeholder="A. Property Owner LLC&#10;B. Management Company LLC"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">List each entity on a separate line</p>
+                    </div>
+                  )}
                 </div>
-                {formData.requires_additional_insured && (
-                  <div className="md:col-span-2">
+              </div>
+
+              {/* Certificate Holder */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">Certificate Holder</h4>
+                <div className="space-y-3">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Additional Insured Name
+                      Certificate Holder Name
                     </label>
                     <input
                       type="text"
-                      value={formData.additional_insured_text}
-                      onChange={(e) => setFormData({ ...formData, additional_insured_text: e.target.value })}
+                      value={formData.certificate_holder_name}
+                      onChange={(e) => setFormData({ ...formData, certificate_holder_name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                      placeholder="Property Owner LLC"
                     />
                   </div>
-                )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Certificate Holder Address
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.certificate_holder_address}
+                      onChange={(e) => setFormData({ ...formData, certificate_holder_address: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Other Requirements */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">Other Requirements</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-4">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Cancellation Notice
+                    </label>
+                    <select
+                      value={formData.cancellation_notice_days}
+                      onChange={(e) => setFormData({ ...formData, cancellation_notice_days: parseInt(e.target.value) })}
+                      className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-sm"
+                    >
+                      <option value={10}>10 days</option>
+                      <option value={30}>30 days</option>
+                      <option value={60}>60 days</option>
+                    </select>
+                    <span className="text-sm text-gray-500">minimum notice required</span>
+                  </div>
+                  <div className="flex flex-wrap gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.requires_declarations_page}
+                        onChange={(e) => setFormData({ ...formData, requires_declarations_page: e.target.checked })}
+                        className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                      />
+                      <span className="text-sm text-gray-700">Require Declarations Page</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.requires_endorsement_pages}
+                        onChange={(e) => setFormData({ ...formData, requires_endorsement_pages: e.target.checked })}
+                        className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                      />
+                      <span className="text-sm text-gray-700">Require Endorsement Pages</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
