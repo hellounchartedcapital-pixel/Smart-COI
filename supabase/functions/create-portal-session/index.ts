@@ -1,11 +1,29 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
-import Stripe from 'https://esm.sh/stripe@14.14.0?target=deno';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Helper function to make Stripe API calls using fetch
+async function stripeRequest(endpoint: string, method: string, body?: any) {
+  const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
+  const response = await fetch(`https://api.stripe.com/v1${endpoint}`, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${stripeKey}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: body ? new URLSearchParams(body).toString() : undefined,
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Stripe API error');
+  }
+  return data;
+}
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -18,11 +36,6 @@ serve(async (req) => {
     if (!stripeKey) {
       throw new Error('Stripe secret key not configured');
     }
-
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: '2023-10-16',
-      httpClient: Stripe.createFetchHttpClient(),
-    });
 
     // Get the authorization header
     const authHeader = req.headers.get('authorization');
@@ -54,10 +67,12 @@ serve(async (req) => {
       throw new Error('No subscription found. Please subscribe to a plan first.');
     }
 
-    // Create portal session
-    const session = await stripe.billingPortal.sessions.create({
+    const origin = req.headers.get('origin') || 'https://your-app.com';
+
+    // Create portal session using fetch
+    const session = await stripeRequest('/billing_portal/sessions', 'POST', {
       customer: subscription.stripe_customer_id,
-      return_url: `${req.headers.get('origin')}/dashboard`,
+      return_url: `${origin}/dashboard`,
     });
 
     return new Response(
