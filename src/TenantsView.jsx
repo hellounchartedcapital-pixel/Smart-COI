@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Users, Plus, Search, Filter, CheckCircle, XCircle, AlertCircle, Clock,
-  Mail, Phone, Calendar, Building2, Home, Edit2, Trash2, X, Send,
-  FileText, ExternalLink, RefreshCw, ChevronDown, DollarSign, Shield
+  Users, Plus, Search, CheckCircle, XCircle, AlertCircle, Clock,
+  Mail, Phone, Calendar, Building2, Edit2, Trash2, X, Send,
+  ExternalLink, Shield
 } from 'lucide-react';
 import { useTenants } from './useTenants';
 import { supabase } from './supabaseClient';
@@ -374,7 +374,7 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties, units }) {
 
 // Main TenantsView component
 export function TenantsView({ properties }) {
-  const { tenants, loading, stats, addTenant, updateTenant, deleteTenant, regenerateUploadToken, refreshTenants } = useTenants();
+  const { tenants, loading, stats, addTenant, updateTenant, deleteTenant } = useTenants();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { X, Plus, Home, Edit2, Trash2, Save, Building2 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
@@ -20,13 +20,7 @@ export function UnitsManager({ isOpen, onClose, properties }) {
     notes: '',
   });
 
-  useEffect(() => {
-    if (isOpen) {
-      loadUnits();
-    }
-  }, [isOpen, selectedProperty]);
-
-  const loadUnits = async () => {
+  const loadUnits = useCallback(async () => {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -50,7 +44,13 @@ export function UnitsManager({ isOpen, onClose, properties }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedProperty]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadUnits();
+    }
+  }, [isOpen, loadUnits]);
 
   const resetForm = () => {
     setFormData({
