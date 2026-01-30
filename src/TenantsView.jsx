@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Users, Plus, Search, CheckCircle, XCircle, AlertCircle, Clock,
   Mail, Phone, Calendar, Building2, Edit2, Trash2, X, Send,
-  ExternalLink, Shield
+  ExternalLink, Shield, Upload
 } from 'lucide-react';
 import { useTenants } from './useTenants';
 import { supabase } from './supabaseClient';
+import { TenantUploadModal } from './TenantUploadModal';
 
 // Status badge component
 function StatusBadge({ status }) {
@@ -549,10 +550,11 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties, units }) {
 
 // Main TenantsView component
 export function TenantsView({ properties }) {
-  const { tenants, loading, stats, addTenant, updateTenant, deleteTenant } = useTenants();
+  const { tenants, loading, stats, addTenant, updateTenant, deleteTenant, refreshTenants } = useTenants();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [editingTenant, setEditingTenant] = useState(null);
   const [units, setUnits] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState(null);
@@ -888,6 +890,13 @@ export function TenantsView({ properties }) {
             <option value="pending">Pending</option>
           </select>
           <button
+            onClick={() => setShowUploadModal(true)}
+            className="px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 font-medium flex items-center gap-2"
+          >
+            <Upload size={20} />
+            <span className="hidden sm:inline">Upload COI</span>
+          </button>
+          <button
             onClick={() => { setEditingTenant(null); setShowModal(true); }}
             className="px-4 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 font-medium flex items-center gap-2"
           >
@@ -1034,6 +1043,17 @@ export function TenantsView({ properties }) {
         tenant={editingTenant}
         properties={properties}
         units={units}
+      />
+
+      {/* Upload COI Modal */}
+      <TenantUploadModal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        onUploadComplete={() => {
+          refreshTenants();
+          setShowUploadModal(false);
+        }}
+        properties={properties}
       />
 
       {/* Delete Confirmation */}
