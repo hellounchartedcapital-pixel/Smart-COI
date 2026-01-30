@@ -1,13 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
-import Stripe from 'https://esm.sh/stripe@14.14.0?target=deno';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Price IDs from Stripe Dashboard - you'll need to create these products/prices in Stripe
+// Price IDs from Stripe Dashboard
 const PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
   starter: {
     monthly: Deno.env.get('STRIPE_STARTER_MONTHLY_PRICE_ID') || '',
@@ -23,12 +22,24 @@ const PRICE_IDS: Record<string, { monthly: string; annual: string }> = {
   },
 };
 
-const PLAN_LIMITS: Record<string, number> = {
-  free: 10,
-  starter: 25,
-  professional: 100,
-  enterprise: 500,
-};
+// Helper function to make Stripe API calls using fetch
+async function stripeRequest(endpoint: string, method: string, body?: any) {
+  const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
+  const response = await fetch(`https://api.stripe.com/v1${endpoint}`, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${stripeKey}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: body ? new URLSearchParams(body).toString() : undefined,
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error?.message || 'Stripe API error');
+  }
+  return data;
+}
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -41,11 +52,6 @@ serve(async (req) => {
     if (!stripeKey) {
       throw new Error('Stripe secret key not configured');
     }
-
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: '2023-10-16',
-      httpClient: Stripe.createFetchHttpClient(),
-    });
 
     // Get the authorization header
     const authHeader = req.headers.get('authorization');
@@ -88,35 +94,27 @@ serve(async (req) => {
 
     // Create a new Stripe customer if needed
     if (!customerId) {
-      const customer = await stripe.customers.create({
+      const customer = await stripeRequest('/customers', 'POST', {
         email: user.email,
-        metadata: {
-          supabase_user_id: user.id,
-        },
+        'metadata[supabase_user_id]': user.id,
       });
       customerId = customer.id;
     }
 
+    const origin = req.headers.get('origin') || 'https://your-app.com';
+
     // Create checkout session
-    const session = await stripe.checkout.sessions.create({
+    const session = await stripeRequest('/checkout/sessions', 'POST', {
       customer: customerId,
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
+      'payment_method_types[0]': 'card',
+      'line_items[0][price]': priceId,
+      'line_items[0][quantity]': '1',
       mode: 'subscription',
-      success_url: `${req.headers.get('origin')}/dashboard?checkout=success`,
-      cancel_url: `${req.headers.get('origin')}/pricing?checkout=cancelled`,
-      subscription_data: {
-        metadata: {
-          supabase_user_id: user.id,
-          plan: plan,
-        },
-      },
-      allow_promotion_codes: true,
+      success_url: `${origin}/dashboard?checkout=success`,
+      cancel_url: `${origin}/pricing?checkout=cancelled`,
+      'subscription_data[metadata][supabase_user_id]': user.id,
+      'subscription_data[metadata][plan]': plan,
+      allow_promotion_codes: 'true',
       billing_address_collection: 'required',
     });
 
