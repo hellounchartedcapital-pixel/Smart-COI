@@ -493,17 +493,17 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
     {
       icon: Bell,
       title: "Automated Follow-Ups",
-      description: "Our system automatically contacts vendors when certificates are expired or non-compliant, so you don't have to chase them down.",
+      description: "Our system automatically contacts vendors and tenants when certificates are expired or non-compliant, so you don't have to chase them down.",
     },
     {
       icon: CheckCircle,
       title: "Compliance Tracking",
-      description: "See at a glance which vendors are compliant, expiring soon, or need immediate attention. Vendors receive clear guidance on what's missing.",
+      description: "See at a glance which vendors and tenants are compliant, expiring soon, or need immediate attention.",
     },
     {
       icon: FolderOpen,
-      title: "Vendor Management",
-      description: "Organize all your vendors and their insurance documents in one central, searchable database.",
+      title: "Vendor & Tenant Management",
+      description: "Organize all your vendors and tenants with their insurance documents in one central, searchable database.",
     },
     {
       icon: Cloud,
@@ -513,7 +513,7 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
     {
       icon: Users,
       title: "Smart Coverage Analysis",
-      description: "Help vendors understand exactly where their insurance falls short of your requirements with detailed compliance reports.",
+      description: "Help vendors and tenants understand exactly where their insurance falls short of your requirements.",
     },
   ];
 
@@ -541,7 +541,7 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
       price: "Free",
       period: "forever",
       description: "Perfect for getting started",
-      vendors: "Up to 10 vendors",
+      vendors: "Up to 10 vendors & tenants",
       features: [
         "AI-powered COI extraction",
         "Compliance dashboard",
@@ -556,7 +556,7 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
       price: "$79",
       period: "/month",
       description: "For small property managers",
-      vendors: "Up to 25 vendors",
+      vendors: "Up to 25 vendors & tenants",
       features: [
         "Everything in Free",
         "CSV export",
@@ -570,7 +570,7 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
       price: "$149",
       period: "/month",
       description: "For growing companies",
-      vendors: "Up to 100 vendors",
+      vendors: "Up to 100 vendors & tenants",
       features: [
         "Everything in Starter",
         "Analytics & reports",
@@ -584,7 +584,7 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
       price: "$299",
       period: "/month",
       description: "For large-scale operations",
-      vendors: "Up to 500 vendors",
+      vendors: "Up to 500 vendors & tenants",
       features: [
         "Everything in Professional",
         "API access",
@@ -601,12 +601,12 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
       answer: "Simply upload a PDF, JPG, or PNG of any Certificate of Insurance. Our AI instantly reads and extracts all policy information including coverage limits, expiration dates, and named insureds with 99% accuracy.",
     },
     {
-      question: "What happens when a vendor is non-compliant?",
-      answer: "SmartCOI automatically identifies compliance gaps and can send follow-up emails to vendors explaining exactly what coverage is missing or insufficient. Vendors receive clear, actionable guidance.",
+      question: "What happens when a vendor or tenant is non-compliant?",
+      answer: "SmartCOI automatically identifies compliance gaps and can send follow-up emails to vendors and tenants explaining exactly what coverage is missing or insufficient. They receive clear, actionable guidance.",
     },
     {
       question: "Is there really a free plan?",
-      answer: "Yes! Our Free plan is free forever and includes up to 10 vendors with full AI extraction capabilities. No credit card required to get started.",
+      answer: "Yes! Our Free plan is free forever and includes up to 10 vendors & tenants with full AI extraction capabilities. No credit card required to get started.",
     },
     {
       question: "How do expiration alerts work?",
@@ -731,8 +731,9 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
               {/* Subheadline */}
               <p className="text-lg sm:text-xl text-gray-600 leading-relaxed mb-8 animate-fade-in-up animation-delay-200">
                 SmartCOI uses artificial intelligence to extract insurance data from
-                certificates in seconds. Automatically follow up with non-compliant vendors
-                and help them understand exactly what coverage they need.
+                certificates in seconds. Track compliance for vendors and tenants,
+                get automatic expiration alerts, and help them understand exactly
+                what coverage they need.
               </p>
 
               {/* CTA Buttons */}
