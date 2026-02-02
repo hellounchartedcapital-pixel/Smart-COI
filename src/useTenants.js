@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from './supabaseClient';
 import logger from './logger';
 
@@ -153,15 +153,15 @@ export function useTenants(propertyId = null) {
     }
   }, []);
 
-  // Get compliance stats
-  const stats = {
+  // Memoize compliance stats to prevent recalculation on every render
+  const stats = useMemo(() => ({
     total: tenants.length,
     compliant: tenants.filter(t => t.insurance_status === 'compliant').length,
     nonCompliant: tenants.filter(t => t.insurance_status === 'non-compliant').length,
     expiring: tenants.filter(t => t.insurance_status === 'expiring').length,
     expired: tenants.filter(t => t.insurance_status === 'expired').length,
     pending: tenants.filter(t => t.insurance_status === 'pending').length,
-  };
+  }), [tenants]);
 
   return {
     tenants,
