@@ -30,32 +30,6 @@ if (process.env.REACT_APP_SENTRY_DSN) {
   });
 }
 
-// TEMPORARY: Sentry test button - REMOVE AFTER VERIFICATION
-function SentryTestButton() {
-  return (
-    <button
-      onClick={() => {
-        throw new Error('Test error from SmartCOI - Sentry is working!');
-      }}
-      style={{
-        position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        padding: '10px 20px',
-        background: '#dc2626',
-        color: 'white',
-        border: 'none',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        zIndex: 9999,
-        fontSize: '14px',
-      }}
-    >
-      Test Sentry Error
-    </button>
-  );
-}
-
 function AppContent() {
   const { user, loading, signOut } = useAuth()
   const [showSignup, setShowSignup] = useState(false)
@@ -186,8 +160,6 @@ export default function App() {
       <AuthProvider>
         <AppContent />
       </AuthProvider>
-      {/* TEMPORARY: Remove after Sentry verification */}
-      {process.env.REACT_APP_SENTRY_DSN && <SentryTestButton />}
     </ErrorBoundary>
   )
 }
