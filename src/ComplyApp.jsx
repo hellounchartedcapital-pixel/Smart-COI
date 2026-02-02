@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
-import { Upload, CheckCircle, XCircle, AlertCircle, FileText, Calendar, X, Search, Download, Settings as SettingsIcon, Eye, Bell, FileDown, Phone, Mail, User, Send, Clock, History, FileCheck, Sparkles, Building2, ChevronDown, CreditCard, Users, Home, LayoutDashboard } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, AlertCircle, FileText, Calendar, X, Search, Download, Settings as SettingsIcon, Eye, Bell, FileDown, Phone, Mail, User, Send, Clock, History, FileCheck, Building2, ChevronDown, CreditCard, Users, Home, LayoutDashboard } from 'lucide-react';
 import { useVendors } from './useVendors';
 import { useTenants } from './useTenants';
 import { useSubscription } from './useSubscription';
-import { UploadModal } from './UploadModal';
 import { SmartUploadModal } from './SmartUploadModal';
 import { Settings } from './Settings';
 import { NotificationSettings } from './NotificationSettings';
 import { OnboardingTutorial } from './OnboardingTutorial';
 import { AlertModal, useAlertModal } from './AlertModal';
 import { supabase } from './supabaseClient';
-import { extractCOIFromPDF } from './extractCOI';
 import { exportPDFReport } from './exportPDFReport';
 import { Logo } from './Logo';
 import Properties from './Properties';
@@ -32,7 +30,7 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
   const [showPropertyDropdown, setShowPropertyDropdown] = useState(false);
 
   // Use database hook instead of local state - filter by selected property
-  const { vendors: dbVendors, loading, loadingMore, error, hasMore, totalCount, addVendor, updateVendor, deleteVendor, loadMore, refreshVendors } = useVendors(selectedProperty?.id);
+  const { vendors: dbVendors, loading, loadingMore, error, hasMore, totalCount, updateVendor, deleteVendor, loadMore, refreshVendors } = useVendors(selectedProperty?.id);
 
   // Tenants hook for dashboard
   const { tenants: dbTenants, refreshTenants } = useTenants();
@@ -69,7 +67,6 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
   const [sortBy, setSortBy] = useState('name');
   const [editingVendor, setEditingVendor] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -80,10 +77,8 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
   const [vendorDetailsTab, setVendorDetailsTab] = useState('details');
   const [vendorActivity, setVendorActivity] = useState([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
-  const [uploadingCOI, setUploadingCOI] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState('');
   const { alertModal, showAlert, hideAlert } = useAlertModal();
-  const { subscription, isFreePlan, canAddVendor, getRemainingVendors } = useSubscription();
+  const { subscription, isFreePlan } = useSubscription();
 
   // Load properties
   const loadProperties = async () => {
@@ -606,135 +601,6 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
     }
   };
 
-  // Handle file upload with AI extraction
-  const handleFileUpload = async (file, progressCallback, vendorEmail = null) => {
-    try {
-      // Check if a property is selected - require property for compliance checking
-      if (!selectedProperty && properties.length > 0) {
-        setUploadingCOI(false);
-        showAlert({
-          type: 'warning',
-          title: 'Select a Property',
-          message: 'Please select a property before uploading a COI.',
-          details: 'Each property has its own insurance requirements. Select a property from the dropdown in the header.'
-        });
-        return;
-      }
-
-      // If no properties exist, prompt to create one
-      if (properties.length === 0) {
-        setUploadingCOI(false);
-        showAlert({
-          type: 'warning',
-          title: 'Create a Property First',
-          message: 'You need to create a property before uploading COIs.',
-          details: 'Click "Add Property" in the header to create your first property with insurance requirements.'
-        });
-        setShowProperties(true);
-        return;
-      }
-
-      // Show full-screen loading overlay
-      setUploadingCOI(true);
-      setUploadStatus('Reading PDF...');
-      setShowUploadModal(false); // Close the upload modal
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      // Use property-specific requirements
-      const requirementsToUse = {
-        general_liability: selectedProperty.general_liability || 1000000,
-        gl_aggregate: selectedProperty.gl_aggregate || 2000000,
-        auto_liability: selectedProperty.auto_liability || 1000000,
-        auto_liability_required: selectedProperty.auto_liability_required || false,
-        workers_comp: selectedProperty.workers_comp_required ? 'Statutory' : 'Not Required',
-        employers_liability: selectedProperty.employers_liability || 500000,
-        company_name: selectedProperty.company_name || userRequirements?.company_name || '',
-        require_additional_insured: selectedProperty.require_additional_insured !== false,
-        require_waiver_of_subrogation: selectedProperty.require_waiver_of_subrogation || false,
-        custom_coverages: selectedProperty.custom_coverages || []
-      };
-
-      // Step 1: Extract data using AI
-      setUploadStatus('AI analyzing certificate...');
-      if (progressCallback) progressCallback('AI extracting data...');
-      console.log('Extracting COI data with AI...');
-      const extractionResult = await extractCOIFromPDF(file, requirementsToUse);
-
-      if (!extractionResult.success) {
-        throw new Error(extractionResult.error);
-      }
-
-      const vendorData = extractionResult.data;
-      console.log('Extracted vendor data:', vendorData);
-
-      // Step 2: Upload file to Storage
-      setUploadStatus('Uploading document...');
-      if (progressCallback) progressCallback('Uploading to cloud...');
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('coi-documents')
-        .upload(fileName, file);
-
-      if (storageError) throw storageError;
-
-      // Generate upload token for vendor portal (valid for 30 days)
-      const uploadToken = crypto.randomUUID();
-      const tokenExpiresAt = new Date();
-      tokenExpiresAt.setDate(tokenExpiresAt.getDate() + 30);
-
-      // Step 3: Create vendor in database
-      setUploadStatus('Checking compliance...');
-      if (progressCallback) progressCallback('Saving vendor...');
-      const result = await addVendor({
-        ...vendorData,
-        propertyId: selectedProperty?.id || null, // Assign to selected property
-        contactEmail: vendorEmail, // Add vendor email for automated follow-ups
-        rawData: {
-          ...vendorData.rawData,
-          documentPath: fileName,
-          documentUrl: storageData.path,
-          uploadToken: uploadToken, // Store upload token for vendor portal
-          uploadTokenExpiresAt: tokenExpiresAt.toISOString()
-        }
-      });
-
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      // Step 4: Refresh vendor list
-      setUploadStatus('Finalizing...');
-      if (progressCallback) progressCallback('Complete!');
-      await refreshVendors();
-
-      // Hide overlay
-      setUploadingCOI(false);
-      setUploadStatus('');
-
-      // Success message with email info
-      const emailNote = vendorEmail
-        ? `\nContact Email: ${vendorEmail}\nAutomatic follow-ups enabled.`
-        : '\nTip: Add a contact email to enable automatic follow-ups.';
-
-      showAlert({
-        type: 'success',
-        title: 'COI Uploaded Successfully',
-        message: `Vendor "${vendorData.name}" has been added to your dashboard.`,
-        details: `Status: ${vendorData.status.toUpperCase()}\nExpiration Date: ${vendorData.expirationDate}${emailNote}`
-      });
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      setUploadingCOI(false);
-      setUploadStatus('');
-      throw new Error(error.message || 'Failed to upload and process COI');
-    }
-  };
-
   // Export to CSV
   const exportToCSV = () => {
     const headers = ['Company Name', 'DBA', 'Status', 'Expiration Date', 'Days Overdue', 'General Liability', 'Auto Liability', 'Workers Comp', 'Employers Liability', 'Issues'];
@@ -915,7 +781,7 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
                 <Bell size={18} />
               </button>
               <button
-                onClick={() => setShowUploadModal(true)}
+                onClick={() => setShowSmartUpload(true)}
                 className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 text-white rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 hover:-translate-y-0.5 transition-all duration-200 flex items-center space-x-2 font-semibold"
                 data-onboarding="upload-button"
               >
@@ -1009,170 +875,6 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
       {/* Vendors Tab Content */}
       {activeTab === 'vendors' && (
         <>
-        {/* Overview Section - Pie Chart & Upcoming Expirations */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Pie Chart Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Compliance Overview</h3>
-            <div className="flex items-center justify-center">
-              <div className="relative">
-                {/* SVG Pie Chart */}
-                <svg width="180" height="180" viewBox="0 0 180 180" className="transform -rotate-90">
-                  {stats.total === 0 ? (
-                    <circle cx="90" cy="90" r="70" fill="none" stroke="#e5e7eb" strokeWidth="24" />
-                  ) : (
-                    <>
-                      {/* Compliant slice (green) */}
-                      <circle
-                        cx="90" cy="90" r="70"
-                        fill="none"
-                        stroke="#10b981"
-                        strokeWidth="24"
-                        strokeDasharray={`${(stats.compliant / stats.total) * 439.82} 439.82`}
-                        strokeDashoffset="0"
-                      />
-                      {/* Non-compliant slice (orange) */}
-                      <circle
-                        cx="90" cy="90" r="70"
-                        fill="none"
-                        stroke="#f97316"
-                        strokeWidth="24"
-                        strokeDasharray={`${(stats.nonCompliant / stats.total) * 439.82} 439.82`}
-                        strokeDashoffset={`${-(stats.compliant / stats.total) * 439.82}`}
-                      />
-                      {/* Expired slice (red) */}
-                      <circle
-                        cx="90" cy="90" r="70"
-                        fill="none"
-                        stroke="#ef4444"
-                        strokeWidth="24"
-                        strokeDasharray={`${(stats.expired / stats.total) * 439.82} 439.82`}
-                        strokeDashoffset={`${-((stats.compliant + stats.nonCompliant) / stats.total) * 439.82}`}
-                      />
-                      {/* Expiring slice (amber) */}
-                      <circle
-                        cx="90" cy="90" r="70"
-                        fill="none"
-                        stroke="#f59e0b"
-                        strokeWidth="24"
-                        strokeDasharray={`${(stats.expiring / stats.total) * 439.82} 439.82`}
-                        strokeDashoffset={`${-((stats.compliant + stats.nonCompliant + stats.expired) / stats.total) * 439.82}`}
-                      />
-                    </>
-                  )}
-                </svg>
-                {/* Center text - Compliance Percentage */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  {stats.total === 0 ? (
-                    <>
-                      <span className="text-3xl font-bold text-gray-400">0%</span>
-                      <span className="text-xs text-gray-500 font-medium">Compliant</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className={`text-3xl font-bold ${
-                        Math.round((stats.compliant / stats.total) * 100) >= 80
-                          ? 'text-emerald-600'
-                          : Math.round((stats.compliant / stats.total) * 100) >= 50
-                            ? 'text-amber-500'
-                            : 'text-red-500'
-                      }`}>
-                        {Math.round((stats.compliant / stats.total) * 100)}%
-                      </span>
-                      <span className="text-xs text-gray-500 font-medium">Compliant</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div className="ml-8 space-y-3">
-                <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 rounded-full bg-emerald-500"></div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{stats.compliant} Compliant</p>
-                    <p className="text-xs text-gray-500">{stats.total > 0 ? Math.round((stats.compliant / stats.total) * 100) : 0}%</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 rounded-full bg-orange-500"></div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{stats.nonCompliant} Non-Compliant</p>
-                    <p className="text-xs text-gray-500">{stats.total > 0 ? Math.round((stats.nonCompliant / stats.total) * 100) : 0}%</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 rounded-full bg-red-500"></div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{stats.expired} Expired</p>
-                    <p className="text-xs text-gray-500">{stats.total > 0 ? Math.round((stats.expired / stats.total) * 100) : 0}%</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="w-4 h-4 rounded-full bg-amber-500"></div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{stats.expiring} Expiring Soon</p>
-                    <p className="text-xs text-gray-500">{stats.total > 0 ? Math.round((stats.expiring / stats.total) * 100) : 0}%</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Upcoming Expirations Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Upcoming Expirations</h3>
-              <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-semibold">Next 30 Days</span>
-            </div>
-            <div className="space-y-3 max-h-[220px] overflow-y-auto">
-              {vendors
-                .filter(v => {
-                  const today = new Date();
-                  const expDate = new Date(v.expirationDate);
-                  const daysUntil = Math.floor((expDate - today) / (1000 * 60 * 60 * 24));
-                  return daysUntil >= 0 && daysUntil <= 30;
-                })
-                .sort((a, b) => new Date(a.expirationDate) - new Date(b.expirationDate))
-                .slice(0, 5)
-                .map((vendor) => {
-                  const today = new Date();
-                  const expDate = new Date(vendor.expirationDate);
-                  const daysUntil = Math.floor((expDate - today) / (1000 * 60 * 60 * 24));
-                  return (
-                    <div key={vendor.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-2 h-2 rounded-full ${daysUntil <= 7 ? 'bg-red-500' : daysUntil <= 14 ? 'bg-amber-500' : 'bg-yellow-400'}`}></div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900 truncate max-w-[180px]">{vendor.name}</p>
-                          <p className="text-xs text-gray-500">{formatDate(vendor.expirationDate)}</p>
-                        </div>
-                      </div>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
-                        daysUntil <= 7 ? 'bg-red-100 text-red-700' :
-                        daysUntil <= 14 ? 'bg-amber-100 text-amber-700' :
-                        'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {daysUntil === 0 ? 'Today' : daysUntil === 1 ? '1 day' : `${daysUntil} days`}
-                      </span>
-                    </div>
-                  );
-                })}
-              {vendors.filter(v => {
-                const today = new Date();
-                const expDate = new Date(v.expirationDate);
-                const daysUntil = Math.floor((expDate - today) / (1000 * 60 * 60 * 24));
-                return daysUntil >= 0 && daysUntil <= 30;
-              }).length === 0 && (
-                <div className="text-center py-8">
-                  <CheckCircle className="mx-auto text-emerald-400 mb-2" size={32} />
-                  <p className="text-sm text-gray-500 font-medium">No expirations in the next 30 days</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <button
@@ -2043,19 +1745,6 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
       />
 
       {/* Upload Modal */}
-      <UploadModal
-        isOpen={showUploadModal}
-        onClose={() => setShowUploadModal(false)}
-        onUploadComplete={handleFileUpload}
-        canAddVendor={canAddVendor(totalCount)}
-        remainingVendors={getRemainingVendors(totalCount)}
-        onUpgrade={onShowPricing}
-        selectedProperty={selectedProperty}
-        properties={properties}
-        onPropertyChange={setSelectedProperty}
-      />
-
-      {/* Smart Upload Modal - for Dashboard */}
       <SmartUploadModal
         isOpen={showSmartUpload}
         onClose={() => setShowSmartUpload(false)}
@@ -2101,34 +1790,6 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
           onComplete={handleOnboardingComplete}
           onSkip={handleOnboardingSkip}
         />
-      )}
-
-      {/* COI Upload Loading Overlay */}
-      {uploadingCOI && (
-        <div className="fixed inset-0 bg-gradient-to-br from-emerald-900/95 via-gray-900/95 to-teal-900/95 flex items-center justify-center z-[60]">
-          <div className="text-center max-w-md px-6">
-            <div className="relative mb-8">
-              <div className="absolute inset-0 w-24 h-24 mx-auto bg-emerald-500/30 rounded-full animate-ping"></div>
-              <div className="relative w-24 h-24 mx-auto bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-emerald-500/30">
-                <Sparkles className="w-12 h-12 text-white animate-pulse" />
-              </div>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
-              Processing COI
-            </h2>
-            <p className="text-emerald-200 text-lg mb-6">
-              {uploadStatus || 'Analyzing your certificate...'}
-            </p>
-            <div className="flex items-center justify-center space-x-2 mb-6">
-              <div className="w-3 h-3 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-              <div className="w-3 h-3 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              <div className="w-3 h-3 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-            </div>
-            <p className="text-emerald-300/70 text-sm">
-              Our AI is extracting coverage details and checking compliance...
-            </p>
-          </div>
-        </div>
       )}
 
       {/* Alert Modal */}
