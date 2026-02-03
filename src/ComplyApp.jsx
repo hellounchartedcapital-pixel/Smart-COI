@@ -25,6 +25,9 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'vendors', or 'tenants'
   const [showSmartUpload, setShowSmartUpload] = useState(false);
 
+  // User settings (must be declared before useVendors to pass expiring threshold)
+  const [userRequirements, setUserRequirements] = useState(null);
+
   // Properties state
   const [properties, setProperties] = useState([]);
   const [selectedProperty, setSelectedProperty] = useState(null);
@@ -32,7 +35,10 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
   const [loadingProperties, setLoadingProperties] = useState(true);
 
   // Use database hook instead of local state - filter by selected property
-  const { vendors: dbVendors, loading, loadingMore, error, hasMore, totalCount, updateVendor, deleteVendor, loadMore, refreshVendors } = useVendors(selectedProperty?.id);
+  // Pass expiring threshold from user settings (will refetch when settings load)
+  const { vendors: dbVendors, loading, loadingMore, error, hasMore, totalCount, updateVendor, deleteVendor, loadMore, refreshVendors } = useVendors(selectedProperty?.id, {
+    expiringThresholdDays: userRequirements?.expiring_threshold_days || 30
+  });
 
   // Tenants hook for dashboard
   const { tenants: dbTenants, refreshTenants } = useTenants();
@@ -78,7 +84,6 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
-  const [userRequirements, setUserRequirements] = useState(null);
   const [requestCOIVendor, setRequestCOIVendor] = useState(null);
   const [requestCOIEmail, setRequestCOIEmail] = useState('');
   const [vendorDetailsTab, setVendorDetailsTab] = useState('details');
