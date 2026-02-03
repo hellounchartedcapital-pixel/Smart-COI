@@ -237,6 +237,7 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
   };
 
   // Update selectedVendor when vendors refresh to prevent stale data
+  // We intentionally omit selectedVendor from deps to avoid infinite loop
   React.useEffect(() => {
     if (selectedVendor && vendors.length > 0) {
       const updatedVendor = vendors.find(v => v.id === selectedVendor.id);
@@ -248,6 +249,7 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
         setSelectedVendor(null);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vendors]); // Run when vendors array changes
 
   const handleOnboardingSkip = async () => {
@@ -1087,6 +1089,8 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
           onSelectTenant={(tenant) => {
             setActiveTab('tenants');
           }}
+          onUploadCOI={() => setShowSmartUpload(true)}
+          onAddTenant={() => setActiveTab('tenants')}
         />
       )}
 
