@@ -171,7 +171,8 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
           custom_coverages: customCoverages,
           company_name: data.company_name || '',
           require_additional_insured: data.require_additional_insured !== false,
-          require_waiver_of_subrogation: data.require_waiver_of_subrogation || false
+          require_waiver_of_subrogation: data.require_waiver_of_subrogation || false,
+          upload_token_expiry_days: data.upload_token_expiry_days || 30
         });
       }
     } catch (err) {
@@ -597,7 +598,8 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
       // Generate upload token if vendor doesn't have one or if it's expired
       let uploadToken = requestCOIVendor.rawData?.uploadToken;
       const tokenExpiresAt = new Date();
-      tokenExpiresAt.setDate(tokenExpiresAt.getDate() + 30); // Token valid for 30 days
+      const tokenExpiryDays = userRequirements?.upload_token_expiry_days || 30;
+      tokenExpiresAt.setDate(tokenExpiresAt.getDate() + tokenExpiryDays);
 
       if (!uploadToken) {
         uploadToken = crypto.randomUUID();
@@ -715,7 +717,8 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
           // Generate/refresh upload token
           const uploadToken = crypto.randomUUID();
           const tokenExpiresAt = new Date();
-          tokenExpiresAt.setDate(tokenExpiresAt.getDate() + 30);
+          const tokenExpiryDays = userRequirements?.upload_token_expiry_days || 30;
+          tokenExpiresAt.setDate(tokenExpiresAt.getDate() + tokenExpiryDays);
 
           await supabase
             .from('vendors')
