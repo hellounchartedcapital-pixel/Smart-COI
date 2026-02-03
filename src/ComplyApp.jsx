@@ -1835,7 +1835,15 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
 
       {/* Vendor Details Modal - Two Column Layout */}
       {selectedVendor && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 lg:p-6">
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4 lg:p-6"
+          onClick={(e) => {
+            // Close when clicking the backdrop (not the modal content)
+            if (e.target === e.currentTarget) {
+              setSelectedVendor(null);
+            }
+          }}
+        >
           <div className="bg-white rounded-2xl w-full max-w-[95vw] lg:max-w-[85vw] xl:max-w-7xl h-[95vh] shadow-2xl flex flex-col overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
