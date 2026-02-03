@@ -76,6 +76,74 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties }) {
   const [saving, setSaving] = useState(false);
   // Progressive disclosure - collapse advanced insurance requirements by default for new tenants
   const [showInsuranceRequirements, setShowInsuranceRequirements] = useState(false);
+  // Lease extraction state
+  const [extractingFromLease, setExtractingFromLease] = useState(false);
+  const [extractionError, setExtractionError] = useState(null);
+  const leaseInputRef = React.useRef(null);
+
+  // Handle lease PDF upload and requirements extraction
+  const handleExtractFromLease = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset file input
+    if (leaseInputRef.current) {
+      leaseInputRef.current.value = '';
+    }
+
+    // Validate file type
+    if (!file.type.includes('pdf')) {
+      setExtractionError('Please select a PDF file');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setExtractionError('File too large. Maximum size is 10MB.');
+      return;
+    }
+
+    setExtractingFromLease(true);
+    setExtractionError(null);
+
+    try {
+      // Convert to base64
+      const arrayBuffer = await file.arrayBuffer();
+      const base64Data = btoa(
+        new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+
+      // Call edge function
+      const { data: result, error } = await supabase.functions.invoke('extract-requirements', {
+        body: { pdfBase64: base64Data }
+      });
+
+      if (error) throw error;
+      if (!result?.success) throw new Error(result?.error || 'Extraction failed');
+
+      const reqs = result.data?.requirements;
+      if (reqs) {
+        // Auto-populate form fields from extracted requirements
+        setFormData(prev => ({
+          ...prev,
+          required_liability_min: reqs.general_liability?.amount || prev.required_liability_min,
+          required_auto_liability_min: reqs.auto_liability?.amount || prev.required_auto_liability_min,
+          required_workers_comp: reqs.workers_comp?.required || prev.required_workers_comp,
+          required_employers_liability_min: reqs.employers_liability?.amount || prev.required_employers_liability_min,
+          requires_additional_insured: reqs.special_requirements?.additional_insured ?? prev.requires_additional_insured,
+          cancellation_notice_days: reqs.special_requirements?.notice_of_cancellation_days || prev.cancellation_notice_days,
+        }));
+
+        // Expand the requirements section to show extracted values
+        setShowInsuranceRequirements(true);
+      }
+    } catch (err) {
+      logger.error('Failed to extract requirements from lease', err);
+      setExtractionError(err.message || 'Failed to extract requirements');
+    } finally {
+      setExtractingFromLease(false);
+    }
+  };
 
   useEffect(() => {
     if (tenant) {
@@ -293,6 +361,54 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties }) {
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Extract from Lease Feature */}
+            <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                    <FileText size={16} className="text-purple-600" />
+                    Extract Requirements from Lease
+                  </h4>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Upload a lease PDF and we'll auto-extract insurance requirements
+                  </p>
+                </div>
+                <div>
+                  <input
+                    ref={leaseInputRef}
+                    type="file"
+                    accept=".pdf,application/pdf"
+                    onChange={handleExtractFromLease}
+                    className="hidden"
+                    id="lease-upload"
+                  />
+                  <label
+                    htmlFor="lease-upload"
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium cursor-pointer transition-colors ${
+                      extractingFromLease
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                    }`}
+                  >
+                    {extractingFromLease ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Extracting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={16} />
+                        <span>Upload Lease</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+              </div>
+              {extractionError && (
+                <p className="mt-2 text-sm text-red-600">{extractionError}</p>
+              )}
             </div>
 
             {/* Insurance Requirements - Collapsible */}
