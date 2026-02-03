@@ -20,11 +20,22 @@ export function parseLocalDate(dateString) {
 
 /**
  * Format a date for display (e.g., "Jan 15, 2024")
+ * Handles YYYY-MM-DD strings without timezone shift
  */
 export function formatDate(date) {
   if (!date) return 'N/A';
-  const d = date instanceof Date ? date : new Date(date);
-  if (isNaN(d.getTime())) return 'N/A';
+
+  let d;
+  if (date instanceof Date) {
+    d = date;
+  } else if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(date)) {
+    // Parse YYYY-MM-DD format without timezone shift
+    d = parseLocalDate(date.substring(0, 10));
+  } else {
+    d = new Date(date);
+  }
+
+  if (!d || isNaN(d.getTime())) return 'N/A';
   return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
