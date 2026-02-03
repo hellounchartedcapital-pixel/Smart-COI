@@ -172,7 +172,8 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
           company_name: data.company_name || '',
           require_additional_insured: data.require_additional_insured !== false,
           require_waiver_of_subrogation: data.require_waiver_of_subrogation || false,
-          upload_token_expiry_days: data.upload_token_expiry_days || 30
+          upload_token_expiry_days: data.upload_token_expiry_days || 30,
+          expiring_threshold_days: data.expiring_threshold_days || 30
         });
       }
     } catch (err) {

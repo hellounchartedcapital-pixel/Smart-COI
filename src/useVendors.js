@@ -5,7 +5,15 @@ import { recalculateVendorStatus } from './utils/complianceUtils';
 
 const PAGE_SIZE = 50;
 
-export function useVendors(propertyId = null) {
+/**
+ * Custom hook for managing vendors
+ * @param {string|null} propertyId - Filter vendors by property ID
+ * @param {object} options - Optional configuration
+ * @param {number} options.expiringThresholdDays - Days before expiration to mark as "expiring" (default: 30)
+ */
+export function useVendors(propertyId = null, options = {}) {
+  const { expiringThresholdDays = 30 } = options;
+
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -63,8 +71,8 @@ export function useVendors(propertyId = null) {
 
       if (error) throw error;
 
-      // Recalculate status for each vendor based on current date
-      const newVendors = (data || []).map(recalculateVendorStatus);
+      // Recalculate status for each vendor based on current date and threshold
+      const newVendors = (data || []).map(v => recalculateVendorStatus(v, expiringThresholdDays));
 
       if (reset) {
         setVendors(newVendors);
@@ -85,7 +93,7 @@ export function useVendors(propertyId = null) {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [propertyId]); // Removed vendors.length to prevent infinite loop
+  }, [propertyId, expiringThresholdDays]); // Removed vendors.length to prevent infinite loop
 
   // Load more vendors
   const loadMore = useCallback(() => {
