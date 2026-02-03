@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Users, Plus, Search, CheckCircle, XCircle, AlertCircle, Clock,
   Mail, Phone, Calendar, Building2, X, Send,
-  ExternalLink, Shield, Loader2, FileText, History, Upload
+  ExternalLink, Shield, Loader2, FileText, History, Upload, ChevronDown
 } from 'lucide-react';
 import { useTenants } from './useTenants';
 import { supabase } from './supabaseClient';
@@ -74,6 +74,8 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties }) {
     requires_endorsement_pages: true,
   });
   const [saving, setSaving] = useState(false);
+  // Progressive disclosure - collapse advanced insurance requirements by default for new tenants
+  const [showInsuranceRequirements, setShowInsuranceRequirements] = useState(false);
 
   useEffect(() => {
     if (tenant) {
@@ -100,6 +102,8 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties }) {
         requires_declarations_page: tenant.requires_declarations_page !== false,
         requires_endorsement_pages: tenant.requires_endorsement_pages !== false,
       });
+      // Expand requirements section when editing existing tenant
+      setShowInsuranceRequirements(true);
     } else {
       setFormData({
         name: '',
@@ -124,6 +128,8 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties }) {
         requires_declarations_page: true,
         requires_endorsement_pages: true,
       });
+      // Collapse requirements section for new tenants
+      setShowInsuranceRequirements(false);
     }
   }, [tenant, isOpen]);
 
@@ -289,78 +295,93 @@ function TenantModal({ isOpen, onClose, onSave, tenant, properties }) {
               </div>
             </div>
 
-            {/* Insurance Requirements */}
+            {/* Insurance Requirements - Collapsible */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Shield size={16} className="text-emerald-600" />
-                Insurance Requirements
-              </h3>
-
-              {/* Coverage Limits */}
-              <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">Required Coverage Limits</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      General Liability
-                    </label>
-                    <select
-                      value={formData.required_liability_min}
-                      onChange={(e) => setFormData({ ...formData, required_liability_min: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    >
-                      <option value={0}>Per Lease</option>
-                      <option value={100000}>$100,000</option>
-                      <option value={300000}>$300,000</option>
-                      <option value={500000}>$500,000</option>
-                      <option value={1000000}>$1,000,000</option>
-                      <option value={2000000}>$2,000,000</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Business Auto Liability
-                    </label>
-                    <select
-                      value={formData.required_auto_liability_min}
-                      onChange={(e) => setFormData({ ...formData, required_auto_liability_min: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    >
-                      <option value={0}>Not Required</option>
-                      <option value={100000}>$100,000</option>
-                      <option value={300000}>$300,000</option>
-                      <option value={500000}>$500,000</option>
-                      <option value={1000000}>$1,000,000</option>
-                    </select>
-                  </div>
+              <button
+                type="button"
+                onClick={() => setShowInsuranceRequirements(!showInsuranceRequirements)}
+                className="w-full text-sm font-semibold text-gray-900 mb-3 flex items-center justify-between gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Shield size={16} className="text-emerald-600" />
+                  Insurance Requirements
+                  <span className="text-xs font-normal text-gray-500">(uses defaults from Settings)</span>
                 </div>
+                <ChevronDown
+                  size={16}
+                  className={`text-gray-400 transition-transform ${showInsuranceRequirements ? 'rotate-180' : ''}`}
+                />
+              </button>
 
-                {/* Workers Compensation */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.required_workers_comp}
-                      onChange={(e) => setFormData({ ...formData, required_workers_comp: e.target.checked, workers_comp_exempt: false })}
-                      className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-                    />
-                    <span className="text-sm text-gray-700">Workers' Compensation Required</span>
-                  </label>
-                </div>
-              </div>
+              {showInsuranceRequirements && (
+                <>
+                  {/* Coverage Limits */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h4 className="text-xs font-semibold text-gray-500 uppercase mb-3">Required Coverage Limits</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          General Liability
+                        </label>
+                        <select
+                          value={formData.required_liability_min}
+                          onChange={(e) => setFormData({ ...formData, required_liability_min: parseInt(e.target.value) })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        >
+                          <option value={0}>Per Lease</option>
+                          <option value={100000}>$100,000</option>
+                          <option value={300000}>$300,000</option>
+                          <option value={500000}>$500,000</option>
+                          <option value={1000000}>$1,000,000</option>
+                          <option value={2000000}>$2,000,000</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Business Auto Liability
+                        </label>
+                        <select
+                          value={formData.required_auto_liability_min}
+                          onChange={(e) => setFormData({ ...formData, required_auto_liability_min: parseInt(e.target.value) })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        >
+                          <option value={0}>Not Required</option>
+                          <option value={100000}>$100,000</option>
+                          <option value={300000}>$300,000</option>
+                          <option value={500000}>$500,000</option>
+                          <option value={1000000}>$1,000,000</option>
+                        </select>
+                      </div>
+                    </div>
 
-              {/* Additional Insured */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.requires_additional_insured}
-                    onChange={(e) => setFormData({ ...formData, requires_additional_insured: e.target.checked })}
-                    className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-                  />
-                  <span className="text-sm text-gray-700">Require owner as additional insured</span>
-                </label>
-              </div>
+                    {/* Workers Compensation */}
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.required_workers_comp}
+                          onChange={(e) => setFormData({ ...formData, required_workers_comp: e.target.checked, workers_comp_exempt: false })}
+                          className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                        />
+                        <span className="text-sm text-gray-700">Workers' Compensation Required</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Additional Insured */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.requires_additional_insured}
+                        onChange={(e) => setFormData({ ...formData, requires_additional_insured: e.target.checked })}
+                        className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                      />
+                      <span className="text-sm text-gray-700">Require owner as additional insured</span>
+                    </label>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </form>

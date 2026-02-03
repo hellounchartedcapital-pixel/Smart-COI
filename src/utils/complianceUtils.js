@@ -236,17 +236,9 @@ export function recalculateVendorStatus(vendor) {
   // Normalize issues
   updatedVendor.issues = normalizeIssues(updatedVendor.issues);
 
-  // Determine new status
-  const newStatus = determineVendorStatus(updatedVendor);
-
-  // Only update status if it would be "worse"
-  const statusPriority = { expired: 0, 'non-compliant': 1, expiring: 2, pending: 3, compliant: 4 };
-  const currentPriority = statusPriority[updatedVendor.status] ?? 4;
-  const newPriority = statusPriority[newStatus] ?? 4;
-
-  if (newPriority < currentPriority) {
-    updatedVendor.status = newStatus;
-  }
+  // Determine new status based on current state
+  // Always update to the accurate status (allows both worsening AND improvement)
+  updatedVendor.status = determineVendorStatus(updatedVendor);
 
   return updatedVendor;
 }

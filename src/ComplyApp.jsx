@@ -234,6 +234,20 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
     }
   };
 
+  // Update selectedVendor when vendors refresh to prevent stale data
+  React.useEffect(() => {
+    if (selectedVendor && vendors.length > 0) {
+      const updatedVendor = vendors.find(v => v.id === selectedVendor.id);
+      if (updatedVendor) {
+        // Update selectedVendor with fresh data
+        setSelectedVendor(updatedVendor);
+      } else {
+        // Vendor was deleted or filtered out - close the detail view
+        setSelectedVendor(null);
+      }
+    }
+  }, [vendors]); // Run when vendors array changes
+
   const handleOnboardingSkip = async () => {
     // Same as complete - mark as done so they don't see it again
     await handleOnboardingComplete();
@@ -691,6 +705,7 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
     setBulkRequesting(true);
     let successCount = 0;
     let failCount = 0;
+    const failedVendors = []; // Track which vendors failed and why
     const companyName = userRequirements?.company_name || 'Our Company';
     const appUrl = window.location.origin;
 
@@ -739,6 +754,8 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
 
           if (fnError || (result && !result.success)) {
             failCount++;
+            const errorMsg = fnError?.message || result?.error || 'Unknown error';
+            failedVendors.push({ name: vendor.name, reason: errorMsg });
             continue;
           }
 
@@ -760,6 +777,7 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
         } catch (err) {
           logger.error(`Failed to send to ${vendor.name}`, err);
           failCount++;
+          failedVendors.push({ name: vendor.name, reason: err.message || 'Network error' });
         }
       }
 
@@ -772,11 +790,14 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
           message: `Successfully sent COI requests to ${successCount} vendors.`
         });
       } else {
+        // Build detailed failure message
+        const failedNames = failedVendors.slice(0, 5).map(v => v.name).join(', ');
+        const moreText = failedVendors.length > 5 ? ` and ${failedVendors.length - 5} more` : '';
         showAlert({
           type: 'warning',
           title: 'Partial Success',
           message: `Sent ${successCount} emails, ${failCount} failed.`,
-          details: 'Check vendor email addresses and try again for failed vendors.'
+          details: `Failed vendors: ${failedNames}${moreText}. Check vendor email addresses and try again.`
         });
       }
     } catch (error) {
