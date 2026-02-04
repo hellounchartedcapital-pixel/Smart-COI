@@ -260,14 +260,78 @@ export function useVendors(propertyId = null, options = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyId]);
 
-  // Auto-refresh on interval and tab focus to prevent stale data
+  // Realtime subscription for instant updates
   useEffect(() => {
-    // Refresh every 60 seconds
-    const intervalId = setInterval(() => {
-      fetchVendors(true);
-    }, 60000);
+    let channel = null;
 
-    // Refresh when tab regains focus
+    const setupRealtimeSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Subscribe to changes on the vendors table for this user
+      channel = supabase
+        .channel('vendors-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'vendors',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            logger.info('Realtime: vendor inserted', payload.new.id);
+            const newVendor = recalculateVendorStatus(payload.new, expiringThresholdDays);
+            setVendors(prev => {
+              // Avoid duplicates
+              if (prev.some(v => v.id === newVendor.id)) return prev;
+              const updated = [newVendor, ...prev];
+              vendorCountRef.current = updated.length;
+              return updated;
+            });
+            setTotalCount(prev => prev + 1);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'vendors',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            logger.info('Realtime: vendor updated', payload.new.id);
+            const updatedVendor = recalculateVendorStatus(payload.new, expiringThresholdDays);
+            setVendors(prev => prev.map(v => v.id === updatedVendor.id ? updatedVendor : v));
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'vendors',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            logger.info('Realtime: vendor deleted', payload.old.id);
+            setVendors(prev => {
+              const updated = prev.filter(v => v.id !== payload.old.id);
+              vendorCountRef.current = updated.length;
+              return updated;
+            });
+            setTotalCount(prev => Math.max(0, prev - 1));
+          }
+        )
+        .subscribe((status) => {
+          logger.info('Realtime subscription status:', status);
+        });
+    };
+
+    setupRealtimeSubscription();
+
+    // Refresh when tab regains focus (fallback for any missed events)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         fetchVendors(true);
@@ -277,10 +341,12 @@ export function useVendors(propertyId = null, options = {}) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      clearInterval(intervalId);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [fetchVendors]);
+  }, [fetchVendors, expiringThresholdDays]);
 
   return {
     vendors,

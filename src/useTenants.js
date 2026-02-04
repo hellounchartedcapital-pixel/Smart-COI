@@ -51,14 +51,85 @@ export function useTenants(propertyId = null) {
     loadTenants();
   }, [loadTenants]);
 
-  // Auto-refresh on interval and tab focus to prevent stale data
+  // Realtime subscription for instant updates
   useEffect(() => {
-    // Refresh every 60 seconds
-    const intervalId = setInterval(() => {
-      loadTenants();
-    }, 60000);
+    let channel = null;
 
-    // Refresh when tab regains focus
+    const setupRealtimeSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Subscribe to changes on the tenants table for this user
+      channel = supabase
+        .channel('tenants-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'tenants',
+            filter: `user_id=eq.${user.id}`
+          },
+          async (payload) => {
+            logger.info('Realtime: tenant inserted', payload.new.id);
+            // Fetch full tenant data with relations
+            const { data } = await supabase
+              .from('tenants')
+              .select(`*, unit:units(id, unit_number, property_id), property:properties(id, name, address)`)
+              .eq('id', payload.new.id)
+              .single();
+            if (data) {
+              setTenants(prev => {
+                if (prev.some(t => t.id === data.id)) return prev;
+                return [data, ...prev];
+              });
+              setTotalCount(prev => prev + 1);
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'tenants',
+            filter: `user_id=eq.${user.id}`
+          },
+          async (payload) => {
+            logger.info('Realtime: tenant updated', payload.new.id);
+            // Fetch full tenant data with relations
+            const { data } = await supabase
+              .from('tenants')
+              .select(`*, unit:units(id, unit_number, property_id), property:properties(id, name, address)`)
+              .eq('id', payload.new.id)
+              .single();
+            if (data) {
+              setTenants(prev => prev.map(t => t.id === data.id ? data : t));
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'tenants',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            logger.info('Realtime: tenant deleted', payload.old.id);
+            setTenants(prev => prev.filter(t => t.id !== payload.old.id));
+            setTotalCount(prev => Math.max(0, prev - 1));
+          }
+        )
+        .subscribe((status) => {
+          logger.info('Tenants realtime subscription status:', status);
+        });
+    };
+
+    setupRealtimeSubscription();
+
+    // Refresh when tab regains focus (fallback for any missed events)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         loadTenants();
@@ -68,7 +139,9 @@ export function useTenants(propertyId = null) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      clearInterval(intervalId);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [loadTenants]);
