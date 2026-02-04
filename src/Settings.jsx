@@ -192,28 +192,28 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
                   onManageProperties();
                 }
               }}
-              className="w-full p-4 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg flex items-center justify-between transition-colors"
+              className="w-full p-4 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-between transition-colors"
             >
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-gray-600" />
                 </div>
                 <div className="text-left">
                   <h4 className="font-medium text-gray-900">Manage Properties</h4>
                   <p className="text-sm text-gray-500">
                     {propertyCount === 0
-                      ? 'Add your first property to set requirements'
+                      ? 'Add your first property to set vendor requirements'
                       : `${propertyCount} propert${propertyCount === 1 ? 'y' : 'ies'} configured`}
                   </p>
                 </div>
               </div>
-              <ChevronRight size={20} className="text-purple-400" />
+              <ChevronRight size={20} className="text-gray-400" />
             </button>
 
             <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg flex items-start space-x-2">
               <Info size={16} className="text-gray-500 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-gray-600">
-                Insurance requirements are managed per-property. Each property can have different coverage requirements.
+                Vendor insurance requirements are managed per-property. Tenant requirements are extracted from their leases.
               </p>
             </div>
           </div>
@@ -225,15 +225,15 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
                 <Clock className="w-5 h-5 text-amber-600" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Upload Link Settings</h3>
-                <p className="text-sm text-gray-500">Configure how upload links work for vendors and tenants</p>
+                <h3 className="text-lg font-semibold text-gray-900">COI Request Links</h3>
+                <p className="text-sm text-gray-500">Settings for when you request updated COIs from vendors or tenants</p>
               </div>
             </div>
 
             <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
               <div className="mb-3">
-                <h4 className="font-medium text-gray-900">Upload Link Expiration</h4>
-                <p className="text-sm text-gray-500">How long upload links remain valid before expiring</p>
+                <h4 className="font-medium text-gray-900">Link Expiration</h4>
+                <p className="text-sm text-gray-500">How long COI request links remain valid</p>
               </div>
               <select
                 value={settings.uploadTokenExpiryDays}
@@ -247,7 +247,7 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
                 <option value={90}>90 days</option>
               </select>
               <p className="mt-2 text-xs text-gray-500">
-                After this time, vendors/tenants will need a new link to upload their COI.
+                When you request an updated COI, the recipient will have this many days to upload before the link expires.
               </p>
             </div>
           </div>
@@ -293,8 +293,8 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
                 <Mail className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Automated Vendor Follow-Ups</h3>
-                <p className="text-sm text-gray-500">Automatically contact vendors about compliance issues</p>
+                <h3 className="text-lg font-semibold text-gray-900">Automated Follow-Ups</h3>
+                <p className="text-sm text-gray-500">Automatically contact vendors and tenants about compliance issues</p>
               </div>
             </div>
 
@@ -303,7 +303,7 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium text-gray-900">Enable Automated Follow-Ups</h4>
-                  <p className="text-sm text-gray-500">Send automatic emails to vendors with compliance issues</p>
+                  <p className="text-sm text-gray-500">Send automatic emails to vendors and tenants with compliance issues</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
@@ -395,7 +395,7 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
                     <Clock size={18} className="text-gray-600" />
                     <h4 className="font-medium text-gray-900">Follow-Up Frequency</h4>
                   </div>
-                  <p className="text-sm text-gray-500 mb-3">Minimum days between emails to the same vendor:</p>
+                  <p className="text-sm text-gray-500 mb-3">Minimum days between emails to the same recipient:</p>
                   <div className="flex items-center space-x-4">
                     <input
                       type="range"
@@ -411,11 +411,11 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
                   </div>
                 </div>
 
-                {/* Info about vendor emails */}
+                {/* Info about emails */}
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start space-x-2">
                   <Info size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-amber-800">
-                    Follow-ups are only sent to vendors with an email address on file. Add vendor emails when uploading COIs to enable automatic follow-ups.
+                    Follow-ups are only sent to vendors and tenants with an email address on file.
                   </p>
                 </div>
               </div>
