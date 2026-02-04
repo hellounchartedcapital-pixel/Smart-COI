@@ -9,6 +9,7 @@ import { supabase } from './supabaseClient';
 import { formatCurrency, formatDate, formatRelativeDate, getStatusConfig, getDaysUntil } from './utils/complianceUtils';
 import { AlertModal, useAlertModal } from './AlertModal';
 import { PropertySelector } from './PropertySelector';
+import { LeaseUploadModal } from './LeaseUploadModal';
 import logger from './logger';
 import { showSuccess, showError } from './toast';
 
@@ -559,6 +560,7 @@ export function TenantsView({ properties, userRequirements, selectedProperty, on
   const [coiPreviewUrl, setCoiPreviewUrl] = useState(null);
   const [tenantActivity, setTenantActivity] = useState([]);
   const [loadingActivity, setLoadingActivity] = useState(false);
+  const [showLeaseUpload, setShowLeaseUpload] = useState(false);
 
   // Calculate tenants that need attention (non-compliant with email)
   const tenantsNeedingAttention = tenants.filter(t =>
@@ -1113,11 +1115,11 @@ export function TenantsView({ properties, userRequirements, selectedProperty, on
             <option value="status">Sort: Status</option>
           </select>
 
-          {/* Add Tenant Button */}
+          {/* Add Tenant Button - Opens Lease Upload Modal */}
           <button
-            onClick={() => { setEditingTenant(null); setShowModal(true); }}
+            onClick={() => setShowLeaseUpload(true)}
             className="px-4 py-2.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 font-medium flex items-center gap-2"
-            aria-label="Add new tenant"
+            aria-label="Add new tenant from lease"
           >
             <Plus size={18} aria-hidden="true" />
             <span className="hidden sm:inline">Add Tenant</span>
@@ -1313,6 +1315,21 @@ export function TenantsView({ properties, userRequirements, selectedProperty, on
         onSave={handleSave}
         tenant={editingTenant}
         properties={properties}
+      />
+
+      {/* Lease Upload Modal - AI-powered tenant creation from lease */}
+      <LeaseUploadModal
+        isOpen={showLeaseUpload}
+        onClose={() => setShowLeaseUpload(false)}
+        properties={properties}
+        onTenantCreated={(newTenant) => {
+          showSuccess(`Tenant "${newTenant.name}" created from lease`);
+          refreshTenants();
+        }}
+        onManualAdd={() => {
+          setEditingTenant(null);
+          setShowModal(true);
+        }}
       />
 
       {/* Delete Confirmation */}
