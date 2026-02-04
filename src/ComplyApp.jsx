@@ -40,8 +40,8 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
     expiringThresholdDays: userRequirements?.expiring_threshold_days || 30
   });
 
-  // Tenants hook for dashboard
-  const { tenants: dbTenants, loading: loadingTenants, refreshTenants } = useTenants();
+  // Tenants hook for dashboard - filter by selected property
+  const { tenants: dbTenants, loading: loadingTenants, refreshTenants } = useTenants(selectedProperty?.id);
 
   // Convert database format (snake_case) to app format (camelCase)
   const vendors = dbVendors.map(v => ({
