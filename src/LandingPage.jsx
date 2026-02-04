@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Logo } from './Logo';
 import {
   CheckCircle, Zap, Bell, Menu, X,
-  FileCheck, FolderOpen, Cloud, Users, Check,
-  AlertCircle, XCircle, Calendar, Send, Mail, User, MessageSquare, Loader2,
-  Building2, ChevronDown, Upload, Search, FileText
+  FileCheck, FolderOpen, Users, Check,
+  AlertCircle, XCircle, Send, Mail, User, MessageSquare, Loader2,
+  Building2, ChevronDown, FileText
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import logger from './logger';
@@ -186,40 +186,9 @@ function ContactModal({ isOpen, onClose }) {
 // Dashboard Mockup Component - Realistic preview of actual dashboard
 function DashboardMockup() {
   // Fake data matching the actual dashboard layout
-  // 35 total: 28 compliant (80%), 4 non-compliant, 2 expired, 1 expiring
-  const stats = { total: 35, compliant: 28, nonCompliant: 4, expired: 2, expiring: 1 };
+  // 42 total: 35 compliant (83%), 3 non-compliant, 2 expired, 2 expiring
+  const stats = { total: 42, compliant: 35, nonCompliant: 3, expired: 2, expiring: 2 };
   const compliancePercent = Math.round((stats.compliant / stats.total) * 100);
-
-  const vendors = [
-    {
-      name: "Riverside Cleaning Co.",
-      dba: "Riverside Services",
-      status: "expired",
-      expDate: "1/21/2026",
-      daysInfo: "8 days",
-      gl: "$1,000,000",
-      auto: "$1,000,000",
-      wc: "Statutory",
-      issue: "Coverage expired 2026-01-21 (8 days overdue)"
-    },
-    {
-      name: "Summit HVAC Solutions",
-      status: "compliant",
-      expDate: "10/2/2026",
-      gl: "$1,000,000",
-      auto: "$3,000,000",
-      wc: "Statutory"
-    },
-    {
-      name: "GreenScape Landscaping LLC",
-      dba: "GreenScape Services",
-      status: "compliant",
-      expDate: "3/1/2026",
-      gl: "$1,000,000",
-      auto: "$1,000,000",
-      wc: "Statutory"
-    },
-  ];
 
   return (
     <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
@@ -252,73 +221,98 @@ function DashboardMockup() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="px-2.5 py-1.5 bg-emerald-500 text-white rounded-lg text-[10px] font-semibold flex items-center gap-1">
-            <Upload className="w-3 h-3" />
-            Upload COI
-          </button>
+          <div className="w-7 h-7 bg-gray-100 rounded-lg flex items-center justify-center">
+            <FolderOpen className="w-3.5 h-3.5 text-gray-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="bg-white border-b border-gray-200 px-4">
+        <div className="flex gap-1">
+          <div className="px-3 py-2 text-[10px] font-semibold text-emerald-600 border-b-2 border-emerald-500 flex items-center gap-1.5">
+            <FolderOpen className="w-3 h-3" />
+            Dashboard
+          </div>
+          <div className="px-3 py-2 text-[10px] font-medium text-gray-500 flex items-center gap-1.5">
+            <FileCheck className="w-3 h-3" />
+            Vendors
+          </div>
+          <div className="px-3 py-2 text-[10px] font-medium text-gray-500 flex items-center gap-1.5">
+            <Users className="w-3 h-3" />
+            Tenants
+          </div>
         </div>
       </div>
 
       {/* Dashboard content */}
       <div className="p-3 bg-gray-50">
+        {/* Stats Cards Row - 5 columns like actual dashboard */}
+        <div className="grid grid-cols-5 gap-2 mb-3">
+          <div className="bg-white rounded-xl p-2 border border-gray-200 shadow-sm">
+            <p className="text-[8px] text-gray-500 font-medium">Total Tracked</p>
+            <p className="text-lg font-bold text-gray-900">{stats.total}</p>
+          </div>
+          <div className="bg-white rounded-xl p-2 border border-gray-200 shadow-sm">
+            <p className="text-[8px] text-gray-500 font-medium">Compliant</p>
+            <p className="text-lg font-bold text-emerald-600">{stats.compliant}</p>
+          </div>
+          <div className="bg-white rounded-xl p-2 border border-gray-200 shadow-sm">
+            <p className="text-[8px] text-gray-500 font-medium">Expired</p>
+            <p className="text-lg font-bold text-red-600">{stats.expired}</p>
+          </div>
+          <div className="bg-white rounded-xl p-2 border border-gray-200 shadow-sm">
+            <p className="text-[8px] text-gray-500 font-medium">Non-Compliant</p>
+            <p className="text-lg font-bold text-orange-600">{stats.nonCompliant}</p>
+          </div>
+          <div className="bg-white rounded-xl p-2 border border-gray-200 shadow-sm">
+            <p className="text-[8px] text-gray-500 font-medium">Expiring Soon</p>
+            <p className="text-lg font-bold text-amber-600">{stats.expiring}</p>
+          </div>
+        </div>
+
         {/* Overview Row - Pie Chart & Upcoming Expirations */}
         <div className="grid grid-cols-2 gap-3 mb-3">
           {/* Compliance Overview */}
           <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
-            <p className="text-xs font-bold text-gray-900 mb-3">Compliance Overview</p>
-            <div className="flex items-center gap-4">
+            <p className="text-xs font-bold text-gray-900 mb-2">Overall Compliance</p>
+            <div className="flex items-center gap-3">
               {/* Donut Chart */}
               <div className="relative">
-                <svg width="80" height="80" viewBox="0 0 80 80" className="transform -rotate-90">
-                  {/* Compliant (green) */}
-                  <circle cx="40" cy="40" r="30" fill="none" stroke="#10b981" strokeWidth="12"
-                    strokeDasharray={`${(stats.compliant / stats.total) * 188.5} 188.5`} strokeDashoffset="0" />
-                  {/* Non-compliant (orange) */}
-                  <circle cx="40" cy="40" r="30" fill="none" stroke="#f97316" strokeWidth="12"
-                    strokeDasharray={`${(stats.nonCompliant / stats.total) * 188.5} 188.5`}
-                    strokeDashoffset={`${-(stats.compliant / stats.total) * 188.5}`} />
-                  {/* Expired (red) */}
-                  <circle cx="40" cy="40" r="30" fill="none" stroke="#ef4444" strokeWidth="12"
-                    strokeDasharray={`${(stats.expired / stats.total) * 188.5} 188.5`}
-                    strokeDashoffset={`${-((stats.compliant + stats.nonCompliant) / stats.total) * 188.5}`} />
-                  {/* Expiring (amber) */}
-                  <circle cx="40" cy="40" r="30" fill="none" stroke="#f59e0b" strokeWidth="12"
-                    strokeDasharray={`${(stats.expiring / stats.total) * 188.5} 188.5`}
-                    strokeDashoffset={`${-((stats.compliant + stats.nonCompliant + stats.expired) / stats.total) * 188.5}`} />
+                <svg width="70" height="70" viewBox="0 0 70 70" className="transform -rotate-90">
+                  <circle cx="35" cy="35" r="26" fill="none" stroke="#10b981" strokeWidth="10"
+                    strokeDasharray={`${(stats.compliant / stats.total) * 163.4} 163.4`} strokeDashoffset="0" />
+                  <circle cx="35" cy="35" r="26" fill="none" stroke="#f97316" strokeWidth="10"
+                    strokeDasharray={`${(stats.nonCompliant / stats.total) * 163.4} 163.4`}
+                    strokeDashoffset={`${-(stats.compliant / stats.total) * 163.4}`} />
+                  <circle cx="35" cy="35" r="26" fill="none" stroke="#ef4444" strokeWidth="10"
+                    strokeDasharray={`${(stats.expired / stats.total) * 163.4} 163.4`}
+                    strokeDashoffset={`${-((stats.compliant + stats.nonCompliant) / stats.total) * 163.4}`} />
+                  <circle cx="35" cy="35" r="26" fill="none" stroke="#f59e0b" strokeWidth="10"
+                    strokeDasharray={`${(stats.expiring / stats.total) * 163.4} 163.4`}
+                    strokeDashoffset={`${-((stats.compliant + stats.nonCompliant + stats.expired) / stats.total) * 163.4}`} />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-base font-bold text-emerald-500">{compliancePercent}%</span>
+                  <span className="text-sm font-bold text-emerald-500">{compliancePercent}%</span>
                 </div>
               </div>
               {/* Legend */}
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                  <div>
-                    <span className="text-[10px] font-semibold text-gray-900">{stats.compliant} Compliant</span>
-                    <span className="text-[9px] text-gray-500 ml-1">{Math.round((stats.compliant/stats.total)*100)}%</span>
-                  </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                  <span className="text-[9px] text-gray-700">{stats.compliant} Compliant</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
-                  <div>
-                    <span className="text-[10px] font-semibold text-gray-900">{stats.nonCompliant} Non-Compliant</span>
-                    <span className="text-[9px] text-gray-500 ml-1">{Math.round((stats.nonCompliant/stats.total)*100)}%</span>
-                  </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                  <span className="text-[9px] text-gray-700">{stats.nonCompliant} Non-Compliant</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-                  <div>
-                    <span className="text-[10px] font-semibold text-gray-900">{stats.expired} Expired</span>
-                    <span className="text-[9px] text-gray-500 ml-1">{Math.round((stats.expired/stats.total)*100)}%</span>
-                  </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  <span className="text-[9px] text-gray-700">{stats.expired} Expired</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-                  <div>
-                    <span className="text-[10px] font-semibold text-gray-900">{stats.expiring} Expiring Soon</span>
-                    <span className="text-[9px] text-gray-500 ml-1">0%</span>
-                  </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                  <span className="text-[9px] text-gray-700">{stats.expiring} Expiring</span>
                 </div>
               </div>
             </div>
@@ -326,134 +320,71 @@ function DashboardMockup() {
 
           {/* Upcoming Expirations */}
           <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-bold text-gray-900">Upcoming Expirations</p>
-              <span className="text-[9px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Next 30 Days</span>
+              <span className="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">Next 30 Days</span>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg px-2 py-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+                    <FileText className="w-3 h-3 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-medium text-gray-900">GreenScape LLC</p>
+                    <p className="text-[8px] text-gray-500">Vendor</p>
+                  </div>
+                </div>
+                <span className="text-[8px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">12 days</span>
+              </div>
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg px-2 py-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 bg-emerald-100 rounded flex items-center justify-center">
+                    <Users className="w-3 h-3 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-medium text-gray-900">John Smith</p>
+                    <p className="text-[8px] text-gray-500">Tenant • Unit 204</p>
+                  </div>
+                </div>
+                <span className="text-[8px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">3 days</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Needs Attention Section */}
+        <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-bold text-gray-900">Needs Attention</p>
+            <span className="text-[8px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-medium">4 items</span>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between bg-gray-50 rounded-lg px-2 py-1.5">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center">
+                  <XCircle className="w-3.5 h-3.5 text-red-600" />
+                </div>
                 <div>
-                  <p className="text-[10px] font-medium text-gray-900">GreenScape Landsca...</p>
-                  <p className="text-[9px] text-gray-500">3/1/2026</p>
-                </div>
-                <span className="text-[9px] font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-full">30 days</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Cards Row */}
-        <div className="grid grid-cols-4 gap-2 mb-3">
-          <div className="bg-white rounded-xl p-2.5 border-2 border-emerald-200 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-[9px] text-gray-500 font-medium">Total Vendors</p>
-              <p className="text-xl font-bold text-gray-900">{stats.total}</p>
-            </div>
-            <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-4 h-4 text-gray-400" />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-[9px] text-gray-500 font-medium">Expired</p>
-              <p className="text-xl font-bold text-red-500">{stats.expired}</p>
-            </div>
-            <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center">
-              <XCircle className="w-4 h-4 text-red-500" />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-[9px] text-gray-500 font-medium">Non-Compliant</p>
-              <p className="text-xl font-bold text-orange-500">{stats.nonCompliant}</p>
-            </div>
-            <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
-              <AlertCircle className="w-4 h-4 text-orange-500" />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl p-2.5 border border-gray-200 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-[9px] text-gray-500 font-medium">Compliant</p>
-              <p className="text-xl font-bold text-emerald-500">{stats.compliant}</p>
-            </div>
-            <div className="w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-4 h-4 text-emerald-500" />
-            </div>
-          </div>
-        </div>
-
-        {/* Search Row */}
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <div className="w-full bg-white border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-[10px] text-gray-400">
-              Search vendors...
-            </div>
-          </div>
-          <button className="px-3 py-2 bg-emerald-500 text-white rounded-lg text-[9px] font-semibold">Export PDF</button>
-          <button className="px-3 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-lg text-[9px] font-semibold">Export CSV</button>
-        </div>
-        <p className="text-[9px] text-gray-500 mb-2">Showing {stats.total} of {stats.total} vendors</p>
-
-        {/* Vendor List */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          {vendors.map((vendor, index) => (
-            <div key={index} className={`p-3 ${index !== vendors.length - 1 ? 'border-b border-gray-100' : ''}`}>
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-2 flex-1 min-w-0">
-                  <div className="mt-0.5">
-                    {vendor.status === 'compliant' && <CheckCircle className="text-emerald-500" size={16} />}
-                    {vendor.status === 'expired' && <XCircle className="text-red-500" size={16} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <span className="text-[11px] font-semibold text-gray-900">{vendor.name}</span>
-                      {vendor.dba && <span className="text-[11px] text-gray-500">/ {vendor.dba}</span>}
-                      {vendor.status === 'expired' && (
-                        <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-red-500 text-white">
-                          Expired ({vendor.daysInfo})
-                        </span>
-                      )}
-                      {vendor.status === 'compliant' && (
-                        <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500 text-white">
-                          COMPLIANT
-                        </span>
-                      )}
-                    </div>
-                    {vendor.issue && (
-                      <p className="text-[9px] text-red-600 mb-1 flex items-center gap-1">
-                        <AlertCircle size={10} />
-                        {vendor.issue}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 text-[9px] text-gray-500">
-                      <span className="bg-gray-100 px-1.5 py-0.5 rounded">GL: {vendor.gl}</span>
-                      <span className="bg-gray-100 px-1.5 py-0.5 rounded">Auto: {vendor.auto}</span>
-                      <span className="bg-gray-100 px-1.5 py-0.5 rounded">WC: {vendor.wc}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right ml-2 flex-shrink-0 space-y-1">
-                  <div className="text-[9px] text-gray-500 flex items-center gap-1 justify-end">
-                    <Calendar size={9} />
-                    {vendor.expDate}
-                  </div>
-                  <div className="text-[9px] space-x-1">
-                    <span className="text-gray-500 hover:text-gray-700 cursor-pointer">Edit</span>
-                    <span className="text-gray-300">|</span>
-                    <span className="text-red-500 hover:text-red-600 cursor-pointer">Delete</span>
-                  </div>
-                  <div className="text-[9px] text-emerald-600 hover:text-emerald-700 cursor-pointer">View Details</div>
-                  {vendor.status === 'expired' && (
-                    <button className="text-[8px] bg-red-500 text-white px-2 py-1 rounded flex items-center gap-1 ml-auto">
-                      <Mail size={8} />
-                      Request COI
-                    </button>
-                  )}
+                  <p className="text-[9px] font-medium text-gray-900">Riverside Cleaning Co.</p>
+                  <p className="text-[8px] text-red-600">Coverage expired (8 days overdue)</p>
                 </div>
               </div>
+              <span className="text-[8px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">Vendor</span>
             </div>
-          ))}
+            <div className="flex items-center justify-between bg-gray-50 rounded-lg px-2 py-1.5">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <AlertCircle className="w-3.5 h-3.5 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-medium text-gray-900">Sarah Johnson</p>
+                  <p className="text-[8px] text-orange-600">GL coverage below requirement</p>
+                </div>
+              </div>
+              <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Tenant</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -489,27 +420,27 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
     {
       icon: Zap,
       title: "Instant AI Extraction",
-      description: "Upload a COI and our AI extracts all policy details, limits, and expiration dates automatically.",
+      description: "Upload a COI and our AI extracts all policy details, limits, and expiration dates automatically in seconds.",
+    },
+    {
+      icon: FileText,
+      title: "Smart Lease Analysis",
+      description: "Upload a lease and our AI extracts tenant insurance requirements automatically. No more manual reading of lease agreements.",
+    },
+    {
+      icon: Building2,
+      title: "Multi-Property Management",
+      description: "Manage vendors and tenants across multiple properties from one dashboard. Set unique requirements per property.",
     },
     {
       icon: Bell,
       title: "Automated Follow-Ups",
-      description: "Our system automatically contacts vendors and tenants when certificates are expired or non-compliant, so you don't have to chase them down.",
+      description: "Automatically contact vendors and tenants when certificates expire or coverage is non-compliant. Set custom reminder schedules.",
     },
     {
       icon: CheckCircle,
-      title: "Compliance Tracking",
-      description: "See at a glance which vendors and tenants are compliant, expiring soon, or need immediate attention.",
-    },
-    {
-      icon: FolderOpen,
-      title: "Vendor & Tenant Management",
-      description: "Organize all your vendors and tenants with their insurance documents in one central, searchable database.",
-    },
-    {
-      icon: Cloud,
-      title: "Cloud Storage",
-      description: "All certificates securely stored in the cloud. Access from anywhere, share with your team instantly.",
+      title: "Compliance Dashboard",
+      description: "See at a glance which vendors and tenants are compliant, expiring soon, or need immediate attention with real-time stats.",
     },
     {
       icon: Users,
@@ -521,18 +452,18 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
   const steps = [
     {
       number: 1,
-      title: "Upload Your COI",
-      description: "Drag and drop any COI document. We support PDF, JPG, and PNG formats.",
+      title: "Upload Documents",
+      description: "Upload COIs for vendors or leases for tenants. Our AI extracts all policy details and requirements automatically.",
     },
     {
       number: 2,
-      title: "AI Extracts Data",
-      description: "Our AI reads the certificate and extracts all relevant policy information automatically.",
+      title: "Track Compliance",
+      description: "View your dashboard with real-time compliance stats across all properties. See who's compliant and who needs attention.",
     },
     {
       number: 3,
-      title: "Track & Monitor",
-      description: "View your compliance dashboard and receive alerts before certificates expire.",
+      title: "Automate Follow-Ups",
+      description: "SmartCOI automatically emails vendors and tenants when certificates expire or coverage falls short.",
     },
   ];
 
@@ -542,9 +473,10 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
       price: "Free",
       period: "forever",
       description: "Perfect for getting started",
-      vendors: "Up to 10 certificates",
+      vendors: "Up to 10 vendors & tenants",
       features: [
         "AI-powered COI extraction",
+        "Smart lease analysis",
         "Compliance dashboard",
         "Expiration alerts",
         "Email COI requests",
@@ -557,9 +489,10 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
       price: "$79",
       period: "/month",
       description: "For small property managers",
-      vendors: "Up to 25 certificates",
+      vendors: "Up to 25 vendors & tenants",
       features: [
         "Everything in Free",
+        "Multi-property management",
         "CSV & PDF export",
         "Automated follow-ups",
       ],
@@ -571,10 +504,11 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
       price: "$149",
       period: "/month",
       description: "For growing companies",
-      vendors: "Up to 100 certificates",
+      vendors: "Up to 100 vendors & tenants",
       features: [
         "Everything in Starter",
-        "Analytics & reports",
+        "Activity history & audit log",
+        "Custom compliance thresholds",
         "Priority support",
       ],
       cta: "Start Free Trial",
@@ -585,9 +519,10 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
       price: "$299",
       period: "/month",
       description: "For large-scale operations",
-      vendors: "Up to 500 certificates",
+      vendors: "Up to 500 vendors & tenants",
       features: [
         "Everything in Professional",
+        "Unlimited properties",
         "Dedicated support",
         "Custom integrations",
       ],
@@ -599,27 +534,31 @@ export function LandingPage({ onLogin, onSignUp, onPrivacy, onTerms, onPricing }
   const faqs = [
     {
       question: "How does the AI extraction work?",
-      answer: "Simply upload a PDF, JPG, or PNG of any Certificate of Insurance. Our AI instantly reads and extracts all policy information including coverage limits, expiration dates, and named insureds with 99% accuracy.",
+      answer: "Simply upload a PDF of any Certificate of Insurance or lease document. Our AI instantly reads and extracts all policy information including coverage limits, expiration dates, and insurance requirements with 99% accuracy.",
+    },
+    {
+      question: "How does lease analysis work for tenants?",
+      answer: "Upload your tenant's lease document and SmartCOI automatically extracts all insurance requirements specified in the lease. When the tenant uploads their COI, we compare it against these requirements automatically.",
+    },
+    {
+      question: "Can I manage multiple properties?",
+      answer: "Yes! SmartCOI supports multi-property management. Set unique insurance requirements per property, filter your dashboard by property, and track compliance across your entire portfolio from one place.",
     },
     {
       question: "What happens when a vendor or tenant is non-compliant?",
-      answer: "SmartCOI automatically identifies compliance gaps and can send follow-up emails to vendors and tenants explaining exactly what coverage is missing or insufficient. They receive clear, actionable guidance.",
+      answer: "SmartCOI automatically identifies compliance gaps and can send follow-up emails explaining exactly what coverage is missing or insufficient. They receive clear, actionable guidance on how to become compliant.",
     },
     {
       question: "Is there really a free plan?",
-      answer: "Yes! Our Free plan is free forever and includes up to 10 certificates with full AI extraction capabilities. No credit card required to get started.",
+      answer: "Yes! Our Free plan is free forever and includes up to 10 vendors and tenants with full AI extraction capabilities. No credit card required to get started.",
     },
     {
-      question: "How do expiration alerts work?",
-      answer: "You'll receive automatic email notifications 30, 14, and 7 days before any certificate expires. You can also customize alert timing in your notification settings.",
-    },
-    {
-      question: "Can I upgrade or downgrade my plan?",
-      answer: "Absolutely. You can change your plan at any time. When upgrading, you'll get immediate access to additional features. When downgrading, changes take effect at the end of your billing cycle.",
+      question: "How do automated follow-ups work?",
+      answer: "Configure SmartCOI to automatically email vendors and tenants when certificates expire or are about to expire. Set custom reminder schedules (30, 14, 7 days before expiration) and let the system handle the follow-ups.",
     },
     {
       question: "Is my data secure?",
-      answer: "Yes. All documents are encrypted at rest and in transit. We use enterprise-grade security and never share your data with third parties. Your certificates are stored securely in the cloud.",
+      answer: "Yes. All documents are encrypted at rest and in transit. We use enterprise-grade security and never share your data with third parties. Your certificates and leases are stored securely in the cloud.",
     },
   ];
 
