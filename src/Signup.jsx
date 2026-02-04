@@ -124,7 +124,6 @@ export default function Signup({ onSwitchToLogin, onBack }) {
                 required
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">This will be used for Additional Insured verification</p>
           </div>
 
           <div>
