@@ -343,7 +343,9 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${vendor.name}_COI.pdf`;
+      // Sanitize filename to prevent path traversal and special character issues
+      const sanitizedName = vendor.name.replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_').substring(0, 50) || 'vendor';
+      a.download = `${sanitizedName}_COI.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -597,13 +599,18 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
         uploadToken = crypto.randomUUID();
       }
       // Always update the token expiration when sending a COI request
-      await supabase
+      const { error: tokenError } = await supabase
         .from('vendors')
         .update({
           upload_token: uploadToken,
           upload_token_expires_at: tokenExpiresAt.toISOString()
         })
         .eq('id', requestCOIVendor.id);
+
+      if (tokenError) {
+        logger.error('Failed to update upload token', tokenError);
+        throw new Error('Failed to generate upload link. Please try again.');
+      }
 
       // Get the app URL (current origin)
       const appUrl = window.location.origin;
@@ -634,15 +641,6 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
         },
       });
 
-      // Log the activity
-      await supabase.from('vendor_activity').insert({
-        vendor_id: requestCOIVendor.id,
-        user_id: user?.id,
-        activity_type: 'email_sent',
-        description: `COI request email sent to ${requestCOIEmail}`,
-        metadata: { email: requestCOIEmail }
-      });
-
       if (fnError) {
         logger.error('Edge Function error', fnError);
         // Try to get more details from the error
@@ -652,6 +650,20 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
 
       if (result && !result.success) {
         throw new Error(result.error || 'Failed to send email');
+      }
+
+      // Log the activity (only after successful email send)
+      try {
+        await supabase.from('vendor_activity').insert({
+          vendor_id: requestCOIVendor.id,
+          user_id: user?.id,
+          activity_type: 'email_sent',
+          description: `COI request email sent to ${requestCOIEmail}`,
+          metadata: { email: requestCOIEmail }
+        });
+      } catch (activityError) {
+        // Log failure but don't fail the whole operation - email was already sent
+        logger.warn('Failed to log activity', activityError);
       }
 
       // Update last contacted timestamp
