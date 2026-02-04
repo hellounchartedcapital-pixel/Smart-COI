@@ -128,16 +128,25 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-modal-title"
+    >
       <div className="bg-white rounded-lg max-w-2xl w-full my-4 sm:my-8 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div>
-            <h2 className="text-lg sm:text-xl font-semibold">Account Settings</h2>
+            <h2 id="settings-modal-title" className="text-lg sm:text-xl font-semibold">Account Settings</h2>
             <p className="text-xs sm:text-sm text-gray-500 mt-1">Manage your account and notification preferences</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-2">
-            <X size={20} />
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 flex-shrink-0 ml-2"
+            aria-label="Close settings"
+          >
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
 
@@ -311,6 +320,9 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
                     checked={settings.autoFollowUpEnabled}
                     onChange={(e) => setSettings({...settings, autoFollowUpEnabled: e.target.checked})}
                     className="sr-only peer"
+                    aria-label="Enable automated follow-ups"
+                    role="switch"
+                    aria-checked={settings.autoFollowUpEnabled}
                   />
                   <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                 </label>
@@ -343,6 +355,8 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
                             ? 'bg-emerald-500 text-white'
                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         }`}
+                        aria-pressed={(settings.followUpDays || []).includes(days)}
+                        aria-label={`Send reminder ${days} days before expiration`}
                       >
                         {days} days
                       </button>
@@ -364,6 +378,9 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
                           checked={settings.followUpOnExpired}
                           onChange={(e) => setSettings({...settings, followUpOnExpired: e.target.checked})}
                           className="sr-only peer"
+                          aria-label="Follow up on expired certificates"
+                          role="switch"
+                          aria-checked={settings.followUpOnExpired}
                         />
                         <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
                       </label>
@@ -382,6 +399,9 @@ export function Settings({ onClose, onManageProperties, propertyCount = 0 }) {
                           checked={settings.followUpOnNonCompliant}
                           onChange={(e) => setSettings({...settings, followUpOnNonCompliant: e.target.checked})}
                           className="sr-only peer"
+                          aria-label="Follow up on non-compliant coverage"
+                          role="switch"
+                          aria-checked={settings.followUpOnNonCompliant}
                         />
                         <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
                       </label>

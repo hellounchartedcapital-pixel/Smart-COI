@@ -505,20 +505,29 @@ export function SmartUploadModal({
   const selectedProp = properties.find(p => p.id === selectedPropertyId);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="upload-modal-title"
+    >
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Upload COI</h2>
+            <h2 id="upload-modal-title" className="text-xl font-bold text-gray-900">Upload COI</h2>
             <p className="text-sm text-gray-500 mt-1">
               {step === 1 && 'Select type and enter details'}
               {step === 2 && 'Upload insurance document'}
               {step === 3 && 'Upload complete'}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-            <X size={20} className="text-gray-500" />
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+            aria-label="Close dialog"
+          >
+            <X size={20} className="text-gray-500" aria-hidden="true" />
           </button>
         </div>
 

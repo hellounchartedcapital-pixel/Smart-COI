@@ -309,7 +309,20 @@ export function Dashboard({
           <div className="flex items-center justify-center">
             <div className="relative">
               {/* SVG Pie Chart */}
-              <svg width="180" height="180" viewBox="0 0 180 180" className="transform -rotate-90">
+              <svg
+                width="180"
+                height="180"
+                viewBox="0 0 180 180"
+                className="transform -rotate-90"
+                role="img"
+                aria-labelledby="compliance-chart-title compliance-chart-desc"
+              >
+                <title id="compliance-chart-title">Compliance Overview Chart</title>
+                <desc id="compliance-chart-desc">
+                  {combinedStats.total === 0
+                    ? 'No data available'
+                    : `Compliance breakdown: ${combinedStats.compliant} compliant, ${combinedStats.nonCompliant} non-compliant, ${combinedStats.expired} expired, ${combinedStats.expiring} expiring, ${combinedStats.pending} pending out of ${combinedStats.total} total`}
+                </desc>
                 {combinedStats.total === 0 ? (
                   <circle cx="90" cy="90" r="70" fill="none" stroke="#e5e7eb" strokeWidth="24" />
                 ) : (
@@ -413,7 +426,11 @@ export function Dashboard({
               <div
                 key={`${item.type}-${item.id}`}
                 onClick={() => handleItemClick(item)}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleItemClick(item); } }}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                role="button"
+                tabIndex={0}
+                aria-label={`View ${item.type} ${item.name}, expires in ${item.daysUntil} days`}
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
@@ -465,7 +482,11 @@ export function Dashboard({
               <div
                 key={`${item.type}-${item.id}`}
                 onClick={() => handleItemClick(item)}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer"
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleItemClick(item); } }}
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                role="button"
+                tabIndex={0}
+                aria-label={`View ${item.type} ${item.name}, status ${item.status}`}
               >
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
