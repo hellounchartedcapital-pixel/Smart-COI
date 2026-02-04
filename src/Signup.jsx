@@ -30,9 +30,24 @@ export default function Signup({ onSwitchToLogin, onBack }) {
       return
     }
 
-    // Validate password length
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+    // Validate password strength
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
+      setLoading(false)
+      return
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError('Password must contain at least one uppercase letter')
+      setLoading(false)
+      return
+    }
+    if (!/[a-z]/.test(password)) {
+      setError('Password must contain at least one lowercase letter')
+      setLoading(false)
+      return
+    }
+    if (!/[0-9]/.test(password)) {
+      setError('Password must contain at least one number')
       setLoading(false)
       return
     }
@@ -137,9 +152,9 @@ export default function Signup({ onSwitchToLogin, onBack }) {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="••••••••"
               required
-              minLength={6}
+              minLength={8}
             />
-            <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters</p>
+            <p className="text-xs text-gray-500 mt-1">Min 8 characters with uppercase, lowercase, and number</p>
           </div>
 
           <div>
@@ -153,7 +168,7 @@ export default function Signup({ onSwitchToLogin, onBack }) {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="••••••••"
               required
-              minLength={6}
+              minLength={8}
             />
           </div>
 

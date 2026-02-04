@@ -83,7 +83,13 @@ export function SmartUploadModal({
       setError(null);
 
       // Try to restore last selected property from localStorage
-      const lastPropertyId = localStorage.getItem(LAST_PROPERTY_KEY);
+      let lastPropertyId = null;
+      try {
+        lastPropertyId = localStorage.getItem(LAST_PROPERTY_KEY);
+      } catch (e) {
+        // localStorage may be unavailable in private browsing
+        logger.warn('localStorage unavailable', e);
+      }
       if (initialProperty?.id) {
         setSelectedPropertyId(initialProperty.id);
       } else if (lastPropertyId && properties.some(p => p.id === lastPropertyId)) {
@@ -103,7 +109,11 @@ export function SmartUploadModal({
   // Save property selection to localStorage
   useEffect(() => {
     if (selectedPropertyId) {
-      localStorage.setItem(LAST_PROPERTY_KEY, selectedPropertyId);
+      try {
+        localStorage.setItem(LAST_PROPERTY_KEY, selectedPropertyId);
+      } catch (e) {
+        // localStorage may be unavailable in private browsing - ignore
+      }
     }
   }, [selectedPropertyId]);
 
