@@ -186,7 +186,6 @@ function buildVendorData(extractedData: any, requirements: Requirements) {
   const expirationDate = new Date(vendorData.expirationDate);
   const daysUntilExpiration = Math.floor((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-  // Check expiration first
   if (daysUntilExpiration < 0) {
     vendorData.status = 'expired';
     issues.push({ type: 'critical', message: `Policy expired on ${vendorData.expirationDate}` });
@@ -197,7 +196,6 @@ function buildVendorData(extractedData: any, requirements: Requirements) {
     vendorData.status = 'compliant';
   }
 
-  // Check coverage amounts
   if (!vendorData.coverage.generalLiability.compliant && vendorData.coverage.generalLiability.amount > 0) {
     if (vendorData.status === 'compliant') vendorData.status = 'non-compliant';
     issues.push({ type: 'error', message: `General Liability $${(vendorData.coverage.generalLiability.amount/1000000).toFixed(1)}M below required $${(requirements.general_liability/1000000).toFixed(1)}M` });
