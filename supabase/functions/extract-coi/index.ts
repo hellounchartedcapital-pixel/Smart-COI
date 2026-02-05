@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.52.0';
+import Anthropic from 'npm:@anthropic-ai/sdk@0.52.0';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
 
 interface Requirements {
@@ -52,39 +52,50 @@ serve(async (req) => {
           },
           {
             type: 'text',
-            text: `You are an expert at extracting data from ACORD Certificate of Insurance (COI) forms.
+            text: `You are an expert at extracting data from ACORD 25 Certificate of Liability Insurance forms.
 
-IMPORTANT: This is likely an ACORD 25 form. Look carefully at these specific sections:
+ACORD 25 FORM LAYOUT - Read these sections carefully:
 
-1. COMMERCIAL GENERAL LIABILITY section - Find:
-   - "EACH OCCURRENCE" limit (usually $1,000,000 or $2,000,000)
-   - "GENERAL AGGREGATE" limit (usually $2,000,000 or $4,000,000)
-   - Policy expiration date in the row
+TOP LEFT - "INSURED" BOX:
+- Contains the company/person name that is insured
 
-2. AUTOMOBILE LIABILITY section - Find:
-   - "COMBINED SINGLE LIMIT" (usually $1,000,000)
-   - Policy expiration date
+MIDDLE SECTION - Coverage table with columns: TYPE OF INSURANCE | POLICY NUMBER | POLICY EFF | POLICY EXP | LIMITS
 
-3. WORKERS COMPENSATION section - Find:
-   - Usually shows "STATUTORY" or "X" in the WC STATUTORY LIMITS box
-   - "E.L. EACH ACCIDENT" amount for Employers Liability
+ROW A - COMMERCIAL GENERAL LIABILITY:
+- Look for "EACH OCCURRENCE" in the LIMITS column - this is usually $1,000,000
+- Look for "GENERAL AGGREGATE" - usually $2,000,000
+- The dollar amounts appear on the RIGHT side of this row
 
-4. Look at the "INSURED" box at top left for the company name
+ROW B - AUTOMOBILE LIABILITY:
+- Look for "COMBINED SINGLE LIMIT (Ea accident)" - usually $1,000,000
+- Dollar amount on the RIGHT side
 
-5. Look at policy effective/expiration dates - they're in MM/DD/YYYY format
+ROW C - UMBRELLA/EXCESS LIABILITY:
+- "EACH OCCURRENCE" and "AGGREGATE" amounts
 
-Extract and return this JSON:
+ROW D - WORKERS COMPENSATION:
+- Usually shows "X" next to "STATUTORY LIMITS"
+- "E.L. EACH ACCIDENT" shows employers liability amount (often $1,000,000)
+- "E.L. DISEASE - EA EMPLOYEE" and "E.L. DISEASE - POLICY LIMIT"
 
+BOTTOM - "DESCRIPTION OF OPERATIONS":
+- May mention "Additional Insured" status
+- May mention "Waiver of Subrogation"
+
+BOTTOM RIGHT - "CERTIFICATE HOLDER":
+- Name and address of who requested the certificate
+
+EXTRACT THIS JSON:
 {
-  "companyName": "Company name from INSURED box",
-  "expirationDate": "YYYY-MM-DD format - use the EARLIEST expiration date from all policies",
+  "companyName": "Name from INSURED box",
+  "expirationDate": "YYYY-MM-DD - earliest policy expiration date",
   "generalLiability": {
-    "amount": <number - the EACH OCCURRENCE limit, e.g. 1000000 for $1,000,000>,
-    "aggregate": <number - the GENERAL AGGREGATE limit>,
+    "amount": <EACH OCCURRENCE number, e.g. 1000000>,
+    "aggregate": <GENERAL AGGREGATE number, e.g. 2000000>,
     "expirationDate": "YYYY-MM-DD"
   },
   "autoLiability": {
-    "amount": <number - COMBINED SINGLE LIMIT>,
+    "amount": <COMBINED SINGLE LIMIT number>,
     "expirationDate": "YYYY-MM-DD"
   },
   "workersComp": {
@@ -92,24 +103,29 @@ Extract and return this JSON:
     "expirationDate": "YYYY-MM-DD"
   },
   "employersLiability": {
-    "amount": <number - E.L. EACH ACCIDENT amount>,
+    "amount": <E.L. EACH ACCIDENT number>,
     "expirationDate": "YYYY-MM-DD"
   },
-  "insuranceCompany": "Name of the insurance carrier",
-  "additionalInsured": "Any text in DESCRIPTION OF OPERATIONS about additional insured",
-  "certificateHolder": "Name and address from CERTIFICATE HOLDER box",
-  "waiverOfSubrogation": "yes or no - check if waiver of subrogation is mentioned"
+  "insuranceCompany": "Insurance company name from INSURER A/B/C",
+  "additionalInsured": "yes if mentioned in Description of Operations, otherwise no",
+  "certificateHolder": "Name from Certificate Holder box",
+  "waiverOfSubrogation": "yes if mentioned in Description of Operations, otherwise no"
 }
 
-CRITICAL RULES:
-- Convert ALL dollar amounts to plain numbers: $1,000,000 becomes 1000000
-- Convert dates from MM/DD/YYYY to YYYY-MM-DD format
-- If you see "1,000,000" that equals 1000000 (one million)
-- If you see "2,000,000" that equals 2000000 (two million)
-- NEVER return 0 for coverage amounts - look harder at the form
-- The EACH OCCURRENCE limit is the main GL coverage amount
+CRITICAL - NUMBER PARSING:
+- "$1,000,000" = 1000000 (one million)
+- "$2,000,000" = 2000000 (two million)
+- "$500,000" = 500000 (five hundred thousand)
+- "$100,000" = 100000 (one hundred thousand)
+- REMOVE all $ signs and commas, return plain integers
+- Most COIs have $1,000,000 per occurrence - if you see this, return 1000000
+- DO NOT return 0 unless the field is truly empty/blank
 
-Return ONLY the JSON object.`
+DATE PARSING:
+- Convert MM/DD/YYYY to YYYY-MM-DD
+- Example: 01/15/2025 becomes 2025-01-15
+
+Return ONLY valid JSON, no other text.`
           }
         ]
       }]
