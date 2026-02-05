@@ -117,7 +117,7 @@ Return ONLY the JSON object.`
 
     const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
     console.log('Claude response:', responseText);
-    
+
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {
@@ -126,7 +126,7 @@ Return ONLY the JSON object.`
 
     const extractedData = JSON.parse(jsonMatch[0]);
     console.log('Extracted data:', JSON.stringify(extractedData));
-    
+
     const vendorData = buildVendorData(extractedData, reqs);
 
     return new Response(
