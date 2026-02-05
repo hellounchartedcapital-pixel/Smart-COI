@@ -166,7 +166,8 @@ function buildVendorData(extractedData: any, requirements: Requirements) {
     },
     rawData: extractedData,
     requirements: requirements,
-    additionalInsured: extractedData.additionalInsured || '',
+    additionalInsured: extractedData.additionalInsured || 'no',
+    hasAdditionalInsured: (extractedData.additionalInsured || '').toLowerCase() === 'yes',
     certificateHolder: extractedData.certificateHolder || '',
     waiverOfSubrogation: extractedData.waiverOfSubrogation || '',
     insuranceCompany: extractedData.insuranceCompany || ''
