@@ -1,52 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.52.0';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getCorsHeaders, handleCorsPreflightRequest } from '../_shared/cors.ts';
-
-const MAX_REQUESTS_PER_WINDOW = parseInt(Deno.env.get('MAX_REQUESTS_PER_WINDOW') || '10');
-const RATE_LIMIT_WINDOW_SECONDS = parseInt(Deno.env.get('RATE_LIMIT_WINDOW_SECONDS') || '60');
-
-function getRateLimitKey(req: Request): string {
-  const forwardedFor = req.headers.get('x-forwarded-for');
-  const clientIp = forwardedFor?.split(',')[0]?.trim() || 'unknown';
-  const authHeader = req.headers.get('authorization') || '';
-  return `extract-coi:${clientIp}:${authHeader.slice(-20)}`;
-}
-
-async function checkRateLimit(key: string): Promise<{ allowed: boolean; remaining: number; resetIn: number }> {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW, resetIn: RATE_LIMIT_WINDOW_SECONDS };
-  }
-
-  try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { data, error } = await supabase.rpc('check_rate_limit', {
-      p_key: key,
-      p_max_requests: MAX_REQUESTS_PER_WINDOW,
-      p_window_seconds: RATE_LIMIT_WINDOW_SECONDS
-    });
-
-    if (error) {
-      return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW, resetIn: RATE_LIMIT_WINDOW_SECONDS };
-    }
-
-    const result = data?.[0] || { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW, reset_in: RATE_LIMIT_WINDOW_SECONDS };
-    return { allowed: result.allowed, remaining: result.remaining, resetIn: result.reset_in };
-  } catch (err) {
-    return { allowed: true, remaining: MAX_REQUESTS_PER_WINDOW, resetIn: RATE_LIMIT_WINDOW_SECONDS };
-  }
-}
-
-function normalizeCompanyName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()'"]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 interface Requirements {
   general_liability: number;
@@ -56,7 +10,10 @@ interface Requirements {
   company_name?: string;
   require_additional_insured?: boolean;
   require_waiver_of_subrogation?: boolean;
-  custom_coverages?: Array<{ type: string; amount: number; required: boolean }>;
+}
+
+function normalizeCompanyName(name: string): string {
+  return name.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()'"]/g, '').replace(/\s+/g, ' ').trim();
 }
 
 serve(async (req) => {
@@ -65,21 +22,6 @@ serve(async (req) => {
   }
 
   const corsHeaders = getCorsHeaders(req);
-  const rateLimitKey = getRateLimitKey(req);
-  const rateLimit = await checkRateLimit(rateLimitKey);
-
-  const rateLimitHeaders = {
-    'X-RateLimit-Limit': MAX_REQUESTS_PER_WINDOW.toString(),
-    'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-    'X-RateLimit-Reset': rateLimit.resetIn.toString(),
-  };
-
-  if (!rateLimit.allowed) {
-    return new Response(
-      JSON.stringify({ success: false, error: 'Rate limit exceeded.', retryAfter: rateLimit.resetIn }),
-      { headers: { ...corsHeaders, ...rateLimitHeaders, 'Content-Type': 'application/json' }, status: 429 }
-    );
-  }
 
   try {
     const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY');
@@ -97,8 +39,7 @@ serve(async (req) => {
       general_liability: 1000000,
       auto_liability: 1000000,
       workers_comp: 'Statutory',
-      employers_liability: 500000,
-      custom_coverages: []
+      employers_liability: 500000
     };
 
     const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
@@ -141,13 +82,7 @@ Extract the following information from this COI PDF and return it as a JSON obje
     "amount": number,
     "expirationDate": "YYYY-MM-DD"
   },
-  "additionalCoverages": [
-    {
-      "type": "Cyber Liability" | "Professional Liability" | "Umbrella" | etc,
-      "amount": number,
-      "expirationDate": "YYYY-MM-DD"
-    }
-  ],
+  "additionalCoverages": [],
   "additionalInsured": "Names listed as additional insured",
   "certificateHolder": "Certificate holder name and address",
   "insuranceCompany": "Insurance company/carrier name",
@@ -157,7 +92,6 @@ Extract the following information from this COI PDF and return it as a JSON obje
 Extract amounts as pure numbers (e.g., 1000000 not "$1,000,000").
 Use YYYY-MM-DD format for all dates.
 If a field is not found, use null.
-For Workers Comp, if it says "Statutory" use that as a string.
 
 Return ONLY the JSON object, no other text.`
           }
@@ -177,14 +111,14 @@ Return ONLY the JSON object, no other text.`
 
     return new Response(
       JSON.stringify({ success: true, data: vendorData }),
-      { headers: { ...corsHeaders, ...rateLimitHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
 
   } catch (error) {
     console.error('Extraction error:', error);
     return new Response(
       JSON.stringify({ success: false, error: error.message || 'Failed to extract data from PDF' }),
-      { headers: { ...corsHeaders, ...rateLimitHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
   }
 });
@@ -236,15 +170,12 @@ function buildVendorData(extractedData: any, requirements: Requirements) {
 
   if (daysUntilExpiration < 0) {
     vendorData.status = 'expired';
-    vendorData.daysOverdue = Math.abs(daysUntilExpiration);
     issues.push({ type: 'critical', message: `Policies expired ${vendorData.expirationDate}` });
   } else if (daysUntilExpiration <= 30) {
     vendorData.status = 'expiring';
-    vendorData.daysOverdue = 0;
     issues.push({ type: 'warning', message: `Policies expiring in ${daysUntilExpiration} days` });
   } else {
     vendorData.status = 'compliant';
-    vendorData.daysOverdue = 0;
   }
 
   if (!vendorData.coverage.generalLiability.compliant) {
@@ -260,23 +191,6 @@ function buildVendorData(extractedData: any, requirements: Requirements) {
   if (!vendorData.coverage.employersLiability.compliant) {
     vendorData.status = 'non-compliant';
     issues.push({ type: 'error', message: `Employers Liability below requirement` });
-  }
-
-  if (requirements.require_waiver_of_subrogation) {
-    const waiverText = (vendorData.waiverOfSubrogation || '').toLowerCase();
-    if (!waiverText.includes('yes')) {
-      vendorData.status = 'non-compliant';
-      issues.push({ type: 'error', message: 'Waiver of Subrogation not included' });
-    }
-  }
-
-  if (requirements.company_name && requirements.require_additional_insured) {
-    const normalizedAdditionalInsured = normalizeCompanyName(vendorData.additionalInsured || '');
-    const normalizedCompanyName = normalizeCompanyName(requirements.company_name);
-    if (!normalizedAdditionalInsured.includes(normalizedCompanyName)) {
-      vendorData.status = 'non-compliant';
-      issues.push({ type: 'error', message: `${requirements.company_name} not listed as Additional Insured` });
-    }
   }
 
   vendorData.issues = issues;
