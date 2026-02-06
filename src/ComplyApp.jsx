@@ -2019,6 +2019,56 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
                               </div>
                             );
                           })}
+
+                          {/* Additional Coverages */}
+                          {selectedVendor.additionalCoverages && selectedVendor.additionalCoverages.length > 0 && (
+                            <>
+                              {selectedVendor.additionalCoverages.map((cov, idx) => {
+                                const amount = cov.amount;
+                                const isExpired = cov.expired;
+                                const isExpiringSoon = cov.expiringSoon;
+                                const hasAmount = amount && amount !== 0;
+
+                                let statusIcon, statusColor, statusBg, statusText;
+                                if (!hasAmount) {
+                                  statusIcon = <XCircle size={14} className="text-gray-400" />;
+                                  statusColor = 'text-gray-400';
+                                  statusBg = 'bg-gray-50';
+                                  statusText = 'Not provided';
+                                } else if (isExpired) {
+                                  statusIcon = <XCircle size={14} className="text-red-600" />;
+                                  statusColor = 'text-red-600';
+                                  statusBg = 'bg-red-50';
+                                  statusText = 'Expired';
+                                } else if (isExpiringSoon) {
+                                  statusIcon = <AlertCircle size={14} className="text-amber-600" />;
+                                  statusColor = 'text-amber-600';
+                                  statusBg = 'bg-amber-50';
+                                  statusText = 'Expiring Soon';
+                                } else {
+                                  statusIcon = <CheckCircle size={14} className="text-emerald-600" />;
+                                  statusColor = 'text-emerald-600';
+                                  statusBg = 'bg-emerald-50';
+                                  statusText = 'Active';
+                                }
+
+                                return (
+                                  <div key={`additional-${idx}`} className={`flex items-center justify-between p-2.5 rounded-lg ${statusBg}`}>
+                                    <div className="flex items-center space-x-2">
+                                      {statusIcon}
+                                      <div>
+                                        <p className="font-medium text-gray-900 text-sm">{cov.type}</p>
+                                        <p className={`text-xs ${statusColor}`}>{statusText}</p>
+                                      </div>
+                                    </div>
+                                    <p className="font-semibold text-gray-900 text-sm">
+                                      {formatCurrency(amount)}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </>
+                          )}
                         </div>
                       </div>
 

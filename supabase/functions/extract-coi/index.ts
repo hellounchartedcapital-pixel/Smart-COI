@@ -10,6 +10,11 @@ interface Requirements {
   company_name?: string;
   require_additional_insured?: boolean;
   require_waiver_of_subrogation?: boolean;
+  custom_coverages?: Array<{
+    type: string;
+    amount: number;
+    required: boolean;
+  }>;
 }
 
 serve(async (req) => {
@@ -299,6 +304,25 @@ function buildVendorData(extractedData: any, requirements: Requirements) {
     } else {
       issues.push({ type: 'error', message: `Employers Liability $${(coverage.employersLiability.amount/1000).toFixed(0)}K below required $${(requirements.employers_liability/1000).toFixed(0)}K` });
     }
+  }
+
+  // Check custom coverage requirements against extracted additional coverages
+  if (requirements.custom_coverages && requirements.custom_coverages.length > 0) {
+    requirements.custom_coverages.forEach((requiredCoverage: any) => {
+      if (!requiredCoverage.required) return;
+
+      const foundCoverage = additionalCoverages.find(
+        (cov: any) => cov.type && cov.type.toLowerCase().includes(requiredCoverage.type.toLowerCase())
+      );
+
+      if (!foundCoverage) {
+        if (vendorData.status === 'compliant') vendorData.status = 'non-compliant';
+        issues.push({ type: 'error', message: `Missing required coverage: ${requiredCoverage.type}` });
+      } else if (foundCoverage.amount < requiredCoverage.amount) {
+        if (vendorData.status === 'compliant') vendorData.status = 'non-compliant';
+        issues.push({ type: 'error', message: `${requiredCoverage.type} $${(foundCoverage.amount / 1000000).toFixed(1)}M below required $${(requiredCoverage.amount / 1000000).toFixed(1)}M` });
+      }
+    });
   }
 
   vendorData.issues = issues;
