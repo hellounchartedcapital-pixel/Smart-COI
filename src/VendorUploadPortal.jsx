@@ -30,10 +30,10 @@ export function VendorUploadPortal({ token, onBack }) {
       setLoading(true);
       setError(null);
 
-      // Fetch vendor by upload token
+      // Fetch vendor by upload token (include property_id for property-level requirements)
       const { data, error: fetchError } = await supabase
         .from('vendors')
-        .select('id, name, dba, status, expiration_date, upload_token, upload_token_expires_at, user_id')
+        .select('id, name, dba, status, expiration_date, upload_token, upload_token_expires_at, user_id, property_id')
         .eq('upload_token', token)
         .single();
 
@@ -51,15 +51,27 @@ export function VendorUploadPortal({ token, onBack }) {
         }
       }
 
-      // Fetch user's requirements settings
+      // Fetch user's requirements settings (fallback)
       const { data: userSettings } = await supabase
         .from('settings')
         .select('general_liability, auto_liability, workers_comp, employers_liability, additional_requirements, require_additional_insured, require_waiver_of_subrogation')
         .eq('user_id', data.user_id)
         .single();
 
-      // Attach settings to vendor object for use during upload
+      // Fetch property-level requirements if vendor is assigned to a property
+      let propertySettings = null;
+      if (data.property_id) {
+        const { data: propData } = await supabase
+          .from('properties')
+          .select('general_liability, gl_aggregate, auto_liability, auto_liability_required, workers_comp_required, employers_liability, require_additional_insured, require_waiver_of_subrogation, custom_coverages, company_name')
+          .eq('id', data.property_id)
+          .single();
+        propertySettings = propData;
+      }
+
+      // Attach settings to vendor object -- property-level takes precedence
       data.userSettings = userSettings;
+      data.propertySettings = propertySettings;
 
       setVendor(data);
     } catch (err) {
@@ -144,17 +156,18 @@ export function VendorUploadPortal({ token, onBack }) {
         reader.readAsDataURL(file);
       });
 
-      // Build requirements from user's settings
+      // Build requirements -- property-level settings take precedence over user-level
       const userSettings = vendor.userSettings || {};
+      const propSettings = vendor.propertySettings || null;
 
-      // Decode custom coverages from additional_requirements if present
-      const customCoverages = [];
+      // Decode custom coverages from user-level additional_requirements if present
+      const userCustomCoverages = [];
       if (userSettings.additional_requirements && Array.isArray(userSettings.additional_requirements)) {
         userSettings.additional_requirements.forEach(item => {
           if (typeof item === 'string' && item.startsWith('__COVERAGE__')) {
             try {
               const coverageData = JSON.parse(item.replace('__COVERAGE__', ''));
-              customCoverages.push(coverageData);
+              userCustomCoverages.push(coverageData);
             } catch (e) {
               // Skip invalid entries
             }
@@ -162,14 +175,20 @@ export function VendorUploadPortal({ token, onBack }) {
         });
       }
 
+      // Property-level custom coverages (already stored as proper JSON array)
+      const propertyCustomCoverages = propSettings?.custom_coverages || [];
+
       const requirements = {
-        general_liability: userSettings.general_liability || 1000000,
-        auto_liability: userSettings.auto_liability || 1000000,
-        workers_comp: userSettings.workers_comp || 'Statutory',
-        employers_liability: userSettings.employers_liability || 500000,
-        custom_coverages: customCoverages,
-        require_additional_insured: userSettings.require_additional_insured || false,
-        require_waiver_of_subrogation: userSettings.require_waiver_of_subrogation || false
+        general_liability: propSettings?.general_liability || userSettings.general_liability || 1000000,
+        auto_liability: propSettings?.auto_liability || userSettings.auto_liability || 1000000,
+        auto_liability_required: propSettings?.auto_liability_required || false,
+        workers_comp: propSettings?.workers_comp_required ? 'Statutory' : (userSettings.workers_comp || 'Statutory'),
+        workers_comp_required: propSettings?.workers_comp_required || false,
+        employers_liability: propSettings?.employers_liability || userSettings.employers_liability || 500000,
+        custom_coverages: propertyCustomCoverages.length > 0 ? propertyCustomCoverages : userCustomCoverages,
+        require_additional_insured: propSettings?.require_additional_insured ?? userSettings.require_additional_insured ?? false,
+        require_waiver_of_subrogation: propSettings?.require_waiver_of_subrogation ?? userSettings.require_waiver_of_subrogation ?? false,
+        company_name: propSettings?.company_name || ''
       };
 
       // Call the extraction Edge Function with token for server-side validation
