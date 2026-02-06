@@ -138,6 +138,12 @@ export function VendorCard({
                   {formatCurrency(vendor.coverage.workersComp.amount)}
                 </div>
               )}
+              {vendor.additionalCoverages && vendor.additionalCoverages.map((cov, idx) => (
+                <div key={idx} className="bg-gray-100 px-2 py-1 rounded-lg">
+                  <span className="font-medium">{cov.type}:</span>{' '}
+                  {formatCurrency(cov.amount)}
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -1783,6 +1783,23 @@ export function TenantsView({ properties, userRequirements, selectedProperty, on
                             </div>
                           )}
 
+                          {/* Additional Coverages from policy_coverage */}
+                          {selectedTenant.policy_coverage?.additionalCoverages && selectedTenant.policy_coverage.additionalCoverages.length > 0 && (
+                            <>
+                              {selectedTenant.policy_coverage.additionalCoverages.map((cov, idx) => (
+                                <div key={`additional-${idx}`} className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-50">
+                                  <div className="flex items-center space-x-2">
+                                    <CheckCircle size={14} className="text-emerald-600" />
+                                    <p className="font-medium text-gray-900 text-sm">{cov.type}</p>
+                                  </div>
+                                  <p className="font-semibold text-gray-900 text-sm">
+                                    {formatCurrency(cov.amount)}
+                                  </p>
+                                </div>
+                              ))}
+                            </>
+                          )}
+
                           {/* Additional Insured */}
                           {selectedTenant.require_additional_insured && (
                             <div className={`flex items-center justify-between p-2.5 rounded-lg ${
