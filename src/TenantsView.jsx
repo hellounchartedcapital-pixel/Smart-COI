@@ -880,13 +880,13 @@ export function TenantsView({ properties, userRequirements, selectedProperty, on
       // Get tenant's property for requirements
       const tenantProperty = properties?.find(p => p.id === tenant.property_id);
 
-      // Build requirements from tenant or property settings
+      // Build requirements from tenant's lease terms (stored on tenant record)
       const requirements = {
-        generalLiability: tenant.required_liability_min || tenantProperty?.general_liability || 100000,
-        autoLiability: tenant.required_auto_liability_min || null,
+        generalLiability: tenant.required_general_liability || 100000,
+        autoLiability: tenant.required_auto_liability || null,
         workersComp: tenant.required_workers_comp || false,
-        employersLiability: tenant.required_employers_liability_min || null,
-        additionalInsured: tenant.requires_additional_insured !== false,
+        employersLiability: tenant.required_employers_liability || null,
+        additionalInsured: tenant.requires_additional_insured ?? false,
         waiverOfSubrogation: false,
       };
 
@@ -996,13 +996,14 @@ export function TenantsView({ properties, userRequirements, selectedProperty, on
           // Get tenant's property
           const tenantProperty = properties?.find(p => p.id === tenant.property_id);
 
-          // Build requirements
+          // Build requirements from tenant's lease terms (stored on tenant record)
           const requirements = {
-            generalLiability: tenant.required_liability_min || tenantProperty?.general_liability || 100000,
-            autoLiability: tenant.required_auto_liability_min || null,
+            generalLiability: tenant.required_general_liability || 100000,
+            autoLiability: tenant.required_auto_liability || null,
             workersComp: tenant.required_workers_comp || false,
-            employersLiability: tenant.required_employers_liability_min || null,
-            additionalInsured: tenant.requires_additional_insured !== false,
+            employersLiability: tenant.required_employers_liability || null,
+            additionalInsured: tenant.requires_additional_insured ?? false,
+            waiverOfSubrogation: false,
           };
 
           // Determine issues
