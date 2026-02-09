@@ -309,6 +309,21 @@ export function SmartUploadModal({
 
       if (insertError) throw insertError;
 
+      // Log activity for the vendor upload
+      try {
+        await supabase.from('vendor_activity').insert({
+          vendor_id: newVendor.id,
+          user_id: user.id,
+          action: 'coi_uploaded',
+          activity_type: 'coi_uploaded',
+          details: { fileName: filePath, status, description: `COI uploaded via admin portal. Status: ${status}` },
+          description: `COI uploaded via admin portal. Status: ${status}`,
+          metadata: { fileName: filePath, status }
+        });
+      } catch (activityErr) {
+        console.warn('Failed to log vendor activity', activityErr);
+      }
+
       setResult({
         success: true,
         type: 'vendor',

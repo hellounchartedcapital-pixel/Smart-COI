@@ -285,7 +285,9 @@ export function VendorUploadPortal({ token, onBack }) {
       await supabase.from('vendor_activity').insert({
         vendor_id: vendor.id,
         user_id: vendor.user_id,
+        action: 'coi_uploaded',
         activity_type: 'coi_uploaded',
+        details: { fileName, fileSize: file.size, status: vendorStatus, description: `Vendor uploaded a new COI via upload portal. Status: ${vendorStatus}` },
         description: `Vendor uploaded a new COI via upload portal. Status: ${vendorStatus}`,
         metadata: { fileName, fileSize: file.size, status: vendorStatus }
       });
