@@ -642,8 +642,18 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
 
       if (fnError) {
         logger.error('Edge Function error', fnError);
-        // Try to get more details from the error
-        const errorMsg = fnError.message || fnError.context?.body || JSON.stringify(fnError);
+        // Try to read the actual error from the edge function response body
+        let errorMsg = 'Failed to send email';
+        try {
+          if (fnError.context && typeof fnError.context.json === 'function') {
+            const body = await fnError.context.json();
+            errorMsg = body?.error || body?.message || errorMsg;
+          } else {
+            errorMsg = fnError.message || JSON.stringify(fnError);
+          }
+        } catch {
+          errorMsg = fnError.message || 'Edge Function error';
+        }
         throw new Error(errorMsg);
       }
 
