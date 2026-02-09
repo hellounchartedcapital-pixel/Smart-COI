@@ -567,9 +567,16 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
 
     try {
       // Refresh session to ensure JWT is valid before calling edge function
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
+      const { data: sessionData, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError || !sessionData?.session) {
         logger.error('Session refresh failed', refreshError);
+        showAlert({
+          type: 'error',
+          title: 'Session Expired',
+          message: 'Your session has expired. Please reload the page and try again.'
+        });
+        setSendingEmail(false);
+        return;
       }
 
       // Save the email to the vendor if it's new or updated
@@ -648,17 +655,19 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
 
       if (fnError) {
         logger.error('Edge Function error', fnError);
+        let errorMsg = fnError.message || 'Failed to send email';
+        // Check for JWT/auth errors specifically
+        if (errorMsg.toLowerCase().includes('jwt') || errorMsg.toLowerCase().includes('auth')) {
+          throw new Error('Authentication error. Please reload the page and try again.');
+        }
         // Try to read the actual error from the edge function response body
-        let errorMsg = 'Failed to send email';
         try {
           if (fnError.context && typeof fnError.context.json === 'function') {
             const body = await fnError.context.json();
             errorMsg = body?.error || body?.message || errorMsg;
-          } else {
-            errorMsg = fnError.message || JSON.stringify(fnError);
           }
         } catch {
-          errorMsg = fnError.message || 'Edge Function error';
+          // Keep the original errorMsg
         }
         throw new Error(errorMsg);
       }
