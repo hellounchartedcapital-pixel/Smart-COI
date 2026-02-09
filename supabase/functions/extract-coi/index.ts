@@ -43,21 +43,85 @@ serve(async (req) => {
       employers_liability: 500000
     };
 
-    const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+    const isTenantPolicy = requirements?.is_tenant_policy === true;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'document',
-            source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 }
-          },
-          {
-            type: 'text',
-            text: `Extract ALL insurance coverage data from this Certificate of Insurance (likely an ACORD 25 or similar form).
+    const extractionPrompt = isTenantPolicy
+      ? `Extract ALL insurance coverage data from this Certificate of Insurance (ACORD 25 or similar form) for a COMMERCIAL TENANT.
+
+This certificate is for a tenant of a commercial property. Read the entire document carefully and extract EVERY policy and coverage type listed.
+
+ALWAYS EXTRACT:
+1. INSURED/COMPANY NAME - The business or person who holds the insurance
+2. INSURANCE COMPANY - The carrier/insurer name
+3. CERTIFICATE HOLDER - Who the certificate was issued to (typically the landlord/property manager)
+4. ADDITIONAL INSURED - Check Description of Operations section for landlord/property manager
+5. WAIVER OF SUBROGATION - Check Description of Operations section
+
+STANDARD COVERAGES (extract if present on the certificate):
+- GENERAL LIABILITY - "Each Occurrence" limit and "General Aggregate"
+- AUTOMOBILE LIABILITY - "Combined Single Limit"
+- WORKERS COMPENSATION - Usually "Statutory"
+- EMPLOYERS LIABILITY - "Each Accident" amount
+
+ADDITIONAL COVERAGES (extract ANY other coverage types found, such as):
+- Umbrella/Excess Liability
+- Professional Liability / Errors & Omissions
+- Business Personal Property / Contents
+- Cyber Liability
+- Medical Payments
+- Any other coverage type listed on the certificate
+
+Return this JSON structure:
+{
+  "companyName": "insured tenant/company name",
+  "expirationDate": "YYYY-MM-DD (earliest expiration across all policies)",
+  "generalLiability": {
+    "amount": <each occurrence limit as integer, or null if NOT explicitly listed with a dollar amount>,
+    "aggregate": <general aggregate as integer, or null if not listed>,
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "autoLiability": {
+    "amount": <combined single limit as integer>,
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "workersComp": {
+    "amount": "Statutory",
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "employersLiability": {
+    "amount": <each accident amount as integer>,
+    "expirationDate": "YYYY-MM-DD"
+  },
+  "additionalCoverages": [
+    {
+      "type": "coverage type name",
+      "amount": <limit as integer>,
+      "aggregate": <aggregate limit as integer if listed, otherwise null>,
+      "expirationDate": "YYYY-MM-DD"
+    }
+  ],
+  "insuranceCompany": "carrier name",
+  "additionalInsured": "yes or no",
+  "certificateHolder": "name from certificate holder section",
+  "waiverOfSubrogation": "yes or no"
+}
+
+CRITICAL RULES:
+- ONLY extract amounts that are EXPLICITLY printed on the document with a dollar figure
+- If a coverage section exists on the form but has NO dollar amount filled in, set it to null - do NOT guess or default to any amount
+- If a standard coverage (GL, Auto, WC, EL) is NOT on the certificate at all, set it to null
+- Put any non-standard coverages in the "additionalCoverages" array
+- If no additional coverages exist, return an empty array []
+
+NUMBER FORMAT: Convert dollar amounts to plain integers.
+- $1,000,000 → 1000000
+- $300,000 → 300000
+- $100,000 → 100000
+
+DATE FORMAT: Convert to YYYY-MM-DD (e.g., 01/15/2025 → 2025-01-15)
+
+Return ONLY the JSON object, no other text.`
+      : `Extract ALL insurance coverage data from this Certificate of Insurance (likely an ACORD 25 or similar form).
 
 Read the entire document carefully and extract EVERY policy and coverage type listed, not just the common ones.
 
@@ -125,6 +189,7 @@ IMPORTANT RULES:
 - If a standard coverage (GL, Auto, WC, EL) is NOT on the certificate, set it to null instead of guessing
 - Put any non-standard coverages in the "additionalCoverages" array
 - If no additional coverages exist, return an empty array []
+- ONLY extract amounts that are EXPLICITLY printed on the document - do NOT guess or fabricate amounts
 
 NUMBER FORMAT: Convert dollar amounts to plain integers.
 - $1,000,000 → 1000000
@@ -133,7 +198,23 @@ NUMBER FORMAT: Convert dollar amounts to plain integers.
 
 DATE FORMAT: Convert to YYYY-MM-DD (e.g., 01/15/2025 → 2025-01-15)
 
-Return ONLY the JSON object, no other text.`
+Return ONLY the JSON object, no other text.`;
+
+    const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY });
+
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 4000,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'document',
+            source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 }
+          },
+          {
+            type: 'text',
+            text: extractionPrompt
           }
         ]
       }]
