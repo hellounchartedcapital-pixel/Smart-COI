@@ -174,7 +174,7 @@ export function TenantUploadPortal({ token, onBack }) {
       } else if (extractionResult?.success && extractionResult?.data) {
         extractedData = extractionResult.data;
 
-        // Check coverage expiration and compliance using shared utility
+        // Add expiration display flags using shared utility
         const updateCoverageFlags = (coverage) => {
           if (coverage && coverage.expirationDate) {
             const result = checkExpiration(coverage);
@@ -188,49 +188,21 @@ export function TenantUploadPortal({ token, onBack }) {
           updateCoverageFlags(extractedData.coverage.autoLiability);
         }
 
-        // Check liability coverage meets lease requirement
-        const liabilityAmount = extractedData.coverage?.generalLiability?.amount || 0;
-        if (tenant.required_liability_min > 0 && liabilityAmount < tenant.required_liability_min) {
-          issues.push(`Personal Liability coverage ${formatCurrency(liabilityAmount)} is below the required ${formatCurrency(tenant.required_liability_min)}`);
-        }
+        // Use status and issues from edge function (checks GL, Auto, EL, WC, expiration)
+        insuranceStatus = extractedData.status || 'compliant';
+        issues = (extractedData.issues || []).map(issue =>
+          typeof issue === 'string' ? issue : (issue?.message || issue?.description || '')
+        ).filter(Boolean);
 
-        // Check auto liability if required
-        if (tenant.required_auto_liability_min > 0) {
-          const autoAmount = extractedData.coverage?.autoLiability?.amount || 0;
-          if (autoAmount < tenant.required_auto_liability_min) {
-            issues.push(`Auto Liability coverage ${formatCurrency(autoAmount)} is below the required ${formatCurrency(tenant.required_auto_liability_min)}`);
-          }
-        }
-
-        // Check additional insured requirement
+        // Tenant-specific: check additional insured text match (edge function only checks yes/no)
         if (tenant.requires_additional_insured && tenant.additional_insured_text) {
           const additionalInsuredOnPolicy = (extractedData.additionalInsured || '').toLowerCase();
-
-          // Check if policy has additional insured endorsement
           if (!additionalInsuredOnPolicy || additionalInsuredOnPolicy.length < 5) {
-            issues.push('Additional Insured endorsement not found on policy');
-          }
-        }
-
-        // Add any issues from extraction
-        if (extractedData.issues) {
-          extractedData.issues.forEach(issue => {
-            const issueText = typeof issue === 'string' ? issue : (issue?.message || issue?.description || '');
-            if (issueText && !issues.includes(issueText)) {
-              issues.push(issueText);
+            if (!issues.some(i => i.toLowerCase().includes('additional insured'))) {
+              issues.push('Additional Insured endorsement not found on policy');
+              if (insuranceStatus === 'compliant') insuranceStatus = 'non-compliant';
             }
-          });
-        }
-
-        // Determine final status
-        if (extractedData.coverage?.generalLiability?.expired) {
-          insuranceStatus = 'expired';
-        } else if (extractedData.coverage?.generalLiability?.expiringSoon) {
-          insuranceStatus = 'expiring';
-        } else if (issues.length > 0) {
-          insuranceStatus = 'non-compliant';
-        } else {
-          insuranceStatus = 'compliant';
+          }
         }
       }
 
