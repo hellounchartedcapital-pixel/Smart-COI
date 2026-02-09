@@ -678,15 +678,17 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
 
       // Log the activity (only after successful email send)
       try {
-        await supabase.from('vendor_activity').insert({
+        const { error: activityErr } = await supabase.from('vendor_activity').insert({
           vendor_id: requestCOIVendor.id,
           user_id: user?.id,
+          action: 'email_sent',
           activity_type: 'email_sent',
+          details: { email: requestCOIEmail, description: `COI request email sent to ${requestCOIEmail}` },
           description: `COI request email sent to ${requestCOIEmail}`,
           metadata: { email: requestCOIEmail }
         });
+        if (activityErr) logger.warn('Failed to log activity', activityErr);
       } catch (activityError) {
-        // Log failure but don't fail the whole operation - email was already sent
         logger.warn('Failed to log activity', activityError);
       }
 
@@ -798,7 +800,9 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
           await supabase.from('vendor_activity').insert({
             vendor_id: vendor.id,
             user_id: user?.id,
+            action: 'email_sent',
             activity_type: 'email_sent',
+            details: { email: vendor.contactEmail, bulk: true, description: `COI request email sent to ${vendor.contactEmail} (bulk)` },
             description: `COI request email sent to ${vendor.contactEmail} (bulk)`,
             metadata: { email: vendor.contactEmail, bulk: true }
           });
@@ -2293,8 +2297,8 @@ function ComplyApp({ user, onSignOut, onShowPricing }) {
                                         : actionType?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Activity'}
                                     </p>
                                     {description && <p className="text-sm text-gray-600 mt-0.5">{description}</p>}
-                                    {activity.details?.email && (
-                                      <p className="text-xs text-gray-500 mt-0.5">To: {activity.details.email}</p>
+                                    {(activity.details?.email || activity.metadata?.email) && (
+                                      <p className="text-xs text-gray-500 mt-0.5">To: {activity.details?.email || activity.metadata?.email}</p>
                                     )}
                                     <p className="text-xs text-gray-400 mt-1">
                                       {new Date(activity.created_at).toLocaleString()}

@@ -253,7 +253,15 @@ serve(async (req) => {
                 vendor_id: vendor.id,
                 user_id: settings.user_id,
                 action: 'auto_follow_up_sent',
+                activity_type: 'auto_follow_up_sent',
                 details: {
+                  reason: followUpReason,
+                  email: vendor.contact_email,
+                  emailId: emailResponse.emailId,
+                  description: `Auto follow-up sent: ${followUpReason}`,
+                },
+                description: `Auto follow-up sent: ${followUpReason}`,
+                metadata: {
                   reason: followUpReason,
                   email: vendor.contact_email,
                   emailId: emailResponse.emailId,
