@@ -554,7 +554,18 @@ export function VendorUploadPortal({ token, onBack }) {
             const elReq = propSettings?.employers_liability || userSettings.employers_liability;
             const reqAdditionalInsured = propSettings?.require_additional_insured ?? userSettings.require_additional_insured;
             const reqWaiverOfSubrogation = propSettings?.require_waiver_of_subrogation ?? userSettings.require_waiver_of_subrogation;
-            const customCoverages = propSettings?.custom_coverages || [];
+
+            // Decode user-level custom coverages from additional_requirements if no property-level ones
+            let customCoverages = propSettings?.custom_coverages || [];
+            if (customCoverages.length === 0 && userSettings.additional_requirements && Array.isArray(userSettings.additional_requirements)) {
+              userSettings.additional_requirements.forEach(item => {
+                if (typeof item === 'string' && item.startsWith('__COVERAGE__')) {
+                  try {
+                    customCoverages.push(JSON.parse(item.replace('__COVERAGE__', '')));
+                  } catch (e) { /* skip invalid */ }
+                }
+              });
+            }
 
             const hasAnyRequirement = glReq || autoReq || wcRequired || elReq || reqAdditionalInsured || reqWaiverOfSubrogation || customCoverages.length > 0;
 
