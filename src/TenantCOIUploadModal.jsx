@@ -176,92 +176,30 @@ export function TenantCOIUploadModal({ isOpen, onClose, onTenantCreated, onManua
         reader.readAsDataURL(file);
       });
 
-      // Call extract-coi with rawOnly to get direct AI extraction
+      // Call extract-coi with lease requirements — same path as vendor extraction
+      // buildVendorData on the server handles compliance checking and null/blank fields
+      const extractionReqs = {
+        general_liability: requirements.general_liability,
+        auto_liability: requirements.auto_liability,
+        auto_liability_required: requirements.auto_liability > 0,
+        workers_comp: requirements.workers_comp ? 'Statutory' : null,
+        workers_comp_required: requirements.workers_comp,
+        employers_liability: requirements.employers_liability,
+        require_additional_insured: requirements.additional_insured,
+        require_waiver_of_subrogation: requirements.waiver_of_subrogation,
+      };
+
       const { data: extractionResult, error: fnError } = await supabase.functions.invoke('extract-coi', {
-        body: { pdfBase64: base64Data, rawOnly: true }
+        body: { pdfBase64: base64Data, requirements: extractionReqs }
       });
 
       if (fnError) throw new Error(fnError.message || 'Failed to process COI');
       if (!extractionResult?.success) throw new Error(extractionResult?.error || 'Failed to extract COI data');
 
-      const raw = extractionResult.data;
-
-      // Extract values from raw AI output
-      const glAmount = raw.generalLiability?.amount ?? 0;
-      const glAggregate = raw.generalLiability?.aggregate ?? 0;
-      const autoAmount = raw.autoLiability?.amount ?? 0;
-      const wcAmount = raw.workersComp?.amount || null;
-      const elAmount = raw.employersLiability?.amount ?? 0;
-      const hasAdditionalInsured = (raw.additionalInsured || '').toLowerCase() === 'yes';
-      const hasWaiverOfSubrogation = (raw.waiverOfSubrogation || '').toLowerCase() === 'yes';
-      const expirationDate = raw.expirationDate || null;
-      const additionalCoverages = raw.additionalCoverages || [];
-
-      // Check compliance against requirements
-      setProcessingStatus('Checking compliance...');
-      const glCompliant = requirements.general_liability === 0 || glAmount >= requirements.general_liability;
-      const autoCompliant = requirements.auto_liability === 0 || autoAmount >= requirements.auto_liability;
-      const wcCompliant = !requirements.workers_comp || wcAmount === 'Statutory' || (typeof wcAmount === 'number' && wcAmount > 0);
-      const elCompliant = requirements.employers_liability === 0 || elAmount >= requirements.employers_liability;
-      const aiCompliant = !requirements.additional_insured || hasAdditionalInsured;
-      const wosCompliant = !requirements.waiver_of_subrogation || hasWaiverOfSubrogation;
-
-      const today = new Date();
-      const expDate = expirationDate ? new Date(expirationDate) : null;
-      const daysUntilExpiration = expDate ? Math.floor((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) : 999;
-
-      let insuranceStatus = 'compliant';
-      const issues = [];
-
-      if (daysUntilExpiration < 0) {
-        insuranceStatus = 'expired';
-        issues.push({ type: 'critical', message: `Policy expired on ${expirationDate}` });
-      } else if (daysUntilExpiration <= 30) {
-        insuranceStatus = 'expiring';
-        issues.push({ type: 'warning', message: `Policy expiring in ${daysUntilExpiration} days` });
-      }
-
-      if (!glCompliant) {
-        if (insuranceStatus === 'compliant') insuranceStatus = 'non-compliant';
-        if (glAmount === 0) {
-          issues.push({ type: 'error', message: `General Liability not found (required ${formatCurrency(requirements.general_liability)})` });
-        } else {
-          issues.push({ type: 'error', message: `General Liability ${formatCurrency(glAmount)} below required ${formatCurrency(requirements.general_liability)}` });
-        }
-      }
-
-      if (!autoCompliant) {
-        if (insuranceStatus === 'compliant') insuranceStatus = 'non-compliant';
-        if (autoAmount === 0) {
-          issues.push({ type: 'error', message: `Auto Liability not found (required ${formatCurrency(requirements.auto_liability)})` });
-        } else {
-          issues.push({ type: 'error', message: `Auto Liability ${formatCurrency(autoAmount)} below required ${formatCurrency(requirements.auto_liability)}` });
-        }
-      }
-
-      if (!wcCompliant) {
-        if (insuranceStatus === 'compliant') insuranceStatus = 'non-compliant';
-        issues.push({ type: 'error', message: 'Workers Compensation is required but not found' });
-      }
-
-      if (!elCompliant) {
-        if (insuranceStatus === 'compliant') insuranceStatus = 'non-compliant';
-        if (elAmount === 0) {
-          issues.push({ type: 'error', message: `Employers Liability not found (required ${formatCurrency(requirements.employers_liability)})` });
-        } else {
-          issues.push({ type: 'error', message: `Employers Liability ${formatCurrency(elAmount)} below required ${formatCurrency(requirements.employers_liability)}` });
-        }
-      }
-
-      if (!aiCompliant) {
-        if (insuranceStatus === 'compliant') insuranceStatus = 'non-compliant';
-        issues.push({ type: 'error', message: 'Additional Insured endorsement required but not found' });
-      }
-
-      if (!wosCompliant) {
-        if (insuranceStatus === 'compliant') insuranceStatus = 'non-compliant';
-        issues.push({ type: 'error', message: 'Waiver of Subrogation required but not found' });
-      }
+      // Use the processed data from buildVendorData (same as vendor flow)
+      const data = extractionResult.data;
+      const insuranceStatus = data.status || 'compliant';
+      const issues = data.issues || [];
 
       // Create tenant record
       setProcessingStatus('Creating tenant...');
@@ -271,6 +209,15 @@ export function TenantCOIUploadModal({ isOpen, onClose, onTenantCreated, onManua
       const tokenExpiry = new Date();
       tokenExpiry.setDate(tokenExpiry.getDate() + 30);
 
+      // Extract coverage values from processed data
+      const coverage = data.coverage || {};
+      const glAmount = coverage.generalLiability?.amount || 0;
+      const glAggregate = coverage.generalLiability?.aggregate || 0;
+      const autoAmount = coverage.autoLiability?.amount || 0;
+      const wcAmount = coverage.workersComp?.amount || null;
+      const elAmount = coverage.employersLiability?.amount || 0;
+      const additionalCoverages = data.additionalCoverages || [];
+
       const tenantData = {
         user_id: user.id,
         property_id: propertyId,
@@ -278,22 +225,16 @@ export function TenantCOIUploadModal({ isOpen, onClose, onTenantCreated, onManua
         email: tenantEmail.trim() || null,
         phone: tenantPhone.trim() || null,
 
-        // COI data
+        // COI data (from buildVendorData processed output)
         policy_document_path: uploadedFilePath,
-        policy_expiration_date: expirationDate,
-        insurance_company: raw.insuranceCompany || null,
+        policy_expiration_date: data.expirationDate || null,
+        insurance_company: data.insuranceCompany || null,
         policy_general_liability: glAmount,
         policy_general_liability_aggregate: glAggregate,
         policy_auto_liability: autoAmount,
         policy_workers_comp: wcAmount ? String(wcAmount) : null,
         policy_employers_liability: elAmount,
-        policy_coverage: {
-          generalLiability: raw.generalLiability ? { amount: glAmount, aggregate: glAggregate } : null,
-          autoLiability: raw.autoLiability ? { amount: autoAmount } : null,
-          workersComp: raw.workersComp ? { amount: wcAmount } : null,
-          employersLiability: raw.employersLiability ? { amount: elAmount } : null,
-          additionalCoverages: additionalCoverages
-        },
+        policy_coverage: coverage,
 
         // Lease requirements
         required_general_liability: requirements.general_liability,
@@ -305,17 +246,17 @@ export function TenantCOIUploadModal({ isOpen, onClose, onTenantCreated, onManua
         // Compliance
         insurance_status: insuranceStatus,
         insurance_issues: issues.length > 0 ? issues : null,
-        compliance_issues: issues.length > 0 ? issues.map(i => i.message) : null,
-        has_additional_insured: hasAdditionalInsured,
-        has_waiver_of_subrogation: hasWaiverOfSubrogation,
-        policy_additional_insured: raw.additionalInsured || null,
+        compliance_issues: issues.length > 0 ? issues.map(i => typeof i === 'string' ? i : i.message).filter(Boolean) : null,
+        has_additional_insured: !!data.hasAdditionalInsured,
+        has_waiver_of_subrogation: !!data.hasWaiverOfSubrogation,
+        policy_additional_insured: data.additionalInsured || null,
 
         // Upload token
         upload_token: uploadToken,
         upload_token_expires_at: tokenExpiry.toISOString(),
         coi_uploaded_at: new Date().toISOString(),
         policy_uploaded_at: new Date().toISOString(),
-        raw_policy_data: raw,
+        raw_policy_data: data.rawData || null,
 
         status: 'active'
       };
@@ -345,18 +286,9 @@ export function TenantCOIUploadModal({ isOpen, onClose, onTenantCreated, onManua
         tenant: newTenant,
         status: insuranceStatus,
         issues,
-        coverage: {
-          generalLiability: glAmount,
-          generalLiabilityAggregate: glAggregate,
-          autoLiability: autoAmount,
-          workersComp: wcAmount,
-          employersLiability: elAmount,
-          additionalInsured: hasAdditionalInsured,
-          waiverOfSubrogation: hasWaiverOfSubrogation,
-          expirationDate,
-          additionalCoverages
-        },
-        companyName: raw.companyName || tenantName
+        coverage: coverage,
+        additionalCoverages: additionalCoverages,
+        companyName: data.name || tenantName
       });
       setStep(STEPS.RESULT);
 
@@ -730,45 +662,53 @@ export function TenantCOIUploadModal({ isOpen, onClose, onTenantCreated, onManua
               </div>
 
               {/* Coverages Found */}
-              <div className="text-left bg-gray-50 rounded-lg p-4 mb-4">
-                <h4 className="font-medium text-gray-900 mb-2">Coverages Found:</h4>
-                <div className="space-y-1 text-sm">
-                  {result.coverage.generalLiability > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">General Liability:</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(result.coverage.generalLiability)}</span>
-                    </div>
-                  )}
-                  {result.coverage.autoLiability > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Auto Liability:</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(result.coverage.autoLiability)}</span>
-                    </div>
-                  )}
-                  {result.coverage.workersComp && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Workers Comp:</span>
-                      <span className="font-medium text-gray-900">
-                        {result.coverage.workersComp === 'Statutory' ? 'Statutory' : formatCurrency(result.coverage.workersComp)}
-                      </span>
-                    </div>
-                  )}
-                  {result.coverage.employersLiability > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Employers Liability:</span>
-                      <span className="font-medium text-gray-900">{formatCurrency(result.coverage.employersLiability)}</span>
-                    </div>
-                  )}
-                  {result.coverage.additionalCoverages && result.coverage.additionalCoverages.length > 0 &&
-                    result.coverage.additionalCoverages.map((cov, idx) => (
-                      <div key={idx} className="flex justify-between">
-                        <span className="text-gray-600">{cov.type}:</span>
-                        <span className="font-medium text-gray-900">{formatCurrency(cov.amount)}</span>
+              {result.coverage && Object.keys(result.coverage).length > 0 && (
+                <div className="text-left bg-gray-50 rounded-lg p-4 mb-4">
+                  <h4 className="font-medium text-gray-900 mb-2">Coverages Found:</h4>
+                  <div className="space-y-1 text-sm">
+                    {result.coverage.generalLiability && !result.coverage.generalLiability.notFound && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">General Liability:</span>
+                        <span className={`font-medium ${result.coverage.generalLiability.compliant === false ? 'text-red-600' : 'text-gray-900'}`}>
+                          {formatCurrency(result.coverage.generalLiability.amount)}
+                        </span>
                       </div>
-                    ))
-                  }
+                    )}
+                    {result.coverage.autoLiability && !result.coverage.autoLiability.notFound && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Auto Liability:</span>
+                        <span className={`font-medium ${result.coverage.autoLiability.compliant === false ? 'text-red-600' : 'text-gray-900'}`}>
+                          {formatCurrency(result.coverage.autoLiability.amount)}
+                        </span>
+                      </div>
+                    )}
+                    {result.coverage.workersComp && !result.coverage.workersComp.notFound && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Workers Comp:</span>
+                        <span className="font-medium text-gray-900">
+                          {result.coverage.workersComp.amount === 'Statutory' ? 'Statutory' : formatCurrency(result.coverage.workersComp.amount)}
+                        </span>
+                      </div>
+                    )}
+                    {result.coverage.employersLiability && !result.coverage.employersLiability.notFound && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Employers Liability:</span>
+                        <span className={`font-medium ${result.coverage.employersLiability.compliant === false ? 'text-red-600' : 'text-gray-900'}`}>
+                          {formatCurrency(result.coverage.employersLiability.amount)}
+                        </span>
+                      </div>
+                    )}
+                    {result.additionalCoverages && result.additionalCoverages.length > 0 &&
+                      result.additionalCoverages.map((cov, idx) => (
+                        <div key={idx} className="flex justify-between">
+                          <span className="text-gray-600">{cov.type}:</span>
+                          <span className="font-medium text-gray-900">{formatCurrency(cov.amount)}</span>
+                        </div>
+                      ))
+                    }
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Issues */}
               {result.issues && result.issues.length > 0 && (
