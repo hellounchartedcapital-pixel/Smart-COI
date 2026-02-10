@@ -223,7 +223,7 @@ export function SmartUploadModal({
       if (documentType === 'vendor') {
         await processVendorUpload(extractedData, fileName, selectedProp, requirements);
       } else {
-        await processTenantUpload(extractedData, fileName);
+        await processTenantUpload(extractedData, fileName, requirements);
       }
 
     } catch (err) {
@@ -336,20 +336,20 @@ export function SmartUploadModal({
     }
   };
 
-  const processTenantUpload = async (data, filePath) => {
+  // processTenantUpload — mirrors processVendorUpload exactly
+  // Same data handling, same result structure. Only difference: saves to tenants table
+  // with lease requirements instead of vendors table with property requirements.
+  const processTenantUpload = async (data, filePath, requirements) => {
     setUploadStatus('Creating tenant record...');
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Use compliance status and issues from the edge function
-      let insuranceStatus = data.status || 'compliant';
-      const issues = (data.issues || []).map(issue =>
-        typeof issue === 'string' ? issue : (issue?.message || issue?.description || '')
-      ).filter(Boolean);
-
-      const liabilityAmount = data.coverage?.generalLiability?.amount || 0;
+      // Use compliance status and issues from the edge function's buildVendorData
+      // SAME as processVendorUpload — no transformation, keep as-is
+      const status = data.status || 'compliant';
+      const issues = data.issues || [];
 
       // Generate upload token
       const uploadToken = crypto.randomUUID();
@@ -357,12 +357,11 @@ export function SmartUploadModal({
       tokenExpiry.setDate(tokenExpiry.getDate() + 30);
 
       // Use extracted name or provided name
-      const tenantName = contactName || data.name || data.companyName || 'New Tenant';
+      const tenantName = data.name || data.companyName || contactName || 'New Tenant';
 
       // Create unit if unit number was provided
       let unitId = null;
       if (unitNumber && unitNumber.trim() && selectedPropertyId) {
-        // Check if unit already exists
         const { data: existingUnit } = await supabase
           .from('units')
           .select('id')
@@ -374,7 +373,6 @@ export function SmartUploadModal({
         if (existingUnit) {
           unitId = existingUnit.id;
         } else {
-          // Create new unit
           const { data: newUnit, error: unitError } = await supabase
             .from('units')
             .insert({
@@ -392,6 +390,7 @@ export function SmartUploadModal({
       }
 
       // Create tenant record
+      // Maps the same buildVendorData output fields to tenant columns
       const tenantData = {
         user_id: user.id,
         name: tenantName,
@@ -400,30 +399,39 @@ export function SmartUploadModal({
         property_id: selectedPropertyId || null,
         unit_id: unitId,
         status: 'active',
-        insurance_status: insuranceStatus,
-        // Lease requirements (user-entered)
-        required_general_liability: leaseRequirements.general_liability || 0,
-        required_auto_liability: leaseRequirements.auto_liability || 0,
-        required_workers_comp: leaseRequirements.workers_comp_required || false,
-        required_employers_liability: leaseRequirements.employers_liability || 0,
-        requires_additional_insured: leaseRequirements.require_additional_insured || false,
-        // Policy data - individual columns (read by tenant detail view)
+        insurance_status: status,
+        // Lease requirements
+        required_general_liability: requirements.general_liability || 0,
+        required_auto_liability: requirements.auto_liability || 0,
+        required_workers_comp: requirements.workers_comp_required || false,
+        required_employers_liability: requirements.employers_liability || 0,
+        requires_additional_insured: requirements.require_additional_insured || false,
+        // Coverage — individual columns (read by tenant detail view)
         policy_expiration_date: data.expirationDate || null,
-        policy_liability_amount: liabilityAmount,
+        policy_liability_amount: data.coverage?.generalLiability?.amount || 0,
         policy_general_liability: data.coverage?.generalLiability?.amount || 0,
         policy_general_liability_aggregate: data.coverage?.generalLiability?.aggregate || 0,
         policy_auto_liability: data.coverage?.autoLiability?.amount || 0,
         policy_workers_comp: data.coverage?.workersComp?.amount ? String(data.coverage.workersComp.amount) : null,
         policy_employers_liability: data.coverage?.employersLiability?.amount || 0,
         insurance_company: data.insuranceCompany || null,
-        // Policy data - full JSON
+        // Coverage — full JSON (same as vendor's coverage field)
         policy_coverage: data.coverage ? { ...data.coverage, additionalCoverages: data.additionalCoverages || [] } : null,
+        // Compliance — same fields as vendor
+        compliance_issues: issues,
+        additional_insured: data.additionalInsured || null,
         policy_additional_insured: data.additionalInsured || null,
         has_additional_insured: !!data.hasAdditionalInsured,
+        waiver_of_subrogation: data.waiverOfSubrogation || null,
         has_waiver_of_subrogation: !!data.hasWaiverOfSubrogation,
+        // Raw data and document
         policy_document_path: filePath,
-        compliance_issues: issues.length > 0 ? issues : null,
-        raw_policy_data: data.rawData || null,
+        raw_policy_data: {
+          ...data.rawData,
+          documentPath: filePath,
+          uploadToken: uploadToken,
+          uploadTokenExpiresAt: tokenExpiry.toISOString()
+        },
         policy_uploaded_at: new Date().toISOString(),
         upload_token: uploadToken,
         upload_token_expires_at: tokenExpiry.toISOString()
@@ -432,20 +440,17 @@ export function SmartUploadModal({
       const { data: newTenant, error: insertError } = await supabase
         .from('tenants')
         .insert(tenantData)
-        .select(`
-          *,
-          unit:units(id, unit_number),
-          property:properties(id, name, address)
-        `)
+        .select()
         .single();
 
       if (insertError) throw insertError;
 
+      // Result — SAME structure as processVendorUpload
       setResult({
         success: true,
         type: 'tenant',
         name: newTenant.name,
-        status: insuranceStatus,
+        status: status,
         issues: issues,
         coverage: data.coverage || {},
         additionalCoverages: data.additionalCoverages || [],
