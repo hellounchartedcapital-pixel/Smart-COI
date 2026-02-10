@@ -147,6 +147,9 @@ IMPORTANT RULES:
 - Do NOT confuse sub-fields within a section (e.g., "Damage to Rented Premises" is NOT "Each Occurrence")
 - If you are unsure whether a value belongs to a specific field, set it to null rather than guessing
 
+COMMON MISTAKE TO AVOID:
+On ACORD 25 forms, the GL section often has "$1,000,000" next to "DAMAGE TO RENTED PREMISES (Ea occurrence)" while the "EACH OCCURRENCE" line is BLANK. In this case, generalLiability MUST be null because "Damage to Rented Premises" is a DIFFERENT coverage — it is NOT the general liability per-occurrence limit. Similarly, "PERSONAL & ADV INJURY" showing $1,000,000 does NOT mean general liability is $1,000,000. ONLY report the value that is specifically on the "EACH OCCURRENCE" line.
+
 NUMBER FORMAT: Convert dollar amounts to plain integers.
 - $1,000,000 → 1000000
 - $2,000,000 → 2000000
@@ -201,8 +204,12 @@ function buildVendorData(extractedData: any, requirements: Requirements) {
   const coverage: any = {};
 
   // General Liability
-  if (extractedData.generalLiability) {
-    const glAmount = extractedData.generalLiability.amount || 0;
+  // The AI may return generalLiability as an object with amount: null when the
+  // "Each Occurrence" field is blank. We must check amount specifically, not just
+  // the existence of the object. A GL section can exist on the form (with sub-fields
+  // like Damage to Rented Premises) while the primary Each Occurrence field is blank.
+  if (extractedData.generalLiability && extractedData.generalLiability.amount != null && extractedData.generalLiability.amount !== 0) {
+    const glAmount = extractedData.generalLiability.amount;
     const glAggregate = extractedData.generalLiability.aggregate || (glAmount * 2);
     coverage.generalLiability = {
       amount: glAmount,
@@ -211,27 +218,27 @@ function buildVendorData(extractedData: any, requirements: Requirements) {
       compliant: glAmount >= requirements.general_liability
     };
   } else {
-    // GL not found on COI - mark as non-compliant if required
+    // GL not found on COI or amount is null/0 - mark as not found
     coverage.generalLiability = {
       amount: 0,
       aggregate: 0,
-      expirationDate: null,
+      expirationDate: extractedData.generalLiability?.expirationDate || null,
       compliant: requirements.general_liability <= 0,
       notFound: true
     };
   }
 
   // Auto Liability
-  if (extractedData.autoLiability) {
+  if (extractedData.autoLiability && extractedData.autoLiability.amount != null && extractedData.autoLiability.amount !== 0) {
     coverage.autoLiability = {
-      amount: extractedData.autoLiability.amount || 0,
+      amount: extractedData.autoLiability.amount,
       expirationDate: extractedData.autoLiability.expirationDate,
-      compliant: (extractedData.autoLiability.amount || 0) >= requirements.auto_liability
+      compliant: extractedData.autoLiability.amount >= requirements.auto_liability
     };
   } else {
     coverage.autoLiability = {
       amount: 0,
-      expirationDate: null,
+      expirationDate: extractedData.autoLiability?.expirationDate || null,
       compliant: requirements.auto_liability <= 0,
       notFound: true
     };
@@ -254,16 +261,16 @@ function buildVendorData(extractedData: any, requirements: Requirements) {
   }
 
   // Employers Liability
-  if (extractedData.employersLiability) {
+  if (extractedData.employersLiability && extractedData.employersLiability.amount != null && extractedData.employersLiability.amount !== 0) {
     coverage.employersLiability = {
-      amount: extractedData.employersLiability.amount || 0,
+      amount: extractedData.employersLiability.amount,
       expirationDate: extractedData.employersLiability.expirationDate,
-      compliant: (extractedData.employersLiability.amount || 0) >= requirements.employers_liability
+      compliant: extractedData.employersLiability.amount >= requirements.employers_liability
     };
   } else {
     coverage.employersLiability = {
       amount: 0,
-      expirationDate: null,
+      expirationDate: extractedData.employersLiability?.expirationDate || null,
       compliant: requirements.employers_liability <= 0,
       notFound: true
     };
