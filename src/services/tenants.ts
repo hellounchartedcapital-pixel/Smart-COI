@@ -77,17 +77,21 @@ export async function createTenant(tenant: {
   lease_start?: string;
   lease_end?: string;
 }): Promise<Tenant> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
   const { data, error } = await supabase
     .from('tenants')
     .insert({
       ...tenant,
+      user_id: user.id,
       status: 'active' as const,
       insurance_status: 'non-compliant' as const,
     })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data as Tenant;
 }
 
