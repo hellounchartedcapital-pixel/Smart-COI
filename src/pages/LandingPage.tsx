@@ -179,13 +179,13 @@ const navLinks = [
 const painPoints = [
   {
     icon: FileText,
-    title: 'Drowning in spreadsheets',
-    description: 'Tracking COIs across dozens of vendors and tenants in spreadsheets is error-prone and eats up hours every week.',
+    title: 'Manually ensuring compliance is a nightmare',
+    description: 'Cross-referencing every COI against your requirements by hand is tedious, error-prone, and eats up hours every week.',
   },
   {
     icon: AlertCircle,
-    title: 'Expired coverage = massive liability',
-    description: 'A single lapsed certificate can expose property owners to millions in uninsured risk. Manual tracking guarantees blind spots.',
+    title: 'Lapsed vendor coverage = massive liability',
+    description: 'A single expired vendor certificate can expose property owners to millions in uninsured risk. Manual tracking guarantees blind spots.',
   },
   {
     icon: Users,

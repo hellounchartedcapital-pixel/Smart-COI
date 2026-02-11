@@ -31,7 +31,7 @@ const statCards = [
   { title: 'Total Certificates', value: '284', icon: FileText, subtitle: '196 vendors, 88 tenants', color: 'text-emerald-600' },
   { title: 'Compliant', value: '94%', icon: CheckCircle2, subtitle: '267 of 284', color: 'text-emerald-600' },
   { title: 'Expiring in 30 Days', value: '12', icon: AlertTriangle, subtitle: 'Requires attention', color: 'text-amber-600' },
-  { title: 'Tenants Tracked', value: '156', icon: Users, subtitle: 'Across 8 properties', color: 'text-teal-600' },
+  { title: 'Action Items', value: '7', icon: AlertTriangle, subtitle: 'Requires follow-up', color: 'text-red-600' },
 ];
 
 const actionItems = [
@@ -53,9 +53,9 @@ function MiniDonut() {
   let offset = 0;
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex items-center gap-3">
       <div className="relative flex-shrink-0">
-        <svg width="90" height="90" viewBox="0 0 100 100" className="transform -rotate-90">
+        <svg width="80" height="80" viewBox="0 0 100 100" className="transform -rotate-90">
           {segments.map((seg, i) => {
             const dash = (seg.value / total) * circumference;
             const el = (
@@ -77,15 +77,15 @@ function MiniDonut() {
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-lg font-bold text-emerald-600">94%</span>
-          <span className="text-[8px] text-gray-500">Compliant</span>
+          <span className="text-base font-bold text-emerald-600">94%</span>
+          <span className="text-[7px] text-gray-500">Compliant</span>
         </div>
       </div>
-      <div className="flex gap-3">
+      <div className="space-y-1 min-w-0">
         {segments.map((seg, i) => (
           <div key={i} className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: seg.color }} />
-            <span className="text-[8px] text-gray-600 whitespace-nowrap">{seg.value} {seg.label}</span>
+            <span className="text-[7px] text-gray-600 truncate">{seg.value} {seg.label}</span>
           </div>
         ))}
       </div>
@@ -180,7 +180,7 @@ export function DashboardPreview() {
             {/* Charts + Action Items row */}
             <div className="grid grid-cols-3 gap-2">
               {/* Compliance Overview */}
-              <div className="bg-white rounded-lg p-2.5 border border-gray-200 shadow-sm">
+              <div className="bg-white rounded-lg p-2.5 border border-gray-200 shadow-sm overflow-hidden">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[9px] font-bold text-gray-900">Compliance Overview</p>
                   <div className="flex gap-0.5">
