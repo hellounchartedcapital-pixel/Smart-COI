@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { DocumentUploadZone } from '@/components/shared/DocumentUploadZone';
 import { ExtractedCoverageDisplay } from '@/components/shared/ExtractedCoverageDisplay';
 import { RequirementTemplateSelector } from '@/components/shared/RequirementTemplateSelector';
+import { PropertySelector } from '@/components/shared/PropertySelector';
 import { ComplianceResults } from '@/components/shared/ComplianceResults';
 import { extractCOI, uploadCOIFile } from '@/services/ai-extraction';
 import { createVendor, updateVendor } from '@/services/vendors';
@@ -31,6 +32,7 @@ export default function AddVendor() {
   // Form state
   const [vendorName, setVendorName] = useState('');
   const [vendorEmail, setVendorEmail] = useState('');
+  const [propertyId, setPropertyId] = useState('');
   const [templateId, setTemplateId] = useState('');
 
   // Validation state
@@ -112,6 +114,7 @@ export default function AddVendor() {
       const vendor = await createVendor({
         name: vendorName.trim(),
         contact_email: vendorEmail.trim(),
+        property_id: propertyId || undefined,
       });
 
       // 2. Upload COI file to storage
@@ -158,7 +161,7 @@ export default function AddVendor() {
     } finally {
       setIsCreating(false);
     }
-  }, [vendorName, vendorEmail, templateId, extractionResult, uploadedFile, templates, queryClient]);
+  }, [vendorName, vendorEmail, propertyId, templateId, extractionResult, uploadedFile, templates, queryClient]);
 
   // After successful creation, show compliance results with a link to go back
   if (createdSuccessfully) {
@@ -198,6 +201,7 @@ export default function AddVendor() {
               setExtractionError(null);
               setVendorName('');
               setVendorEmail('');
+              setPropertyId('');
               setTemplateId('');
               setComplianceResult(null);
               setErrors({});
@@ -321,6 +325,11 @@ export default function AddVendor() {
                   Used for compliance notifications and COI update requests
                 </p>
               </div>
+
+              <PropertySelector
+                value={propertyId}
+                onChange={(v) => setPropertyId(v)}
+              />
 
               <RequirementTemplateSelector
                 value={templateId}
