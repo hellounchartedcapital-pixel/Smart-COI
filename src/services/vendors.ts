@@ -99,3 +99,8 @@ export async function deleteVendor(id: string): Promise<void> {
   const { error } = await supabase.from('vendors').delete().eq('id', id);
   if (error) throw error;
 }
+
+export async function deleteVendors(ids: string[]): Promise<void> {
+  const { error } = await supabase.from('vendors').delete().in('id', ids);
+  if (error) throw error;
+}
