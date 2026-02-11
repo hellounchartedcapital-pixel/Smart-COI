@@ -29,6 +29,7 @@ jobs:
         run: |
           supabase functions deploy extract-lease --no-verify-jwt
           supabase functions deploy extract-coi --no-verify-jwt
+          supabase functions deploy extract-lease-requirements --no-verify-jwt
           supabase functions deploy extract-requirements --no-verify-jwt
           supabase functions deploy send-contact --no-verify-jwt
           supabase functions deploy send-notifications --no-verify-jwt
