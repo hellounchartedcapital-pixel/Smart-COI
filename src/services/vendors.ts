@@ -75,13 +75,16 @@ export async function createVendor(vendor: {
   contact_email?: string;
   contact_phone?: string;
 }): Promise<Vendor> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
   const { data, error } = await supabase
     .from('vendors')
-    .insert({ ...vendor, status: 'non-compliant' as const })
+    .insert({ ...vendor, user_id: user.id, status: 'non-compliant' as const })
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) throw new Error(error.message);
   return data as Vendor;
 }
 
