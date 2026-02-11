@@ -105,3 +105,8 @@ export async function deleteTenant(id: string): Promise<void> {
   const { error } = await supabase.from('tenants').delete().eq('id', id);
   if (error) throw error;
 }
+
+export async function deleteTenants(ids: string[]): Promise<void> {
+  const { error } = await supabase.from('tenants').delete().in('id', ids);
+  if (error) throw error;
+}

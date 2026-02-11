@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, Plus, Mail, Upload, Eye } from 'lucide-react';
+import { Users, Plus, Mail, Upload, Eye, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -22,7 +23,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { EntityDetailModal } from '@/components/shared/EntityDetailModal';
 import { Skeleton } from '@/components/ui/skeleton';
-import { fetchTenants, createTenant, deleteTenant } from '@/services/tenants';
+import { fetchTenants, createTenant, deleteTenant, deleteTenants } from '@/services/tenants';
 import { fetchProperties } from '@/services/properties';
 import { formatDate } from '@/lib/utils';
 import type { Tenant } from '@/types';
@@ -34,6 +35,7 @@ export default function Tenants() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [detailTenant, setDetailTenant] = useState<Tenant | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [newTenant, setNewTenant] = useState({
     name: '', email: '', phone: '', unit: '',
     property_id: '', lease_start: '', lease_end: '',
@@ -70,7 +72,48 @@ export default function Tenants() {
     onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to delete tenant'),
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: deleteTenants,
+    onSuccess: (_, deletedIds) => {
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      setSelectedIds(new Set());
+      toast.success(`${deletedIds.length} tenant${deletedIds.length > 1 ? 's' : ''} deleted successfully`);
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : 'Failed to delete tenants'),
+  });
+
   const tenants = tenantData?.data ?? [];
+
+  const allSelected = tenants.length > 0 && tenants.every((t) => selectedIds.has(t.id));
+  const someSelected = tenants.some((t) => selectedIds.has(t.id));
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(tenants.map((t) => t.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    const count = selectedIds.size;
+    if (count === 0) return;
+    if (window.confirm(`Delete ${count} tenant${count > 1 ? 's' : ''}? This action cannot be undone.`)) {
+      bulkDeleteMutation.mutate(Array.from(selectedIds));
+    }
+  };
 
   if (isLoading) {
     return (
@@ -109,6 +152,30 @@ export default function Tenants() {
         filterPlaceholder="Status"
       />
 
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2.5">
+          <span className="text-sm font-medium">
+            {selectedIds.size} tenant{selectedIds.size > 1 ? 's' : ''} selected
+          </span>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleBulkDelete}
+            disabled={bulkDeleteMutation.isPending}
+          >
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+            {bulkDeleteMutation.isPending ? 'Deleting...' : 'Delete Selected'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedIds(new Set())}
+          >
+            Clear Selection
+          </Button>
+        </div>
+      )}
+
       {tenants.length === 0 ? (
         <EmptyState
           icon={Users}
@@ -123,6 +190,13 @@ export default function Tenants() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px] pl-4">
+                    <Checkbox
+                      checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Select all tenants"
+                    />
+                  </TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Property</TableHead>
@@ -134,7 +208,17 @@ export default function Tenants() {
               </TableHeader>
               <TableBody>
                 {tenants.map((tenant) => (
-                  <TableRow key={tenant.id}>
+                  <TableRow
+                    key={tenant.id}
+                    data-state={selectedIds.has(tenant.id) ? 'selected' : undefined}
+                  >
+                    <TableCell className="pl-4">
+                      <Checkbox
+                        checked={selectedIds.has(tenant.id)}
+                        onCheckedChange={() => toggleSelect(tenant.id)}
+                        aria-label={`Select ${tenant.name}`}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{tenant.name}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {tenant.email ? (
