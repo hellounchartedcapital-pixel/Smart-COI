@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - claude/smartcoi-saas-build-uIybw
+      - claude/rebuild-smartcoi-app-Wh28R
     paths:
       - 'supabase/functions/**'
       - '.github/workflows/deploy-functions.yml'
