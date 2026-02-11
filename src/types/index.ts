@@ -147,6 +147,7 @@ export interface Property {
   user_id: string;
   name: string;
   address?: string;
+  ownership_entity?: string;
   vendor_count?: number;
   tenant_count?: number;
   compliance_percentage?: number;
