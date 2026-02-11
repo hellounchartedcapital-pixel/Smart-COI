@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   X, Building2, Upload, FileText, Edit3, Loader2, CheckCircle,
-  AlertCircle, ChevronDown, ChevronUp, Shield, Users, ArrowLeft, ArrowRight,
+  AlertCircle, ArrowLeft, ArrowRight,
   Info, AlertTriangle
 } from 'lucide-react';
 import { supabase } from './supabaseClient';

@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import {
   X, Upload, Loader2, CheckCircle, XCircle, AlertCircle,
-  FileText, Minus, ArrowLeft
+  FileText, Minus
 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import { extractCOIFromPDF } from './extractCOI';

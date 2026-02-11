@@ -3,12 +3,12 @@ import {
   Users, Plus, Search, CheckCircle, XCircle, AlertCircle, Clock,
   Mail, Phone, Calendar, Building2, X, Send,
   Loader2, FileText, History, Upload, Shield, ChevronDown, ChevronUp,
-  Settings as SettingsIcon, Eye, FileDown, Edit3, ArrowRight
+  Eye
 } from 'lucide-react';
 import { useTenants } from './useTenants';
 import { supabase } from './supabaseClient';
 import { formatCurrency, formatDate, formatRelativeDate, getStatusConfig, getDaysUntil } from './utils/complianceUtils';
-import { getSourceInfo, getComplianceFieldStatusInfo, compareTenantCOI } from './utils/tenantComplianceUtils';
+import { getSourceInfo, getComplianceFieldStatusInfo } from './utils/tenantComplianceUtils';
 import { AlertModal, useAlertModal } from './AlertModal';
 import { PropertySelector } from './PropertySelector';
 import { AddTenantWorkflow } from './AddTenantWorkflow';

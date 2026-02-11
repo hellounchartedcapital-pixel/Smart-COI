@@ -1,5 +1,5 @@
 // BuildingTenantDefaults.jsx - Manage building-level default tenant insurance requirements
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Building2, Save, Loader2, Plus, X, Shield, ChevronDown, ChevronUp,
   AlertCircle, CheckCircle
@@ -58,11 +58,7 @@ export function BuildingTenantDefaults({ propertyId, propertyName, onClose, onSa
   const [newEndorsement, setNewEndorsement] = useState('');
   const [newAdditionalInsured, setNewAdditionalInsured] = useState('');
 
-  useEffect(() => {
-    loadDefaults();
-  }, [propertyId]);
-
-  const loadDefaults = async () => {
+  const loadDefaults = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -110,7 +106,11 @@ export function BuildingTenantDefaults({ propertyId, propertyName, onClose, onSa
     } finally {
       setLoading(false);
     }
-  };
+  }, [propertyId]);
+
+  useEffect(() => {
+    loadDefaults();
+  }, [loadDefaults]);
 
   const handleSave = async () => {
     setSaving(true);
