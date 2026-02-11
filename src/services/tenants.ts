@@ -25,7 +25,8 @@ export async function fetchTenants({
 }: FetchTenantsParams = {}): Promise<PaginatedResult<Tenant>> {
   let query = supabase
     .from('tenants')
-    .select('*, property:properties(*)', { count: 'exact' });
+    .select('*, property:properties(*)', { count: 'exact' })
+    .is('deleted_at', null);
 
   if (propertyId && propertyId !== 'all') {
     query = query.eq('property_id', propertyId);
@@ -60,6 +61,7 @@ export async function fetchTenant(id: string): Promise<Tenant> {
     .from('tenants')
     .select('*, property:properties(*)')
     .eq('id', id)
+    .is('deleted_at', null)
     .single();
 
   if (error) throw error;
@@ -102,11 +104,28 @@ export async function updateTenant(id: string, updates: Partial<Tenant>): Promis
 }
 
 export async function deleteTenant(id: string): Promise<void> {
+  // Try hard delete first
   const { error } = await supabase.from('tenants').delete().eq('id', id);
-  if (error) throw error;
+  if (error) {
+    // Fall back to soft delete if hard delete fails (e.g. FK constraint)
+    const { error: softError } = await supabase
+      .from('tenants')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id);
+    if (softError) throw softError;
+    return;
+  }
 }
 
 export async function deleteTenants(ids: string[]): Promise<void> {
   const { error } = await supabase.from('tenants').delete().in('id', ids);
-  if (error) throw error;
+  if (error) {
+    // Fall back to soft delete if hard delete fails
+    const { error: softError } = await supabase
+      .from('tenants')
+      .update({ deleted_at: new Date().toISOString() })
+      .in('id', ids);
+    if (softError) throw softError;
+    return;
+  }
 }
