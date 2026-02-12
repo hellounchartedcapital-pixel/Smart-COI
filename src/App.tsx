@@ -88,6 +88,14 @@ function AppRoutes() {
           </Suspense>
         }
       />
+      <Route
+        path="/tenant-portal"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <VendorPortal />
+          </Suspense>
+        }
+      />
 
       {/* Protected routes (require auth) */}
       <Route element={user ? <AppLayout /> : <Navigate to="/login" replace />}>

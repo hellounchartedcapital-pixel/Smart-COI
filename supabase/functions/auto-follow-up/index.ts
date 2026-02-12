@@ -15,6 +15,17 @@ interface Vendor {
   coverage: Record<string, unknown> | null;
 }
 
+interface TenantRecord {
+  id: string;
+  user_id: string;
+  name: string;
+  insurance_status: string;
+  lease_end: string | null;
+  email: string | null;
+  upload_token: string | null;
+  last_contacted_at: string | null;
+}
+
 interface UserSettings {
   user_id: string;
   company_name: string | null;
@@ -35,13 +46,17 @@ interface Subscription {
 const PLANS_WITH_AUTO_FOLLOWUP = ['starter', 'professional', 'enterprise'];
 
 interface FollowUpResult {
-  vendorId: string;
-  vendorName: string;
+  entityType: 'vendor' | 'tenant';
+  entityId: string;
+  entityName: string;
   email: string;
   success: boolean;
   reason: string;
   emailId?: string;
 }
+
+// Keep backwards-compatible shape
+type LegacyFollowUpResult = FollowUpResult & { vendorId?: string; vendorName?: string };
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -50,9 +65,10 @@ serve(async (req) => {
   }
 
   const corsHeaders = getCorsHeaders(req);
-  const results: FollowUpResult[] = [];
+  const results: LegacyFollowUpResult[] = [];
   let processedUsers = 0;
   let totalVendorsChecked = 0;
+  let totalTenantsChecked = 0;
   let emailsSent = 0;
 
   try {
@@ -296,6 +312,146 @@ serve(async (req) => {
           });
         }
       }
+
+      // ---- Process Tenants for this user ----
+      const { data: tenants, error: tenantsError } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('user_id', settings.user_id)
+        .is('deleted_at', null)
+        .not('email', 'is', null);
+
+      if (tenantsError) {
+        console.error(`Failed to fetch tenants for user ${settings.user_id}:`, tenantsError);
+      }
+
+      if (tenants) {
+        for (const tenant of tenants as TenantRecord[]) {
+          totalTenantsChecked++;
+
+          if (!tenant.email) continue;
+
+          // Check if recently contacted
+          if (tenant.last_contacted_at) {
+            const lastContacted = new Date(tenant.last_contacted_at);
+            const daysSinceContact = Math.floor((today.getTime() - lastContacted.getTime()) / (1000 * 60 * 60 * 24));
+            if (daysSinceContact < settings.follow_up_frequency_days) {
+              results.push({
+                entityType: 'tenant',
+                entityId: tenant.id,
+                entityName: tenant.name,
+                email: tenant.email,
+                success: false,
+                reason: `Recently contacted (${daysSinceContact} days ago)`,
+              });
+              continue;
+            }
+          }
+
+          let shouldFollowUp = false;
+          let followUpReason = '';
+
+          // Use lease_end as expiration date for tenants
+          const tenantExpDate = tenant.lease_end ? new Date(tenant.lease_end) : null;
+
+          if (tenantExpDate) {
+            tenantExpDate.setHours(0, 0, 0, 0);
+            const daysUntilExp = Math.floor((tenantExpDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+            if (daysUntilExp < 0 && settings.follow_up_on_expired) {
+              shouldFollowUp = true;
+              followUpReason = 'expired';
+            }
+
+            if (!shouldFollowUp && settings.follow_up_days && settings.follow_up_days.length > 0) {
+              for (const days of settings.follow_up_days) {
+                if (daysUntilExp === days) {
+                  shouldFollowUp = true;
+                  followUpReason = `expiring in ${days} days`;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (!shouldFollowUp && settings.follow_up_on_non_compliant && tenant.insurance_status === 'non-compliant') {
+            shouldFollowUp = true;
+            followUpReason = 'non-compliant';
+          }
+
+          if (!shouldFollowUp) continue;
+
+          try {
+            const uploadLink = tenant.upload_token ? `${APP_URL}/tenant-portal?token=${tenant.upload_token}` : null;
+
+            const emailResponse = await sendFollowUpEmail({
+              to: tenant.email,
+              vendorName: tenant.name, // reusing field name for template
+              vendorStatus: tenant.insurance_status,
+              issues: ['Certificate of Insurance needs to be updated'],
+              companyName: settings.company_name || 'Your Business Partner',
+              uploadLink,
+              resendApiKey: RESEND_API_KEY,
+              fromEmail: FROM_EMAIL,
+              reason: followUpReason,
+            });
+
+            if (emailResponse.success) {
+              emailsSent++;
+
+              await supabase
+                .from('tenants')
+                .update({ last_contacted_at: new Date().toISOString() })
+                .eq('id', tenant.id);
+
+              // Log activity
+              await supabase
+                .from('activity_log')
+                .insert({
+                  entity_type: 'tenant',
+                  entity_id: tenant.id,
+                  entity_name: tenant.name,
+                  activity_type: 'email_sent',
+                  description: `Auto follow-up sent: ${followUpReason}`,
+                  metadata: {
+                    reason: followUpReason,
+                    email: tenant.email,
+                    emailId: emailResponse.emailId,
+                  },
+                });
+
+              results.push({
+                entityType: 'tenant',
+                entityId: tenant.id,
+                entityName: tenant.name,
+                email: tenant.email,
+                success: true,
+                reason: followUpReason,
+                emailId: emailResponse.emailId,
+              });
+            } else {
+              results.push({
+                entityType: 'tenant',
+                entityId: tenant.id,
+                entityName: tenant.name,
+                email: tenant.email,
+                success: false,
+                reason: `Email failed: ${emailResponse.error}`,
+              });
+            }
+          } catch (emailError) {
+            console.error(`Failed to send email to tenant ${tenant.email}:`, emailError);
+            results.push({
+              entityType: 'tenant',
+              entityId: tenant.id,
+              entityName: tenant.name,
+              email: tenant.email,
+              success: false,
+              reason: `Email error: ${emailError.message}`,
+            });
+          }
+        }
+      }
     }
 
     return new Response(
@@ -304,6 +460,7 @@ serve(async (req) => {
         message: 'Auto follow-up completed',
         processedUsers,
         totalVendorsChecked,
+        totalTenantsChecked,
         emailsSent,
         results,
       }),
@@ -321,6 +478,7 @@ serve(async (req) => {
         error: error.message || 'Auto follow-up failed',
         processedUsers,
         totalVendorsChecked,
+        totalTenantsChecked,
         emailsSent,
         results,
       }),

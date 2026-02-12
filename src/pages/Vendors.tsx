@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Truck, Plus, Mail, Upload, Eye, Trash2, PackagePlus } from 'lucide-react';
+import { Truck, Plus, Mail, Upload, Eye, Trash2, PackagePlus, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import { EmptyState } from '@/components/shared/EmptyState';
 import { EntityDetailModal } from '@/components/shared/EntityDetailModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { fetchVendors, deleteVendor, deleteVendors } from '@/services/vendors';
+import { generatePortalLink } from '@/services/portal-links';
 import { formatDate } from '@/lib/utils';
 import type { Vendor } from '@/types';
 
@@ -94,6 +95,16 @@ export default function Vendors() {
     if (count === 0) return;
     if (window.confirm(`Delete ${count} vendor${count > 1 ? 's' : ''}? This action cannot be undone.`)) {
       bulkDeleteMutation.mutate(Array.from(selectedIds));
+    }
+  };
+
+  const handleCopyPortalLink = async (vendor: Vendor) => {
+    try {
+      const link = await generatePortalLink('vendor', vendor.id);
+      await navigator.clipboard.writeText(link);
+      toast.success(`Portal link for ${vendor.name} copied to clipboard`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to generate portal link');
     }
   };
 
@@ -245,6 +256,15 @@ export default function Vendors() {
                           title="Upload COI"
                         >
                           <Upload className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleCopyPortalLink(vendor)}
+                          title="Copy portal link"
+                        >
+                          <Link2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>

@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Menu, X, Check,
   Zap, Bell, Users, FileText, Sparkles,
-  LayoutDashboard, Truck, ArrowRight,
+  Truck, ArrowRight,
   Mail, User, MessageSquare, Send, Loader2,
   CheckCircle, AlertCircle, ChevronDown,
+  Globe, Upload, BarChart3,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { DashboardPreview } from '@/components/landing/DashboardPreview';
@@ -204,7 +205,7 @@ const features = [
   {
     icon: Truck,
     title: 'Vendor Compliance',
-    description: 'Set requirements per building, upload vendor COIs, get instant compliance status. Three ways to set up requirements — building defaults, AI-assisted, or manual.',
+    description: 'Set requirements per building, upload vendor COIs, get instant compliance status. Choose from pre-built templates for construction, landscaping, healthcare, and more — or create your own.',
     span: '',
   },
   {
@@ -214,16 +215,28 @@ const features = [
     span: '',
   },
   {
-    icon: Bell,
-    title: 'Expiration Alerts',
-    description: 'Get notified before certificates expire. Automatically email vendors and tenants when coverage lapses so you never get caught with a gap.',
+    icon: Globe,
+    title: 'Self-Service Portals',
+    description: 'Give vendors and tenants each a secure link to upload their own COIs. They see exactly what coverage is required and can submit updated certificates — no more back-and-forth emails.',
     span: '',
   },
   {
-    icon: LayoutDashboard,
-    title: 'Real-Time Compliance Dashboard',
-    description: 'See your entire portfolio\'s compliance status at a glance. Filter by property, vendor, tenant, or status. Export reports in one click.',
+    icon: Upload,
+    title: 'Bulk COI Import',
+    description: 'Upload multiple COIs at once and let AI extract data from every file simultaneously. Create vendors in batch — no more processing certificates one at a time.',
     span: '',
+  },
+  {
+    icon: Bell,
+    title: 'Recurring Follow-Up Emails',
+    description: 'Automatically send follow-up emails to vendors and tenants at 30, 14, and 0 days before certificates expire — and again when coverage is non-compliant. No manual chasing required.',
+    span: '',
+  },
+  {
+    icon: BarChart3,
+    title: 'Compliance Dashboard & Reports',
+    description: 'See your entire portfolio\'s compliance status at a glance. Filter by property, vendor, tenant, or status. Export compliance reports as CSV or PDF in one click.',
+    span: 'lg:col-span-2',
   },
 ];
 
@@ -234,7 +247,7 @@ const pricingTiers = [
     period: 'forever',
     description: 'Perfect for getting started',
     capacity: 'Up to 10 vendors & tenants',
-    features: ['AI-powered COI extraction', 'Smart lease analysis', 'Compliance dashboard', 'Expiration alerts', 'Email COI requests'],
+    features: ['AI-powered COI extraction', 'Smart lease analysis', 'Compliance dashboard', 'Expiration alerts', 'Vendor & tenant self-service portals'],
     cta: 'Get Started Free',
     popular: false,
   },
@@ -244,7 +257,7 @@ const pricingTiers = [
     period: '/month',
     description: 'For small property managers',
     capacity: 'Up to 50 vendors & tenants',
-    features: ['Everything in Free', 'Multi-property management', 'CSV & PDF export', 'Automated follow-ups'],
+    features: ['Everything in Free', 'Multi-property management', 'Bulk COI import', 'CSV & PDF report export', 'Recurring follow-up emails'],
     cta: 'Start Free Trial',
     popular: false,
   },
@@ -254,7 +267,7 @@ const pricingTiers = [
     period: '/month',
     description: 'For growing portfolios',
     capacity: 'Up to 100 vendors & tenants',
-    features: ['Everything in Starter', 'Activity history & audit log', 'Custom compliance thresholds', 'Priority support'],
+    features: ['Everything in Starter', 'Activity history & audit log', 'Custom requirement templates', 'Priority support'],
     cta: 'Start Free Trial',
     popular: true,
   },
@@ -271,12 +284,13 @@ const pricingTiers = [
 ];
 
 const faqs = [
-  { question: 'How does the AI extraction work?', answer: 'Upload a PDF of any Certificate of Insurance or lease document. Our AI reads and extracts all policy information including coverage limits, expiration dates, and insurance requirements with 99% accuracy.' },
+  { question: 'How does the AI extraction work?', answer: 'Upload a PDF or image of any Certificate of Insurance or lease document. Our AI reads and extracts all policy information — carrier, coverage types, limits, endorsements, and expiration dates — in seconds.' },
   { question: 'How does lease analysis work for tenants?', answer: 'Upload your tenant\'s lease document and SmartCOI automatically extracts all insurance requirements specified in the lease. When the tenant uploads their COI, we compare it against these requirements automatically.' },
-  { question: 'Can I manage multiple properties?', answer: 'Yes! SmartCOI supports multi-property management. Set unique insurance requirements per property, filter your dashboard by property, and track compliance across your entire portfolio from one place.' },
-  { question: 'What happens when a vendor or tenant is non-compliant?', answer: 'SmartCOI identifies compliance gaps and can send follow-up emails explaining exactly what coverage is missing or insufficient. They receive clear, actionable guidance on becoming compliant.' },
-  { question: 'Is there really a free plan?', answer: 'Yes! Our Free plan is free forever and includes up to 10 vendors and tenants with full AI extraction capabilities. No credit card required to get started.' },
-  { question: 'Is my data secure?', answer: 'All documents are encrypted at rest and in transit. We use enterprise-grade security and never share your data with third parties. Your certificates and leases are stored securely in the cloud.' },
+  { question: 'What are the self-service portals?', answer: 'Both vendors and tenants get their own secure portal link where they can see exactly what coverage is required and upload their COI directly. SmartCOI checks it against your requirements instantly — no back-and-forth emails needed.' },
+  { question: 'Can I manage multiple properties?', answer: 'Yes! SmartCOI supports multi-property management. Set unique insurance requirements per property, use pre-built templates for common vendor types, and track compliance across your entire portfolio from one dashboard.' },
+  { question: 'What happens when a vendor or tenant is non-compliant?', answer: 'SmartCOI identifies exactly which coverages are missing or below your required limits. It automatically sends recurring follow-up emails at 30, 14, and 0 days before expiration, and both vendors and tenants can use their self-service portals to upload updated certificates.' },
+  { question: 'Is there really a free plan?', answer: 'Yes! Our Free plan is free forever and includes up to 10 vendors and tenants with full AI extraction, lease analysis, and self-service portals for both vendors and tenants. No credit card required to get started.' },
+  { question: 'Is my data secure?', answer: 'All documents are encrypted at rest and in transit. We use enterprise-grade security powered by Supabase and never share your data with third parties. Your certificates and leases are stored securely in the cloud.' },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -424,8 +438,8 @@ export default function LandingPage() {
               <FadeIn delay={0.1}>
                 <p className="text-lg sm:text-xl text-gray-600 leading-relaxed mb-8 max-w-xl mx-auto lg:mx-0">
                   Track insurance compliance for all your vendors and tenants in one
-                  dashboard. Get notified before certificates expire and automatically
-                  follow up with anyone who falls out of compliance.
+                  dashboard. Upload COIs in bulk, let vendors self-serve through their
+                  own portal, and get notified before certificates expire.
                 </p>
               </FadeIn>
 

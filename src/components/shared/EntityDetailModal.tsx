@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   Clock,
   Eye,
+  Link2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -38,6 +39,7 @@ import type {
 } from '@/types';
 import { compareCoverageToRequirements, getComplianceGaps } from '@/services/compliance';
 import { sendCOIRequest } from '@/services/settings';
+import { generatePortalLink } from '@/services/portal-links';
 
 interface EntityDetailModalProps {
   open: boolean;
@@ -256,6 +258,7 @@ export function EntityDetailModal({
   const [isEditing, setIsEditing] = useState(false);
   const [localCoverages, setLocalCoverages] = useState(coverages);
   const [sendingRequest, setSendingRequest] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState(false);
 
   const entityName = entity.name;
   const entityEmail =
@@ -311,6 +314,21 @@ export function EntityDetailModal({
     setLocalCoverages(updated);
     setIsEditing(false);
     toast.success('Coverages updated');
+  };
+
+  const handleCopyPortalLink = async () => {
+    setGeneratingLink(true);
+    try {
+      const link = await generatePortalLink(entityType, entity.id);
+      await navigator.clipboard.writeText(link);
+      toast.success('Portal link copied to clipboard');
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to generate portal link'
+      );
+    } finally {
+      setGeneratingLink(false);
+    }
   };
 
   return (
@@ -462,7 +480,7 @@ export function EntityDetailModal({
 
         <Separator />
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           <Button
             variant="outline"
             size="sm"
@@ -480,6 +498,15 @@ export function EntityDetailModal({
           >
             <Mail className="mr-1.5 h-3.5 w-3.5" />
             {sendingRequest ? 'Sending...' : 'Request COI'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyPortalLink}
+            disabled={generatingLink}
+          >
+            <Link2 className="mr-1.5 h-3.5 w-3.5" />
+            {generatingLink ? 'Generating...' : 'Portal Link'}
           </Button>
           {onEdit && (
             <Button variant="outline" size="sm" onClick={onEdit}>
