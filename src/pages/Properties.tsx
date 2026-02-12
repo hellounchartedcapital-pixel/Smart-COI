@@ -119,9 +119,22 @@ export default function Properties() {
                       <span className="text-muted-foreground">
                         {property.vendor_count ?? 0} vendors, {property.tenant_count ?? 0} tenants
                       </span>
-                      <span className="font-medium">{compliance}%</span>
+                      <span className={`font-medium ${
+                        compliance >= 80 ? 'text-emerald-600' :
+                        compliance >= 50 ? 'text-amber-600' :
+                        'text-red-600'
+                      }`}>
+                        {compliance}% Compliant
+                      </span>
                     </div>
-                    <Progress value={compliance} />
+                    <Progress
+                      value={compliance}
+                      indicatorClassName={
+                        compliance >= 80 ? 'bg-emerald-500' :
+                        compliance >= 50 ? 'bg-amber-500' :
+                        'bg-red-500'
+                      }
+                    />
                   </div>
                 </CardContent>
               </Card>
