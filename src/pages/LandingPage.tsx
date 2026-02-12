@@ -216,8 +216,8 @@ const features = [
   },
   {
     icon: Globe,
-    title: 'Vendor Self-Service Portal',
-    description: 'Give vendors a secure link to upload their own COIs. They see exactly what coverage is required and can submit updated certificates — no more back-and-forth emails.',
+    title: 'Self-Service Portals',
+    description: 'Give vendors and tenants each a secure link to upload their own COIs. They see exactly what coverage is required and can submit updated certificates — no more back-and-forth emails.',
     span: '',
   },
   {
@@ -228,8 +228,8 @@ const features = [
   },
   {
     icon: Bell,
-    title: 'Expiration Alerts',
-    description: 'Get notified at 30, 14, and 0 days before certificates expire. Automatically queue follow-up emails to vendors and tenants with clear guidance on what coverage is needed.',
+    title: 'Recurring Follow-Up Emails',
+    description: 'Automatically send follow-up emails to vendors and tenants at 30, 14, and 0 days before certificates expire — and again when coverage is non-compliant. No manual chasing required.',
     span: '',
   },
   {
@@ -247,7 +247,7 @@ const pricingTiers = [
     period: 'forever',
     description: 'Perfect for getting started',
     capacity: 'Up to 10 vendors & tenants',
-    features: ['AI-powered COI extraction', 'Smart lease analysis', 'Compliance dashboard', 'Expiration alerts', 'Vendor self-service portal'],
+    features: ['AI-powered COI extraction', 'Smart lease analysis', 'Compliance dashboard', 'Expiration alerts', 'Vendor & tenant self-service portals'],
     cta: 'Get Started Free',
     popular: false,
   },
@@ -257,7 +257,7 @@ const pricingTiers = [
     period: '/month',
     description: 'For small property managers',
     capacity: 'Up to 50 vendors & tenants',
-    features: ['Everything in Free', 'Multi-property management', 'Bulk COI import', 'CSV & PDF report export', 'Automated follow-ups'],
+    features: ['Everything in Free', 'Multi-property management', 'Bulk COI import', 'CSV & PDF report export', 'Recurring follow-up emails'],
     cta: 'Start Free Trial',
     popular: false,
   },
@@ -286,10 +286,10 @@ const pricingTiers = [
 const faqs = [
   { question: 'How does the AI extraction work?', answer: 'Upload a PDF or image of any Certificate of Insurance or lease document. Our AI reads and extracts all policy information — carrier, coverage types, limits, endorsements, and expiration dates — in seconds.' },
   { question: 'How does lease analysis work for tenants?', answer: 'Upload your tenant\'s lease document and SmartCOI automatically extracts all insurance requirements specified in the lease. When the tenant uploads their COI, we compare it against these requirements automatically.' },
-  { question: 'What is the vendor self-service portal?', answer: 'Each vendor gets a secure link to a portal where they can see exactly what coverage is required and upload their own COI directly. SmartCOI checks it against your requirements instantly — no back-and-forth emails needed.' },
+  { question: 'What are the self-service portals?', answer: 'Both vendors and tenants get their own secure portal link where they can see exactly what coverage is required and upload their COI directly. SmartCOI checks it against your requirements instantly — no back-and-forth emails needed.' },
   { question: 'Can I manage multiple properties?', answer: 'Yes! SmartCOI supports multi-property management. Set unique insurance requirements per property, use pre-built templates for common vendor types, and track compliance across your entire portfolio from one dashboard.' },
-  { question: 'What happens when a vendor or tenant is non-compliant?', answer: 'SmartCOI identifies exactly which coverages are missing or below your required limits. It queues follow-up emails at 30, 14, and 0 days before expiration, and vendors can use their self-service portal to upload updated certificates.' },
-  { question: 'Is there really a free plan?', answer: 'Yes! Our Free plan is free forever and includes up to 10 vendors and tenants with full AI extraction, lease analysis, and the vendor self-service portal. No credit card required to get started.' },
+  { question: 'What happens when a vendor or tenant is non-compliant?', answer: 'SmartCOI identifies exactly which coverages are missing or below your required limits. It automatically sends recurring follow-up emails at 30, 14, and 0 days before expiration, and both vendors and tenants can use their self-service portals to upload updated certificates.' },
+  { question: 'Is there really a free plan?', answer: 'Yes! Our Free plan is free forever and includes up to 10 vendors and tenants with full AI extraction, lease analysis, and self-service portals for both vendors and tenants. No credit card required to get started.' },
   { question: 'Is my data secure?', answer: 'All documents are encrypted at rest and in transit. We use enterprise-grade security powered by Supabase and never share your data with third parties. Your certificates and leases are stored securely in the cloud.' },
 ];
 

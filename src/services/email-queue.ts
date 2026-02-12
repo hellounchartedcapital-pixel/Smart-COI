@@ -56,7 +56,7 @@ function buildBody(params: QueueEmailParams): string {
 
   switch (params.emailType) {
     case 'expiration_30day':
-      return `${greeting}\n\nYour Certificate of Insurance for ${params.propertyName} expires on ${params.expirationDate ?? 'N/A'}. Please upload an updated certificate at your earliest convenience.\n\nYou can upload your updated COI through your vendor portal link.${footer}`;
+      return `${greeting}\n\nYour Certificate of Insurance for ${params.propertyName} expires on ${params.expirationDate ?? 'N/A'}. Please upload an updated certificate at your earliest convenience.\n\nYou can upload your updated COI through your self-service portal link.${footer}`;
 
     case 'expiration_14day':
       return `${greeting}\n\nThis is a follow-up reminder that your Certificate of Insurance for ${params.propertyName} expires on ${params.expirationDate ?? 'N/A'}. Please upload an updated certificate as soon as possible.${footer}`;
