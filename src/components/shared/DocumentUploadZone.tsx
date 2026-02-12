@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Upload, FileText, X, Loader2, RefreshCw } from 'lucide-react';
+import { Upload, FileText, X, Loader2, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FILE_UPLOAD_CONFIG } from '@/constants';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,8 @@ interface DocumentUploadZoneProps {
   uploadedFileSize?: number;
   onRemove?: () => void;
   error?: string;
+  success?: boolean;
+  successText?: string;
   className?: string;
 }
 
@@ -35,6 +37,8 @@ export function DocumentUploadZone({
   uploadedFileSize,
   onRemove,
   error,
+  success = false,
+  successText,
   className,
 }: DocumentUploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -128,53 +132,63 @@ export function DocumentUploadZone({
   // File uploaded state
   if (uploadedFileName) {
     return (
-      <div className={cn('rounded-xl border-2 border-dashed border-primary/30 bg-accent/10 p-6', className)}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
-              <FileText className="h-5 w-5 text-primary" />
+      <div className={cn('space-y-2', className)}>
+        <div className="rounded-xl border-2 border-dashed border-primary/30 bg-accent/10 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{uploadedFileName}</p>
+                {success && successText ? (
+                  <p className="flex items-center gap-1 text-xs text-emerald-600">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {successText}
+                  </p>
+                ) : uploadedFileSize ? (
+                  <p className="text-xs text-muted-foreground">
+                    {(uploadedFileSize / 1024 / 1024).toFixed(1)} MB
+                  </p>
+                ) : null}
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium">{uploadedFileName}</p>
-              {uploadedFileSize && (
-                <p className="text-xs text-muted-foreground">
-                  {(uploadedFileSize / 1024 / 1024).toFixed(1)} MB
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => inputRef.current?.click()}
-              type="button"
-            >
-              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-              Replace
-            </Button>
-            {onRemove && (
+            <div className="flex gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onRemove}
+                onClick={() => inputRef.current?.click()}
                 type="button"
-                className="text-destructive hover:text-destructive"
               >
-                <X className="mr-1.5 h-3.5 w-3.5" />
-                Remove
+                <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                Replace
               </Button>
-            )}
+              {onRemove && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRemove}
+                  type="button"
+                  className="text-destructive hover:text-destructive"
+                >
+                  <X className="mr-1.5 h-3.5 w-3.5" />
+                  Remove
+                </Button>
+              )}
+            </div>
           </div>
+          <input
+            ref={inputRef}
+            type="file"
+            accept={acceptedExtensions}
+            onChange={handleFileInput}
+            className="hidden"
+            aria-hidden="true"
+          />
         </div>
-        <input
-          ref={inputRef}
-          type="file"
-          accept={acceptedExtensions}
-          onChange={handleFileInput}
-          className="hidden"
-          aria-hidden="true"
-        />
+        {displayError && (
+          <p className="text-sm text-destructive">{displayError}</p>
+        )}
       </div>
     );
   }

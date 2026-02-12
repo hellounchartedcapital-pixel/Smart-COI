@@ -451,7 +451,6 @@ export default function AddTenant() {
   // ---- Has any extraction completed? ----
   const hasLeaseResults = leaseResult?.success || showManualRequirements;
   const hasCOIResults = coiResult?.success;
-  const showReviewSection = hasLeaseResults || hasCOIResults;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -486,6 +485,8 @@ export default function AddTenant() {
             setShowManualRequirements(false);
           }}
           error={leaseError && !showManualRequirements ? leaseError : undefined}
+          success={!!leaseResult?.success}
+          successText={leaseResult?.success ? 'Requirements extracted — review below' : undefined}
         />
 
         {/* Lease error actions */}
@@ -530,6 +531,8 @@ export default function AddTenant() {
             setCoiError(null);
           }}
           error={coiError ?? undefined}
+          success={!!coiResult?.success}
+          successText={coiResult?.success ? 'Certificate analyzed — review below' : undefined}
         />
 
         {coiError && (
@@ -548,204 +551,188 @@ export default function AddTenant() {
         )}
       </div>
 
-      {/* Step 2: Review Extracted Info + Details */}
-      {showReviewSection && (
-        <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
-          {/* Lease requirements (editable) */}
-          {(hasLeaseResults) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Lease Requirements</CardTitle>
-                <CardDescription>
-                  {leaseResult?.success
-                    ? 'Extracted from the uploaded lease — you can edit these if needed'
-                    : 'Enter the insurance requirements from the lease'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {requirements.map((req) => (
-                  <div
-                    key={req.id}
-                    className="rounded-lg border bg-card p-4 space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 grid gap-3 sm:grid-cols-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">Coverage Type</Label>
-                          <Input
-                            value={req.coverageType}
-                            onChange={(e) => updateRequirement(req.id, 'coverageType', e.target.value)}
-                            placeholder="e.g., General Liability"
-                            className="h-9"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Per Occurrence Limit</Label>
-                          <Input
-                            value={req.occurrenceLimit}
-                            onChange={(e) => updateRequirement(req.id, 'occurrenceLimit', e.target.value)}
-                            placeholder="e.g., 1000000"
-                            className="h-9"
-                            type="number"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Aggregate Limit</Label>
-                          <Input
-                            value={req.aggregateLimit}
-                            onChange={(e) => updateRequirement(req.id, 'aggregateLimit', e.target.value)}
-                            placeholder="e.g., 2000000"
-                            className="h-9"
-                            type="number"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 pt-5">
-                        {req.confidenceScore !== undefined && (
-                          <ConfidenceIndicator score={req.confidenceScore} />
-                        )}
-                        {req.sourceReference && (
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {req.sourceReference}
-                          </span>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => removeRequirement(req.id)}
-                          type="button"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+      {/* Extracted lease requirements (editable) */}
+      {hasLeaseResults && (
+        <Card className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
+          <CardHeader>
+            <CardTitle>Lease Requirements</CardTitle>
+            <CardDescription>
+              {leaseResult?.success
+                ? 'Extracted from the uploaded lease — you can edit these if needed'
+                : 'Enter the insurance requirements from the lease'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {requirements.map((req) => (
+              <div
+                key={req.id}
+                className="rounded-lg border bg-card p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Coverage Type</Label>
+                      <Input
+                        value={req.coverageType}
+                        onChange={(e) => updateRequirement(req.id, 'coverageType', e.target.value)}
+                        placeholder="e.g., General Liability"
+                        className="h-9"
+                      />
                     </div>
-                    {req.source === 'manual' && req.confidenceScore !== undefined && (
-                      <p className="text-xs text-muted-foreground italic">
-                        Edited from extracted value
-                      </p>
-                    )}
+                    <div className="space-y-1">
+                      <Label className="text-xs">Per Occurrence Limit</Label>
+                      <Input
+                        value={req.occurrenceLimit}
+                        onChange={(e) => updateRequirement(req.id, 'occurrenceLimit', e.target.value)}
+                        placeholder="e.g., 1000000"
+                        className="h-9"
+                        type="number"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Aggregate Limit</Label>
+                      <Input
+                        value={req.aggregateLimit}
+                        onChange={(e) => updateRequirement(req.id, 'aggregateLimit', e.target.value)}
+                        placeholder="e.g., 2000000"
+                        className="h-9"
+                        type="number"
+                      />
+                    </div>
                   </div>
-                ))}
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addRequirement}
-                  type="button"
-                  className="w-full"
-                >
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  Add Requirement
-                </Button>
-                {errors.requirements && (
-                  <p className="text-sm text-destructive">{errors.requirements}</p>
+                  <div className="flex items-center gap-2 pt-5">
+                    {req.confidenceScore !== undefined && (
+                      <ConfidenceIndicator score={req.confidenceScore} />
+                    )}
+                    {req.sourceReference && (
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {req.sourceReference}
+                      </span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => removeRequirement(req.id)}
+                      type="button"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+                {req.source === 'manual' && req.confidenceScore !== undefined && (
+                  <p className="text-xs text-muted-foreground italic">
+                    Edited from extracted value
+                  </p>
                 )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Extracted COI coverages (read-only) */}
-          {hasCOIResults && coiResult && (
-            <ExtractedCoverageDisplay
-              coverages={coiResult.coverages}
-              carrier={coiResult.carrier}
-              policyNumber={coiResult.policy_number}
-              effectiveDate={coiResult.effective_date}
-              expirationDate={coiResult.expiration_date}
-              overallConfidence={coiResult.confidence_score}
-              title="Tenant's Coverage"
-              description="These are the coverages found on the uploaded certificate."
-            />
-          )}
-
-          {!coiFile && !isExtractingCOI && (
-            <Card className="border-dashed">
-              <CardContent className="flex items-center gap-3 p-6 text-muted-foreground">
-                <FileText className="h-5 w-5" />
-                <p className="text-sm">
-                  No COI uploaded yet. You can upload it later from the tenant's detail page.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Tenant info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tenant Information</CardTitle>
-              <CardDescription>
-                {(leaseResult?.tenant_name || coiResult?.named_insured)
-                  ? 'Pre-filled from uploaded documents — edit if needed'
-                  : 'Enter the tenant details'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="tenant-name">
-                  Tenant Name <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="tenant-name"
-                  value={tenantName}
-                  onChange={(e) => {
-                    setTenantName(e.target.value);
-                    if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
-                  }}
-                  placeholder="Tenant name"
-                />
-                {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
               </div>
+            ))}
 
-              <div className="space-y-2">
-                <Label htmlFor="tenant-email">
-                  Tenant Email <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="tenant-email"
-                  type="email"
-                  value={tenantEmail}
-                  onChange={(e) => {
-                    setTenantEmail(e.target.value);
-                    if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
-                  }}
-                  placeholder="tenant@example.com"
-                />
-                {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-                <p className="text-xs text-muted-foreground">
-                  Used for compliance notifications and COI update requests
-                </p>
-              </div>
-
-              <PropertySelector
-                value={propertyId}
-                onChange={(v) => {
-                  setPropertyId(v);
-                  if (errors.property) setErrors((prev) => ({ ...prev, property: '' }));
-                }}
-                required
-                error={errors.property}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Create button */}
-          <Button
-            onClick={handleCreate}
-            disabled={isCreating || !tenantName.trim() || !tenantEmail.trim() || !propertyId}
-            className="w-full h-12 text-base"
-          >
-            {isCreating ? (
-              <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Creating Tenant...
-              </>
-            ) : (
-              'Create Tenant'
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={addRequirement}
+              type="button"
+              className="w-full"
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Add Requirement
+            </Button>
+            {errors.requirements && (
+              <p className="text-sm text-destructive">{errors.requirements}</p>
             )}
-          </Button>
-        </div>
+          </CardContent>
+        </Card>
       )}
+
+      {/* Extracted COI coverages (read-only) */}
+      {hasCOIResults && coiResult && (
+        <ExtractedCoverageDisplay
+          coverages={coiResult.coverages}
+          carrier={coiResult.carrier}
+          policyNumber={coiResult.policy_number}
+          effectiveDate={coiResult.effective_date}
+          expirationDate={coiResult.expiration_date}
+          overallConfidence={coiResult.confidence_score}
+          title="Tenant's Coverage"
+          description="These are the coverages found on the uploaded certificate."
+        />
+      )}
+
+      {/* Tenant info — always visible */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Tenant Information</CardTitle>
+          <CardDescription>
+            {(leaseResult?.tenant_name || coiResult?.named_insured)
+              ? 'Pre-filled from uploaded documents — edit if needed'
+              : 'Enter the tenant details'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="tenant-name">
+              Tenant Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="tenant-name"
+              value={tenantName}
+              onChange={(e) => {
+                setTenantName(e.target.value);
+                if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
+              }}
+              placeholder="Tenant name"
+            />
+            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="tenant-email">
+              Tenant Email <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="tenant-email"
+              type="email"
+              value={tenantEmail}
+              onChange={(e) => {
+                setTenantEmail(e.target.value);
+                if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
+              }}
+              placeholder="tenant@example.com"
+            />
+            {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+            <p className="text-xs text-muted-foreground">
+              Used for compliance notifications and COI update requests
+            </p>
+          </div>
+
+          <PropertySelector
+            value={propertyId}
+            onChange={(v) => {
+              setPropertyId(v);
+              if (errors.property) setErrors((prev) => ({ ...prev, property: '' }));
+            }}
+            required
+            error={errors.property}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Create button — always visible */}
+      <Button
+        onClick={handleCreate}
+        disabled={isCreating || !tenantName.trim() || !tenantEmail.trim() || !propertyId}
+        className="w-full h-12 text-base"
+      >
+        {isCreating ? (
+          <>
+            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            Creating Tenant...
+          </>
+        ) : (
+          'Create Tenant'
+        )}
+      </Button>
     </div>
   );
 }
