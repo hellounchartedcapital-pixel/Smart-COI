@@ -29,6 +29,7 @@ import {
 import { extractCOI, uploadCOIFile } from '@/services/ai-extraction';
 import { createVendor, updateVendor } from '@/services/vendors';
 import { fetchRequirementTemplates } from '@/services/requirements';
+import { fetchProperty } from '@/services/properties';
 import { compareCoverageToRequirements } from '@/services/compliance';
 import { formatCurrency } from '@/lib/utils';
 import type { COIExtractionResult } from '@/types';
@@ -140,6 +141,16 @@ export default function BulkImport() {
     setCreateProgress({ current: 0, total: toCreate.length });
     let created = 0;
 
+    // Fetch property data once for endorsement/entity name checks
+    let propertyData = null;
+    if (propertyId) {
+      try {
+        propertyData = await fetchProperty(propertyId);
+      } catch {
+        // Non-critical
+      }
+    }
+
     for (const entry of toCreate) {
       setCreateProgress({ current: created + 1, total: toCreate.length });
 
@@ -177,7 +188,11 @@ export default function BulkImport() {
         if (templateId) {
           const template = findTemplateById(templateId, dbTemplates ?? []);
           if (template) {
-            const compliance = compareCoverageToRequirements(extraction.coverages, template);
+            const compliance = compareCoverageToRequirements(
+              extraction.coverages,
+              template,
+              { property: propertyData }
+            );
             if (compliance.overall_status !== status) {
               await updateVendor(vendor.id, { status: compliance.overall_status } as any);
             }

@@ -16,6 +16,7 @@ import { ComplianceResults } from '@/components/shared/ComplianceResults';
 import { extractCOI, uploadCOIFile } from '@/services/ai-extraction';
 import { createVendor, updateVendor } from '@/services/vendors';
 import { fetchRequirementTemplates } from '@/services/requirements';
+import { fetchProperty } from '@/services/properties';
 import { compareCoverageToRequirements } from '@/services/compliance';
 import type { COIExtractionResult, ComplianceResult } from '@/types';
 
@@ -140,7 +141,20 @@ export default function AddVendor() {
       // 4. Run compliance comparison against the selected requirement template
       const selectedTemplate = findTemplateById(templateId, templates ?? []);
       if (selectedTemplate) {
-        const compliance = compareCoverageToRequirements(extractionResult.coverages, selectedTemplate);
+        // Fetch property data for endorsement/entity name checks
+        let propertyData = null;
+        if (propertyId) {
+          try {
+            propertyData = await fetchProperty(propertyId);
+          } catch {
+            // Property fetch is non-critical
+          }
+        }
+        const compliance = compareCoverageToRequirements(
+          extractionResult.coverages,
+          selectedTemplate,
+          { property: propertyData }
+        );
         setComplianceResult(compliance);
 
         // Update vendor status based on compliance result

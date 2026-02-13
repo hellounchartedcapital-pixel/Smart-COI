@@ -260,6 +260,7 @@ export default function Tenants() {
           onOpenChange={(open) => !open && setDetailTenant(null)}
           entity={detailTenant}
           entityType="tenant"
+          property={detailTenant.property ?? null}
           onDelete={() => deleteMutation.mutate(detailTenant.id)}
           onEdit={() => navigate(`/upload?type=tenant&id=${detailTenant.id}`)}
           isDeleting={deleteMutation.isPending}
