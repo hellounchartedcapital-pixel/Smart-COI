@@ -411,6 +411,7 @@ export default function AddTenant() {
           insurance_status: insuranceStatus,
           coverage: coiResult.coverages,
           endorsements: coiResult.endorsements ?? [],
+          certificate_holder_on_coi: coiResult.certificate_holder ?? '',
           expiration_date: coiResult.expiration_date,
         } as any);
 
@@ -465,7 +466,7 @@ export default function AddTenant() {
           const compliance = compareCoverageToRequirements(
             coiResult.coverages,
             template,
-            { endorsements: coiResult.endorsements, property: propertyData }
+            { endorsements: coiResult.endorsements, property: propertyData, certificateHolder: coiResult.certificate_holder }
           );
           setComplianceResult(compliance);
         } catch {

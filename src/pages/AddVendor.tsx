@@ -136,6 +136,7 @@ export default function AddVendor() {
         expiration_date: extractionResult.expiration_date,
         coverage: extractionResult.coverages,
         endorsements: extractionResult.endorsements ?? [],
+        certificate_holder_on_coi: extractionResult.certificate_holder ?? '',
         status,
       } as any);
 
@@ -154,7 +155,11 @@ export default function AddVendor() {
         const compliance = compareCoverageToRequirements(
           extractionResult.coverages,
           selectedTemplate,
-          { endorsements: extractionResult.endorsements, property: propertyData }
+          {
+            endorsements: extractionResult.endorsements,
+            property: propertyData,
+            certificateHolder: extractionResult.certificate_holder,
+          }
         );
         setComplianceResult(compliance);
 

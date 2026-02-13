@@ -417,9 +417,16 @@ export function EntityDetailModal({
       ? (entity as Vendor).status
       : (entity as Tenant).insurance_status;
 
+  // Get certificate holder text from the entity for AI entity name verification
+  const certHolderOnCoi =
+    entityType === 'vendor'
+      ? (entity as Vendor).certificate_holder_on_coi
+      : (entity as Tenant).certificate_holder_on_coi;
+
   const compliance = compareCoverageToRequirements(localCoverages, template ?? null, {
     endorsements: derivedEndorsements,
     property: property ?? null,
+    certificateHolder: certHolderOnCoi,
   });
   const gaps = getComplianceGaps(compliance.fields);
 

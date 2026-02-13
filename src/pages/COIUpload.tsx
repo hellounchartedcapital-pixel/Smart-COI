@@ -362,6 +362,7 @@ export default function COIUpload() {
             expiration_date: result.expiration_date,
             coverage: result.coverages,
             endorsements: result.endorsements ?? [],
+            certificate_holder_on_coi: result.certificate_holder ?? '',
             status: result.expiration_date
               ? new Date(result.expiration_date) > new Date()
                 ? 'compliant'
@@ -373,6 +374,7 @@ export default function COIUpload() {
             expiration_date: result.expiration_date,
             coverage: result.coverages,
             endorsements: result.endorsements ?? [],
+            certificate_holder_on_coi: result.certificate_holder ?? '',
             insurance_status: result.expiration_date
               ? new Date(result.expiration_date) > new Date()
                 ? 'compliant'

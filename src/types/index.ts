@@ -182,6 +182,7 @@ export interface Vendor {
   contact_phone?: string;
   coverage?: ExtractedCoverage[] | null;
   endorsements?: ExtractedEndorsement[] | null;
+  certificate_holder_on_coi?: string;
   expiration_date?: string;
   requirement_profile_id?: string;
   requirement_profile?: RequirementProfile;
@@ -209,6 +210,7 @@ export interface Tenant {
   unit?: string;
   coverage?: ExtractedCoverage[] | null;
   endorsements?: ExtractedEndorsement[] | null;
+  certificate_holder_on_coi?: string;
   expiration_date?: string;
   lease_start?: string;
   lease_end?: string;
@@ -248,6 +250,7 @@ export interface COIExtractionResult {
   carrier?: string;
   policy_number?: string;
   named_insured?: string;
+  certificate_holder?: string;
   effective_date?: string;
   expiration_date?: string;
   coverages: ExtractedCoverage[];

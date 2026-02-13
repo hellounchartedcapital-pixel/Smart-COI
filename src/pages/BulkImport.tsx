@@ -181,6 +181,7 @@ export default function BulkImport() {
           expiration_date: extraction.expiration_date,
           coverage: extraction.coverages,
           endorsements: extraction.endorsements ?? [],
+          certificate_holder_on_coi: extraction.certificate_holder ?? '',
           status,
         } as any);
 
@@ -192,7 +193,7 @@ export default function BulkImport() {
             const compliance = compareCoverageToRequirements(
               extraction.coverages,
               template,
-              { endorsements: extraction.endorsements, property: propertyData }
+              { endorsements: extraction.endorsements, property: propertyData, certificateHolder: extraction.certificate_holder }
             );
             if (compliance.overall_status !== status) {
               await updateVendor(vendor.id, { status: compliance.overall_status } as any);
