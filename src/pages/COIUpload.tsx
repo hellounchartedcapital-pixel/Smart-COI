@@ -361,6 +361,7 @@ export default function COIUpload() {
           await updateVendor(targetId!, {
             expiration_date: result.expiration_date,
             coverage: result.coverages,
+            endorsements: result.endorsements ?? [],
             status: result.expiration_date
               ? new Date(result.expiration_date) > new Date()
                 ? 'compliant'
@@ -369,6 +370,9 @@ export default function COIUpload() {
           } as any);
         } else {
           await updateTenant(targetId!, {
+            expiration_date: result.expiration_date,
+            coverage: result.coverages,
+            endorsements: result.endorsements ?? [],
             insurance_status: result.expiration_date
               ? new Date(result.expiration_date) > new Date()
                 ? 'compliant'

@@ -180,6 +180,7 @@ export default function BulkImport() {
         await updateVendor(vendor.id, {
           expiration_date: extraction.expiration_date,
           coverage: extraction.coverages,
+          endorsements: extraction.endorsements ?? [],
           status,
         } as any);
 
@@ -191,7 +192,7 @@ export default function BulkImport() {
             const compliance = compareCoverageToRequirements(
               extraction.coverages,
               template,
-              { property: propertyData }
+              { endorsements: extraction.endorsements, property: propertyData }
             );
             if (compliance.overall_status !== status) {
               await updateVendor(vendor.id, { status: compliance.overall_status } as any);

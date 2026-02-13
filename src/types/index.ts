@@ -181,6 +181,7 @@ export interface Vendor {
   contact_email?: string;
   contact_phone?: string;
   coverage?: ExtractedCoverage[] | null;
+  endorsements?: ExtractedEndorsement[] | null;
   expiration_date?: string;
   requirement_profile_id?: string;
   requirement_profile?: RequirementProfile;
@@ -206,6 +207,8 @@ export interface Tenant {
   property?: Property;
   tenant_type?: string;
   unit?: string;
+  coverage?: ExtractedCoverage[] | null;
+  endorsements?: ExtractedEndorsement[] | null;
   expiration_date?: string;
   lease_start?: string;
   lease_end?: string;

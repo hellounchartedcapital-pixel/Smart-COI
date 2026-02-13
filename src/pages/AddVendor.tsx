@@ -135,6 +135,7 @@ export default function AddVendor() {
       await updateVendor(vendor.id, {
         expiration_date: extractionResult.expiration_date,
         coverage: extractionResult.coverages,
+        endorsements: extractionResult.endorsements ?? [],
         status,
       } as any);
 
@@ -153,7 +154,7 @@ export default function AddVendor() {
         const compliance = compareCoverageToRequirements(
           extractionResult.coverages,
           selectedTemplate,
-          { property: propertyData }
+          { endorsements: extractionResult.endorsements, property: propertyData }
         );
         setComplianceResult(compliance);
 

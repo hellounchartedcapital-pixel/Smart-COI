@@ -34,6 +34,7 @@ import type {
   Vendor,
   Tenant,
   ExtractedCoverage,
+  ExtractedEndorsement,
   ComplianceField,
   RequirementTemplate,
   EntityType,
@@ -392,7 +393,13 @@ export function EntityDetailModal({
       ? coverages
       : (entityType === 'vendor'
           ? ((entity as Vendor).coverage ?? [])
-          : []);
+          : ((entity as Tenant).coverage ?? []));
+
+  // Derive endorsements from entity record
+  const derivedEndorsements: ExtractedEndorsement[] =
+    entityType === 'vendor'
+      ? ((entity as Vendor).endorsements ?? [])
+      : ((entity as Tenant).endorsements ?? []);
 
   const [localCoverages, setLocalCoverages] = useState(derivedCoverages);
   const [sendingRequest, setSendingRequest] = useState(false);
@@ -411,6 +418,7 @@ export function EntityDetailModal({
       : (entity as Tenant).insurance_status;
 
   const compliance = compareCoverageToRequirements(localCoverages, template ?? null, {
+    endorsements: derivedEndorsements,
     property: property ?? null,
   });
   const gaps = getComplianceGaps(compliance.fields);
