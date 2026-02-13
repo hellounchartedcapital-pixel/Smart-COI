@@ -37,6 +37,7 @@ import type {
   ComplianceField,
   RequirementTemplate,
   EntityType,
+  Property,
 } from '@/types';
 import { compareCoverageToRequirements, getComplianceGaps } from '@/services/compliance';
 import { sendCOIRequest } from '@/services/settings';
@@ -50,6 +51,7 @@ interface EntityDetailModalProps {
   coverages?: ExtractedCoverage[];
   coiUrl?: string;
   template?: RequirementTemplate | null;
+  property?: Property | null;
   onDelete: () => void;
   onEdit?: () => void;
   isDeleting?: boolean;
@@ -377,6 +379,7 @@ export function EntityDetailModal({
   coverages = [],
   coiUrl: externalCoiUrl,
   template,
+  property,
   onDelete,
   onEdit,
   isDeleting = false,
@@ -407,7 +410,9 @@ export function EntityDetailModal({
       ? (entity as Vendor).status
       : (entity as Tenant).insurance_status;
 
-  const compliance = compareCoverageToRequirements(localCoverages, template ?? null);
+  const compliance = compareCoverageToRequirements(localCoverages, template ?? null, {
+    property: property ?? null,
+  });
   const gaps = getComplianceGaps(compliance.fields);
 
   const handleRequestCOI = async () => {

@@ -302,6 +302,7 @@ export default function Vendors() {
           entity={detailVendor}
           entityType="vendor"
           template={detailTemplate}
+          property={detailVendor.property ?? null}
           onDelete={() => deleteMutation.mutate(detailVendor.id)}
           onEdit={() => navigate(`/upload?type=vendor&id=${detailVendor.id}`)}
           isDeleting={deleteMutation.isPending}

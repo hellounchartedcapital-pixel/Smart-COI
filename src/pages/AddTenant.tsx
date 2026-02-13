@@ -19,6 +19,7 @@ import { ComplianceResults } from '@/components/shared/ComplianceResults';
 import { ConfidenceIndicator } from '@/components/shared/ConfidenceIndicator';
 import { extractCOI, extractLeaseRequirements, uploadCOIFile } from '@/services/ai-extraction';
 import { createTenant, updateTenant } from '@/services/tenants';
+import { fetchProperty } from '@/services/properties';
 import { compareCoverageToRequirements } from '@/services/compliance';
 import { TENANT_TEMPLATES, templateCoverageSummary, type TenantTemplate } from '@/constants/tenantTemplates';
 import type {
@@ -447,7 +448,20 @@ export default function AddTenant() {
             updated_at: '',
           };
 
-          const compliance = compareCoverageToRequirements(coiResult.coverages, template);
+          // Fetch property data for endorsement/entity name checks
+          let propertyData = null;
+          if (propertyId) {
+            try {
+              propertyData = await fetchProperty(propertyId);
+            } catch {
+              // Non-critical
+            }
+          }
+          const compliance = compareCoverageToRequirements(
+            coiResult.coverages,
+            template,
+            { property: propertyData }
+          );
           setComplianceResult(compliance);
         } catch {
           // Not critical
