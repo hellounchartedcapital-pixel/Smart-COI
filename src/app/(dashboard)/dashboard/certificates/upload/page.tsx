@@ -47,15 +47,6 @@ type UploadStep =
   | 'done'
   | 'failed';
 
-const STEP_MESSAGES: Record<UploadStep, string> = {
-  idle: '',
-  uploading: 'Uploading document…',
-  creating_record: 'Creating certificate record…',
-  extracting: 'Extracting coverage data… This may take a moment.',
-  done: 'Extraction complete! Redirecting to review…',
-  failed: '',
-};
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
