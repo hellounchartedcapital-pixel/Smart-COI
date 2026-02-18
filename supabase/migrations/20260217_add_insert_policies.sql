@@ -11,7 +11,7 @@ CREATE POLICY "Authenticated users can create organizations"
 -- Users: allow authenticated users to create their own profile row
 CREATE POLICY "Users can insert own profile"
   ON users FOR INSERT TO authenticated
-  WITH CHECK (id = auth.uid());
+  WITH CHECK (id = (select auth.uid()));
 
 -- ============================================================================
 -- SECURITY DEFINER function to create org + user profile (bypasses RLS)

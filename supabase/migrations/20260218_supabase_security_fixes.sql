@@ -23,7 +23,7 @@ $$ LANGUAGE plpgsql SET search_path = public;
 -- 1b. get_user_organization_id — RLS helper (SECURITY DEFINER)
 CREATE OR REPLACE FUNCTION public.get_user_organization_id()
 RETURNS UUID AS $$
-  SELECT organization_id FROM public.users WHERE id = auth.uid()
+  SELECT organization_id FROM public.users WHERE id = (select auth.uid())
 $$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 -- 1c. create_org_and_profile — signup helper (SECURITY DEFINER)
