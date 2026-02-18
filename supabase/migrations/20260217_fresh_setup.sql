@@ -125,6 +125,8 @@ CREATE TABLE IF NOT EXISTS tenants (
   contact_name TEXT,
   contact_email TEXT,
   contact_phone TEXT,
+  unit_suite TEXT,
+  tenant_type TEXT,
   template_id UUID REFERENCES requirement_templates(id) ON DELETE SET NULL,
   compliance_status TEXT DEFAULT 'pending'
     CHECK (compliance_status IN ('compliant', 'non_compliant', 'expiring_soon', 'expired', 'pending', 'under_review')),
