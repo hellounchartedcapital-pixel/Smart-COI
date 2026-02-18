@@ -403,10 +403,10 @@ function ReviewInterface({
   const requiredReqIds = new Set(templateRequirements.filter((r) => r.is_required).map((r) => r.id));
   const optionalReqIds = new Set(templateRequirements.filter((r) => !r.is_required).map((r) => r.id));
   const requiredMetCount = complianceResult.coverageResults.filter(
-    (r) => r.status === 'met' && requiredReqIds.has(r.coverage_requirement_id)
+    (r) => r.status === 'met' && r.coverage_requirement_id != null && requiredReqIds.has(r.coverage_requirement_id)
   ).length;
   const optionalMetCount = complianceResult.coverageResults.filter(
-    (r) => r.status === 'met' && optionalReqIds.has(r.coverage_requirement_id)
+    (r) => r.status === 'met' && r.coverage_requirement_id != null && optionalReqIds.has(r.coverage_requirement_id)
   ).length;
   const requiredCount = requiredReqIds.size;
 
