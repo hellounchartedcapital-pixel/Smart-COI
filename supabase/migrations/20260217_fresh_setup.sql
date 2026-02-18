@@ -318,7 +318,7 @@ CREATE TRIGGER update_requirement_templates_updated_at
 
 CREATE OR REPLACE FUNCTION get_user_organization_id()
 RETURNS UUID AS $$
-  SELECT organization_id FROM public.users WHERE id = auth.uid()
+  SELECT organization_id FROM public.users WHERE id = (select auth.uid())
 $$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
 
 
@@ -350,11 +350,11 @@ CREATE POLICY "Users can view members of own organization"
 
 CREATE POLICY "Users can update own profile"
   ON users FOR UPDATE TO authenticated
-  USING (id = auth.uid());
+  USING (id = (select auth.uid()));
 
 CREATE POLICY "Users can insert own profile"
   ON users FOR INSERT TO authenticated
-  WITH CHECK (id = auth.uid());
+  WITH CHECK (id = (select auth.uid()));
 
 -- ---- properties ----
 ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
@@ -430,14 +430,25 @@ CREATE POLICY "Org members can view coverage requirements"
     )
   );
 
-CREATE POLICY "Org members can manage own coverage requirements"
-  ON template_coverage_requirements FOR ALL TO authenticated
+CREATE POLICY "Org members can insert coverage requirements"
+  ON template_coverage_requirements FOR INSERT TO authenticated
+  WITH CHECK (
+    template_id IN (
+      SELECT id FROM requirement_templates WHERE organization_id = get_user_organization_id()
+    )
+  );
+
+CREATE POLICY "Org members can update coverage requirements"
+  ON template_coverage_requirements FOR UPDATE TO authenticated
   USING (
     template_id IN (
       SELECT id FROM requirement_templates WHERE organization_id = get_user_organization_id()
     )
-  )
-  WITH CHECK (
+  );
+
+CREATE POLICY "Org members can delete coverage requirements"
+  ON template_coverage_requirements FOR DELETE TO authenticated
+  USING (
     template_id IN (
       SELECT id FROM requirement_templates WHERE organization_id = get_user_organization_id()
     )
