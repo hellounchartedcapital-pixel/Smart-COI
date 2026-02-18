@@ -436,56 +436,135 @@ export default function LandingPage() {
                   Simple, Transparent Pricing
                 </h2>
                 <p className="mt-4 text-lg text-slate-500">
-                  One plan. Everything included. Scale as you grow.
+                  Start small and scale as your portfolio grows. Every plan includes a 14-day free trial.
                 </p>
               </div>
             </AnimateIn>
 
-            <AnimateIn delay={150}>
-              <div className="mx-auto mt-12 max-w-md">
-                <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5">
-                  {/* Gradient top accent */}
-                  <div className="h-1.5 w-full bg-gradient-to-r from-[#73E2A7] to-[#4CC78A]" />
-
-                  <div className="p-8 sm:p-10">
-                    <p className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-                      Pro
-                    </p>
-                    <div className="mt-3 flex items-baseline gap-1">
-                      <span className="text-5xl font-black tracking-tight text-slate-950">$29</span>
-                      <span className="text-lg text-slate-500">/month per property</span>
-                    </div>
-
-                    <ul className="mt-8 space-y-4">
-                      {[
-                        'Unlimited vendors & tenants',
-                        'AI compliance checking',
-                        'Automated follow-ups & reminders',
-                        'Portfolio compliance dashboard',
-                        'Self-service upload portal',
-                        'Email notifications',
-                        'Priority support',
-                      ].map((item) => (
-                        <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
-                          <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
-                          {item}
-                        </li>
-                      ))}
-                    </ul>
-
-                    <Link
-                      href="/signup"
-                      className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 transition-all hover:bg-slate-800"
-                    >
-                      Get Started
-                    </Link>
-
-                    <p className="mt-4 text-center text-xs text-slate-400">
-                      Free 14-day trial — no credit card required
-                    </p>
+            <div className="mx-auto mt-14 grid max-w-5xl gap-8 lg:grid-cols-3">
+              {/* Starter */}
+              <AnimateIn delay={100}>
+                <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-8 transition-shadow hover:shadow-lg">
+                  <p className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+                    Starter
+                  </p>
+                  <div className="mt-3 flex items-baseline gap-1">
+                    <span className="text-5xl font-black tracking-tight text-slate-950">$49</span>
+                    <span className="text-lg text-slate-500">/mo</span>
                   </div>
+                  <p className="mt-2 text-sm text-slate-500">Up to 5 properties</p>
+
+                  <ul className="mt-8 flex-1 space-y-4">
+                    {[
+                      'Up to 5 properties',
+                      '50 vendors & tenants',
+                      'AI compliance checking',
+                      'Expiration tracking',
+                      'Self-service upload portal',
+                      'Email notifications',
+                    ].map((item) => (
+                      <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
+                        <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    href="/signup"
+                    className="mt-8 flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                  >
+                    Start Free Trial
+                  </Link>
                 </div>
-              </div>
+              </AnimateIn>
+
+              {/* Professional — Most Popular */}
+              <AnimateIn delay={200}>
+                <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-[#73E2A7] bg-white p-8 shadow-xl shadow-[#73E2A7]/10">
+                  <div className="absolute top-0 right-0 rounded-bl-xl bg-[#73E2A7] px-4 py-1.5 text-xs font-bold text-slate-950">
+                    Most Popular
+                  </div>
+
+                  <p className="text-sm font-semibold uppercase tracking-wider text-[#4CC78A]">
+                    Professional
+                  </p>
+                  <div className="mt-3 flex items-baseline gap-1">
+                    <span className="text-5xl font-black tracking-tight text-slate-950">$79</span>
+                    <span className="text-lg text-slate-500">/mo</span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-500">Up to 20 properties</p>
+
+                  <ul className="mt-8 flex-1 space-y-4">
+                    {[
+                      'Up to 20 properties',
+                      'Unlimited vendors & tenants',
+                      'AI compliance checking',
+                      'Automated follow-ups & reminders',
+                      'Portfolio compliance dashboard',
+                      'Self-service upload portal',
+                      'Custom requirement templates',
+                      'Priority support',
+                    ].map((item) => (
+                      <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
+                        <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    href="/signup"
+                    className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 transition-all hover:bg-slate-800"
+                  >
+                    Start Free Trial
+                  </Link>
+                </div>
+              </AnimateIn>
+
+              {/* Enterprise */}
+              <AnimateIn delay={300}>
+                <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-8 transition-shadow hover:shadow-lg">
+                  <p className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+                    Enterprise
+                  </p>
+                  <div className="mt-3 flex items-baseline gap-1">
+                    <span className="text-4xl font-black tracking-tight text-slate-950">Let&apos;s Talk</span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-500">Unlimited properties</p>
+
+                  <ul className="mt-8 flex-1 space-y-4">
+                    {[
+                      'Unlimited properties',
+                      'Unlimited vendors & tenants',
+                      'Everything in Professional',
+                      'PMS integrations (Yardi, MRI)',
+                      'Custom onboarding & training',
+                      'Dedicated account manager',
+                      'SSO & advanced security',
+                      'SLA & uptime guarantee',
+                    ].map((item) => (
+                      <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
+                        <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    href="mailto:sales@smartcoi.com"
+                    className="mt-8 flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                  >
+                    Contact Us
+                  </Link>
+                </div>
+              </AnimateIn>
+            </div>
+
+            <AnimateIn delay={400}>
+              <p className="mt-8 text-center text-sm text-slate-400">
+                All plans include a 14-day free trial. No credit card required. Save 17% with annual billing.
+              </p>
             </AnimateIn>
           </div>
         </section>
