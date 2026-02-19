@@ -230,44 +230,81 @@ export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
 </p>
 
 <p style="font-size:14px;color:#334155;line-height:1.6;margin-top:16px;">
-  You're just a few steps away from automating your COI compliance. Here's what to do next:
+  You\u2019re just a few steps away from automating your COI compliance. Here\u2019s what to do next:
 </p>
 
+<!-- Steps -->
 <table cellpadding="0" cellspacing="0" style="margin:20px 0;width:100%;">
+  <!-- Step 1 -->
   <tr>
-    <td style="padding:12px 16px;background:#f0fdf4;border-radius:6px;border-left:4px solid #059669;">
-      <p style="margin:0 0 8px;font-size:14px;color:#334155;font-weight:600;">Step 1: Set up your organization</p>
-      <p style="margin:0 0 4px;font-size:13px;color:#475569;">Name your company and add your default certificate holder and additional insured entities.</p>
+    <td style="width:40px;vertical-align:top;padding:12px 0;">
+      <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">1</div>
+    </td>
+    <td style="vertical-align:top;padding:12px 0 12px 12px;">
+      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Set up your organization</p>
+      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Add your company name, certificate holder entity, and additional insured entities that appear on your vendor and tenant certificates.</p>
     </td>
   </tr>
-  <tr><td style="height:8px;"></td></tr>
+  <!-- Divider -->
+  <tr><td colspan="2" style="padding:0;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
+  <!-- Step 2 -->
   <tr>
-    <td style="padding:12px 16px;background:#f0fdf4;border-radius:6px;border-left:4px solid #059669;">
-      <p style="margin:0 0 8px;font-size:14px;color:#334155;font-weight:600;">Step 2: Add a property and choose templates</p>
-      <p style="margin:0 0 4px;font-size:13px;color:#475569;">Create your first property and pick the insurance requirement templates that match your needs.</p>
+    <td style="width:40px;vertical-align:top;padding:12px 0;">
+      <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">2</div>
+    </td>
+    <td style="vertical-align:top;padding:12px 0 12px 12px;">
+      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Add properties &amp; requirements</p>
+      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Create your first property and select the insurance requirement templates that match your vendor and tenant contracts.</p>
     </td>
   </tr>
-  <tr><td style="height:8px;"></td></tr>
+  <!-- Divider -->
+  <tr><td colspan="2" style="padding:0;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
+  <!-- Step 3 -->
   <tr>
-    <td style="padding:12px 16px;background:#f0fdf4;border-radius:6px;border-left:4px solid #059669;">
-      <p style="margin:0 0 8px;font-size:14px;color:#334155;font-weight:600;">Step 3: Upload your first certificate</p>
-      <p style="margin:0 0 4px;font-size:13px;color:#475569;">Upload a COI and watch SmartCOI automatically extract and verify coverage in seconds.</p>
+    <td style="width:40px;vertical-align:top;padding:12px 0;">
+      <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">3</div>
+    </td>
+    <td style="vertical-align:top;padding:12px 0 12px 12px;">
+      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Upload your first COI</p>
+      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Upload a certificate of insurance and watch SmartCOI extract coverage details and check compliance in seconds.</p>
     </td>
   </tr>
 </table>
 
-<table cellpadding="0" cellspacing="0" style="margin:24px 0;">
-<tr><td style="background:#059669;border-radius:6px;padding:12px 24px;">
-  <a href="${fields.setup_link}" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Go to Setup</a>
+<!-- CTA Button -->
+<table cellpadding="0" cellspacing="0" style="margin:24px auto;" align="center">
+<tr><td style="background:#059669;border-radius:6px;padding:12px 32px;" align="center">
+  <a href="${fields.setup_link}" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;display:inline-block;">Go to Setup</a>
 </td></tr>
 </table>
 
-<p style="font-size:13px;color:#475569;margin-top:16px;">
-  If you have any questions, just reply to this email or reach out to our support team. We're here to help!
+<p style="font-size:13px;color:#475569;margin-top:24px;">
+  Questions? Reach out to us at <a href="mailto:support@smartcoi.io" style="color:#059669;">support@smartcoi.io</a> \u2014 we\u2019re happy to help you get set up.
 </p>`;
+
+  // Use a dedicated wrapper: SmartCOI-only header (no org name), plus copyright footer
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;">
+<tr><td align="center">
+<table width="100%" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+  <tr><td style="background:#059669;padding:20px 24px;">
+    <span style="color:#ffffff;font-size:18px;font-weight:700;">SmartCOI</span>
+  </td></tr>
+  <tr><td style="padding:24px;">${body}</td></tr>
+  <tr><td style="padding:16px 24px;background:#f1f5f9;font-size:11px;color:#64748b;text-align:center;">
+    \u00A9 2026 SmartCOI \u00B7 <a href="mailto:support@smartcoi.io" style="color:#64748b;">support@smartcoi.io</a>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 
   return {
     subject: "Welcome to SmartCOI \u2014 Let's Get You Set Up",
-    html: emailWrapper(body, { organization_name: 'SmartCOI' }),
+    html,
   };
 }

@@ -12,6 +12,22 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.svg',
   },
+  metadataBase: process.env.NEXT_PUBLIC_APP_URL
+    ? new URL(process.env.NEXT_PUBLIC_APP_URL)
+    : undefined,
+  openGraph: {
+    title: 'SmartCOI',
+    description:
+      'AI-powered COI compliance tracking for commercial property managers',
+    siteName: 'SmartCOI',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SmartCOI',
+    description:
+      'AI-powered COI compliance tracking for commercial property managers',
+  },
 };
 
 export default function RootLayout({
