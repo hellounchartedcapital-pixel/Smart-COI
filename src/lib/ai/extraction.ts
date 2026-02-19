@@ -115,6 +115,15 @@ Important instructions:
 - If a field is unclear or illegible, still include it but set confidence to "low"
 - Look at ALL pages of the document for endorsements, additional insured schedules, and supplementary information
 - Extract exact entity names and addresses for certificate holder and all additional insured parties
+
+IMPORTANT: Additional insured entities are frequently listed in the "Description of Operations / Locations / Vehicles" section of the ACORD form, not just in structured fields. Look carefully at this section for language like:
+  - "[Entity Name] is included as Additional Insured"
+  - "Additional Insured: [Entity Name]"
+  - "[Entity Names] are included as Additional Insureds with respect to..."
+  - "Certificate holder and [Entity Name] are named as additional insured..."
+  - Any entity names listed alongside phrases like "additional insured", "named insured", "loss payee"
+Extract ALL entity names mentioned as additional insureds from this section and include them in the additional_insured_entities array. Also check for additional insured entities mentioned in the certificate holder box (sometimes multiple entities are listed together in that field).
+
 - Return ONLY the JSON object, no other text`;
 
 // ============================================================================
