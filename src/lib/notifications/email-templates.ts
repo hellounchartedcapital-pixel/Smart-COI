@@ -209,3 +209,65 @@ ${gaps.map((g) => {
   }).join('\n')}
 </ul>`;
 }
+
+// ============================================================================
+// Welcome / Onboarding Email
+// ============================================================================
+
+interface WelcomeEmailFields {
+  user_name: string;
+  setup_link: string;
+}
+
+export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
+  const name = fields.user_name || 'there';
+
+  const body = `
+<p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 16px;">Hi ${name},</p>
+
+<p style="font-size:14px;color:#334155;line-height:1.6;">
+  Welcome to <strong>SmartCOI</strong>! Your account is confirmed and ready to go.
+</p>
+
+<p style="font-size:14px;color:#334155;line-height:1.6;margin-top:16px;">
+  You're just a few steps away from automating your COI compliance. Here's what to do next:
+</p>
+
+<table cellpadding="0" cellspacing="0" style="margin:20px 0;width:100%;">
+  <tr>
+    <td style="padding:12px 16px;background:#f0fdf4;border-radius:6px;border-left:4px solid #059669;">
+      <p style="margin:0 0 8px;font-size:14px;color:#334155;font-weight:600;">Step 1: Set up your organization</p>
+      <p style="margin:0 0 4px;font-size:13px;color:#475569;">Name your company and add your default certificate holder and additional insured entities.</p>
+    </td>
+  </tr>
+  <tr><td style="height:8px;"></td></tr>
+  <tr>
+    <td style="padding:12px 16px;background:#f0fdf4;border-radius:6px;border-left:4px solid #059669;">
+      <p style="margin:0 0 8px;font-size:14px;color:#334155;font-weight:600;">Step 2: Add a property and choose templates</p>
+      <p style="margin:0 0 4px;font-size:13px;color:#475569;">Create your first property and pick the insurance requirement templates that match your needs.</p>
+    </td>
+  </tr>
+  <tr><td style="height:8px;"></td></tr>
+  <tr>
+    <td style="padding:12px 16px;background:#f0fdf4;border-radius:6px;border-left:4px solid #059669;">
+      <p style="margin:0 0 8px;font-size:14px;color:#334155;font-weight:600;">Step 3: Upload your first certificate</p>
+      <p style="margin:0 0 4px;font-size:13px;color:#475569;">Upload a COI and watch SmartCOI automatically extract and verify coverage in seconds.</p>
+    </td>
+  </tr>
+</table>
+
+<table cellpadding="0" cellspacing="0" style="margin:24px 0;">
+<tr><td style="background:#059669;border-radius:6px;padding:12px 24px;">
+  <a href="${fields.setup_link}" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Go to Setup</a>
+</td></tr>
+</table>
+
+<p style="font-size:13px;color:#475569;margin-top:16px;">
+  If you have any questions, just reply to this email or reach out to our support team. We're here to help!
+</p>`;
+
+  return {
+    subject: "Welcome to SmartCOI \u2014 Let's Get You Set Up",
+    html: emailWrapper(body, { organization_name: 'SmartCOI' }),
+  };
+}

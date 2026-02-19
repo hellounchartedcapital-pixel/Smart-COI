@@ -1,6 +1,8 @@
 'use server';
 
 import { createServiceClient } from '@/lib/supabase/service';
+import { sendNotificationEmail } from '@/lib/notifications/email-sender';
+import { welcomeEmail } from '@/lib/notifications/email-templates';
 
 /**
  * Creates an organization and user profile after Supabase Auth signup.
@@ -63,6 +65,13 @@ export async function createOrgAfterSignup(
   if (profileError) {
     throw new Error(`Failed to create user profile: ${profileError.message}`);
   }
+
+  // Send welcome email (fire-and-forget — don't block signup on email delivery)
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://smartcoi.io';
+  const template = welcomeEmail({ user_name: fullName, setup_link: `${appUrl}/setup` });
+  sendNotificationEmail(email, template.subject, template.html).catch((err) =>
+    console.error('Welcome email failed:', err)
+  );
 
   return { orgId: org.id };
 }
