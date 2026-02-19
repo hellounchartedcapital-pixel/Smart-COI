@@ -368,16 +368,29 @@ export function calculateCompliance(
   }
 
   // ---- Entity requirements ----
+  // Search across ALL extracted entities regardless of type. In practice,
+  // entities may appear in any field on the COI (certificate holder box,
+  // additional insured schedule, or description of operations text). The
+  // important thing is that the entity IS named somewhere on the certificate.
   for (const pe of propertyEntities) {
-    // Find best matching extracted entity of the same type
-    const candidates = entities.filter((e) => e.entity_type === pe.entity_type);
-    let bestMatch: { entity: EntityInput; exact: boolean } | null = null;
+    // First pass: prefer same-type matches (exact type match is strongest signal)
+    let bestMatch: { entity: EntityInput; exact: boolean; sameType: boolean } | null = null;
 
-    for (const candidate of candidates) {
+    for (const candidate of entities) {
       const result = entityNameMatches(pe.entity_name, candidate.entity_name);
-      if (result.matched) {
-        bestMatch = { entity: candidate, exact: result.exact };
-        if (result.exact) break; // prefer exact match
+      if (!result.matched) continue;
+
+      const sameType = candidate.entity_type === pe.entity_type;
+      const isBetter =
+        !bestMatch ||
+        // Prefer same-type over cross-type
+        (sameType && !bestMatch.sameType) ||
+        // Within same preference tier, prefer exact over fuzzy
+        (sameType === bestMatch.sameType && result.exact && !bestMatch.exact);
+
+      if (isBetter) {
+        bestMatch = { entity: candidate, exact: result.exact, sameType };
+        if (result.exact && sameType) break; // best possible — stop early
       }
     }
 
@@ -389,20 +402,30 @@ export function calculateCompliance(
         match_details: null,
       });
       hasGap = true;
-    } else if (bestMatch.exact) {
-      entityResults.push({
-        property_entity_id: pe.id,
-        extracted_entity_id: bestMatch.entity.id ?? null,
-        status: 'found',
-        match_details: null,
-      });
     } else {
-      // Fuzzy match — found but with variation
+      // Build a descriptive match_details string
+      const locationLabel =
+        bestMatch.entity.entity_type === 'certificate_holder'
+          ? 'Certificate Holder'
+          : 'Additional Insured';
+      const crossType = !bestMatch.sameType;
+      const fuzzy = !bestMatch.exact;
+
+      let details: string | null = null;
+      if (crossType && fuzzy) {
+        details = `Found as ${locationLabel} (name variation: "${bestMatch.entity.entity_name}")`;
+      } else if (crossType) {
+        details = `Found as ${locationLabel}`;
+      } else if (fuzzy) {
+        details = `Matched "${bestMatch.entity.entity_name}" (name variation)`;
+      }
+      // If exact match + same type → details stays null (perfect match)
+
       entityResults.push({
         property_entity_id: pe.id,
         extracted_entity_id: bestMatch.entity.id ?? null,
         status: 'found',
-        match_details: `Matched "${bestMatch.entity.entity_name}" (name variation)`,
+        match_details: details,
       });
     }
   }
