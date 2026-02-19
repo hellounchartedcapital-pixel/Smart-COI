@@ -176,7 +176,7 @@ export default function LandingPage() {
                     href="/signup"
                     className="inline-flex h-12 items-center rounded-xl bg-slate-950 px-8 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 transition-all hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-950/25"
                   >
-                    Start Free
+                    Start Your Free Trial
                     <IconArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                   <ScrollLink
@@ -441,7 +441,14 @@ export default function LandingPage() {
               </div>
             </AnimateIn>
 
-            <div className="mx-auto mt-14 grid max-w-5xl gap-8 lg:grid-cols-3">
+            {/* Annual billing toggle hint */}
+            <AnimateIn delay={50}>
+              <p className="mt-8 text-center text-sm font-medium text-emerald-600">
+                Save 20% with annual billing
+              </p>
+            </AnimateIn>
+
+            <div className="mx-auto mt-10 grid max-w-5xl gap-8 lg:grid-cols-3">
               {/* Starter */}
               <AnimateIn delay={100}>
                 <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-8 transition-shadow hover:shadow-lg">
@@ -449,19 +456,23 @@ export default function LandingPage() {
                     Starter
                   </p>
                   <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-5xl font-black tracking-tight text-slate-950">$49</span>
+                    <span className="text-5xl font-black tracking-tight text-slate-950">$99</span>
                     <span className="text-lg text-slate-500">/mo</span>
                   </div>
-                  <p className="mt-2 text-sm text-slate-500">Up to 5 properties</p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    For firms getting started with compliance automation
+                  </p>
 
                   <ul className="mt-8 flex-1 space-y-4">
                     {[
-                      'Up to 5 properties',
-                      '50 vendors & tenants',
-                      'AI compliance checking',
-                      'Expiration tracking',
-                      'Self-service upload portal',
-                      'Email notifications',
+                      'Unlimited properties',
+                      'Up to 50 vendors & tenants',
+                      '50 COI extractions per month',
+                      'AI-powered compliance checking',
+                      'Custom requirement templates',
+                      'Automated expiration notifications',
+                      'Self-service vendor upload portal',
+                      'Compliance dashboard',
                     ].map((item) => (
                       <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
                         <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
@@ -481,41 +492,51 @@ export default function LandingPage() {
 
               {/* Professional — Most Popular */}
               <AnimateIn delay={200}>
-                <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-[#73E2A7] bg-white p-8 shadow-xl shadow-[#73E2A7]/10">
-                  <div className="absolute top-0 right-0 rounded-bl-xl bg-[#73E2A7] px-4 py-1.5 text-xs font-bold text-slate-950">
+                <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-emerald-400 bg-white p-8 shadow-xl shadow-emerald-500/10 lg:-mt-4 lg:mb-[-1rem]">
+                  <div className="absolute top-0 right-0 rounded-bl-xl bg-emerald-500 px-4 py-1.5 text-xs font-bold text-white">
                     Most Popular
                   </div>
 
-                  <p className="text-sm font-semibold uppercase tracking-wider text-[#4CC78A]">
+                  <p className="text-sm font-semibold uppercase tracking-wider text-emerald-600">
                     Professional
                   </p>
                   <div className="mt-3 flex items-baseline gap-1">
-                    <span className="text-5xl font-black tracking-tight text-slate-950">$79</span>
+                    <span className="text-5xl font-black tracking-tight text-slate-950">$249</span>
                     <span className="text-lg text-slate-500">/mo</span>
                   </div>
-                  <p className="mt-2 text-sm text-slate-500">Up to 20 properties</p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    For growing portfolios that need more capacity
+                  </p>
 
                   <ul className="mt-8 flex-1 space-y-4">
+                    <li className="flex items-start gap-3 text-sm text-slate-600">
+                      <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
+                      Everything in Starter, plus:
+                    </li>
                     {[
-                      'Up to 20 properties',
-                      'Unlimited vendors & tenants',
-                      'AI compliance checking',
-                      'Automated follow-ups & reminders',
-                      'Portfolio compliance dashboard',
-                      'Self-service upload portal',
-                      'Custom requirement templates',
-                      'Priority support',
+                      { label: 'Up to 250 vendors & tenants', comingSoon: false },
+                      { label: '200 COI extractions per month', comingSoon: false },
+                      { label: 'Priority email support', comingSoon: false },
+                      { label: 'Compliance reports & exports', comingSoon: true },
+                      { label: 'Team members & roles', comingSoon: true },
                     ].map((item) => (
-                      <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
+                      <li key={item.label} className="flex items-start gap-3 text-sm text-slate-600">
                         <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
-                        {item}
+                        <span>
+                          {item.label}
+                          {item.comingSoon && (
+                            <span className="ml-1.5 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                              Coming Soon
+                            </span>
+                          )}
+                        </span>
                       </li>
                     ))}
                   </ul>
 
                   <Link
                     href="/signup"
-                    className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-slate-950 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 transition-all hover:bg-slate-800"
+                    className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:shadow-xl hover:shadow-emerald-600/30"
                   >
                     Start Free Trial
                   </Link>
@@ -531,18 +552,22 @@ export default function LandingPage() {
                   <div className="mt-3 flex items-baseline gap-1">
                     <span className="text-4xl font-black tracking-tight text-slate-950">Let&apos;s Talk</span>
                   </div>
-                  <p className="mt-2 text-sm text-slate-500">Unlimited properties</p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    For large portfolios with complex requirements
+                  </p>
 
                   <ul className="mt-8 flex-1 space-y-4">
+                    <li className="flex items-start gap-3 text-sm text-slate-600">
+                      <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
+                      Everything in Professional, plus:
+                    </li>
                     {[
-                      'Unlimited properties',
                       'Unlimited vendors & tenants',
-                      'Everything in Professional',
-                      'PMS integrations (Yardi, MRI)',
-                      'Custom onboarding & training',
+                      'Unlimited COI extractions',
+                      'Dedicated onboarding & training',
+                      'Custom integrations (Yardi, MRI, AppFolio)',
+                      'SLA & uptime guarantees',
                       'Dedicated account manager',
-                      'SSO & advanced security',
-                      'SLA & uptime guarantee',
                     ].map((item) => (
                       <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
                         <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
@@ -552,20 +577,30 @@ export default function LandingPage() {
                   </ul>
 
                   <Link
-                    href="mailto:sales@smartcoi.com"
+                    href="mailto:sales@smartcoi.io"
                     className="mt-8 flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
                   >
-                    Contact Us
+                    Contact Sales
                   </Link>
                 </div>
               </AnimateIn>
             </div>
 
-            <AnimateIn delay={400}>
-              <p className="mt-8 text-center text-sm text-slate-400">
-                All plans include a 14-day free trial. No credit card required. Save 17% with annual billing.
-              </p>
-            </AnimateIn>
+            <div className="mt-10 space-y-2 text-center">
+              <AnimateIn delay={400}>
+                <p className="text-sm text-slate-500">
+                  All plans include a 14-day free trial. No credit card required.
+                </p>
+              </AnimateIn>
+              <AnimateIn delay={450}>
+                <p className="text-sm text-slate-400">
+                  Need help choosing?{' '}
+                  <a href="mailto:sales@smartcoi.io" className="text-emerald-600 underline underline-offset-2 hover:text-emerald-700">
+                    Email us at sales@smartcoi.io
+                  </a>
+                </p>
+              </AnimateIn>
+            </div>
           </div>
         </section>
 
