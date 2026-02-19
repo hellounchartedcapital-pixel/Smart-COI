@@ -106,10 +106,15 @@ export function BillingClient({
       ? PRICE_IDS.PROFESSIONAL_MONTHLY
       : PRICE_IDS.PROFESSIONAL_ANNUAL;
 
-  const starterPrice = interval === 'monthly' ? '$99' : '$79';
-  const starterPer = interval === 'monthly' ? '/mo' : '/mo, billed annually';
-  const proPrice = interval === 'monthly' ? '$249' : '$199';
-  const proPer = interval === 'monthly' ? '/mo' : '/mo, billed annually';
+  const isAnnual = interval === 'annual';
+  const starterPrice = isAnnual ? '$79' : '$99';
+  const starterPer = '/mo';
+  const starterSavings = isAnnual ? 'Save $238/year' : null;
+  const starterBilledLabel = isAnnual ? 'billed annually' : null;
+  const proPrice = isAnnual ? '$199' : '$249';
+  const proPer = '/mo';
+  const proSavings = isAnnual ? 'Save $598/year' : null;
+  const proBilledLabel = isAnnual ? 'billed annually' : null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -180,27 +185,32 @@ export function BillingClient({
           {/* Interval toggle */}
           <div className="flex items-center justify-center gap-3">
             <span
-              className={`text-sm font-medium ${interval === 'monthly' ? 'text-slate-900' : 'text-slate-400'}`}
+              className={`text-sm font-medium transition-colors duration-200 ${!isAnnual ? 'text-slate-900' : 'text-slate-400'}`}
             >
               Monthly
             </span>
             <button
               onClick={() => setInterval((i) => (i === 'monthly' ? 'annual' : 'monthly'))}
-              className="relative h-6 w-11 rounded-full bg-slate-200 transition-colors data-[active=true]:bg-emerald-500"
-              data-active={interval === 'annual'}
+              className={`relative inline-flex h-7 w-[52px] flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${
+                isAnnual ? 'bg-emerald-500' : 'bg-slate-300'
+              }`}
+              role="switch"
+              aria-checked={isAnnual}
               aria-label="Toggle annual billing"
             >
               <span
-                className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${interval === 'annual' ? 'translate-x-5' : ''}`}
+                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-300 ${
+                  isAnnual ? 'translate-x-[27px]' : 'translate-x-[3px]'
+                }`}
               />
             </button>
             <span
-              className={`text-sm font-medium ${interval === 'annual' ? 'text-slate-900' : 'text-slate-400'}`}
+              className={`text-sm font-medium transition-colors duration-200 ${isAnnual ? 'text-slate-900' : 'text-slate-400'}`}
             >
               Annual
             </span>
-            {interval === 'annual' && (
-              <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+            {isAnnual && (
+              <span className="ml-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
                 Save 20%
               </span>
             )}
@@ -212,6 +222,8 @@ export function BillingClient({
               name="Starter"
               price={starterPrice}
               per={starterPer}
+              billedLabel={starterBilledLabel}
+              savings={starterSavings}
               features={[
                 'Unlimited properties',
                 'Up to 50 vendors & tenants',
@@ -232,6 +244,8 @@ export function BillingClient({
               name="Professional"
               price={proPrice}
               per={proPer}
+              billedLabel={proBilledLabel}
+              savings={proSavings}
               popular
               features={[
                 'Everything in Starter, plus:',
@@ -270,6 +284,8 @@ function PlanCard({
   name,
   price,
   per,
+  billedLabel,
+  savings,
   features,
   popular,
   isCurrent,
@@ -279,6 +295,8 @@ function PlanCard({
   name: string;
   price: string;
   per: string;
+  billedLabel?: string | null;
+  savings?: string | null;
   features: string[];
   popular?: boolean;
   isCurrent: boolean;
@@ -301,9 +319,21 @@ function PlanCard({
 
       <p className="text-sm font-semibold uppercase tracking-wider text-slate-400">{name}</p>
       <div className="mt-2 flex items-baseline gap-1">
-        <span className="text-4xl font-black tracking-tight text-slate-950">{price}</span>
+        <span className="text-4xl font-black tracking-tight text-slate-950 transition-all duration-300">{price}</span>
         <span className="text-sm text-slate-500">{per}</span>
       </div>
+      {(billedLabel || savings) && (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          {billedLabel && (
+            <span className="text-xs text-slate-500">{billedLabel}</span>
+          )}
+          {savings && (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+              {savings}
+            </span>
+          )}
+        </div>
+      )}
 
       <ul className="mt-6 flex-1 space-y-3">
         {features.map((feat) => (
