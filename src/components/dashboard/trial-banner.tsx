@@ -48,10 +48,11 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
   const isExpired = expiresAt ? now >= expiresAt : false;
 
   // Calculate days remaining
+  let daysRemaining: number | null = null;
   let daysText = '';
   if (expiresAt && !isExpired) {
     const msRemaining = expiresAt.getTime() - now.getTime();
-    const daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+    daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
     if (daysRemaining < 1) {
       daysText = 'less than 1 day remaining';
     } else if (daysRemaining === 1) {
@@ -60,6 +61,8 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
       daysText = `${daysRemaining} days remaining`;
     }
   }
+
+  const isUrgent = daysRemaining !== null && daysRemaining <= 3;
 
   // Expired banner — NOT dismissible
   if (isExpired) {
@@ -88,14 +91,39 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
   }
 
   return (
-    <div className="flex items-center justify-center gap-2 bg-indigo-50 border-b border-indigo-200 px-4 py-2 text-sm text-indigo-700">
-      <Clock className="h-4 w-4 flex-shrink-0 text-indigo-500" />
+    <div
+      className={`flex items-center justify-center gap-2 border-b px-4 py-2 text-sm ${
+        isUrgent
+          ? 'border-amber-200 bg-amber-50 text-amber-800'
+          : 'border-indigo-200 bg-indigo-50 text-indigo-700'
+      }`}
+    >
+      {isUrgent ? (
+        <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-600" />
+      ) : (
+        <Clock className="h-4 w-4 flex-shrink-0 text-indigo-500" />
+      )}
       <span>
-        You&apos;re on a free trial &mdash; {daysText}
+        You&apos;re on a free trial
+        {daysText ? <> &mdash; <span className="font-semibold">{daysText}</span></> : null}
       </span>
+      <Link
+        href="/dashboard/settings/billing"
+        className={`ml-2 inline-flex items-center rounded-md px-3 py-1 text-xs font-semibold text-white transition-colors ${
+          isUrgent
+            ? 'bg-amber-600 hover:bg-amber-700'
+            : 'bg-indigo-600 hover:bg-indigo-700'
+        }`}
+      >
+        Upgrade
+      </Link>
       <button
         onClick={handleDismiss}
-        className="ml-2 rounded p-0.5 text-indigo-400 transition-colors hover:bg-indigo-100 hover:text-indigo-600"
+        className={`ml-1 rounded p-0.5 transition-colors ${
+          isUrgent
+            ? 'text-amber-400 hover:bg-amber-100 hover:text-amber-600'
+            : 'text-indigo-400 hover:bg-indigo-100 hover:text-indigo-600'
+        }`}
         aria-label="Dismiss trial banner"
       >
         <X className="h-3.5 w-3.5" />
