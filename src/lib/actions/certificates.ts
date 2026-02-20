@@ -319,11 +319,32 @@ export async function getCOISignedUrl(
 
   if (!cert?.file_path) throw new Error('Certificate or file not found');
 
-  const { data, error } = await supabase.storage
+  // Normalize: strip public URL prefix if file_path was stored as a full URL
+  // (portal uploads previously stored the public URL instead of the relative path)
+  let storagePath = cert.file_path;
+  const publicUrlPrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/coi-documents/`;
+  if (storagePath.startsWith(publicUrlPrefix)) {
+    storagePath = storagePath.slice(publicUrlPrefix.length);
+  } else if (storagePath.startsWith('http')) {
+    const idx = storagePath.indexOf('/coi-documents/');
+    if (idx !== -1) {
+      storagePath = storagePath.slice(idx + '/coi-documents/'.length);
+    }
+  }
+
+  console.log(`[getCOISignedUrl] cert=${certificateId} storagePath="${storagePath}" originalPath="${cert.file_path}"`);
+
+  // Use service role client — service role can sign URLs for all files
+  // regardless of upload source (PM or portal)
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const serviceClient = createServiceClient();
+
+  const { data, error } = await serviceClient.storage
     .from('coi-documents')
-    .createSignedUrl(cert.file_path, 3600); // 1 hour
+    .createSignedUrl(storagePath, 3600); // 1 hour
 
   if (error || !data?.signedUrl) {
+    console.error(`[getCOISignedUrl] Supabase Storage error for path "${storagePath}":`, error);
     throw new Error('Failed to generate signed URL');
   }
 

@@ -160,15 +160,11 @@ export async function POST(
       );
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('coi-documents')
-      .getPublicUrl(filePath);
-
-    // Create certificate record
+    // Create certificate record — store the relative storage path (not the public URL)
+    // so signed URL generation works consistently for both PM and portal uploads
     const certRecord: Record<string, unknown> = {
       organization_id: organizationId,
-      file_path: urlData.publicUrl,
+      file_path: filePath,
       file_hash: fileHash,
       upload_source: 'portal_upload',
       processing_status: 'processing',

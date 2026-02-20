@@ -115,9 +115,39 @@ interface CertificateReviewClientProps {
   entityType: 'vendor' | 'tenant';
   entityId: string;
   entityName: string;
+  insuredName: string | null;
   propertyName: string | null;
   reviewerName: string | null;
   expirationThresholdDays: number;
+}
+
+// Normalize entity name for fuzzy matching (same logic as compliance/calculate.ts)
+function normalizeForMatch(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[.,;:'"!?()]/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\bl\.?l\.?c\.?\b/g, '')
+    .replace(/\blimited liability company\b/g, '')
+    .replace(/\binc\.?\b/g, '')
+    .replace(/\bincorporated\b/g, '')
+    .replace(/\bcorp\.?\b/g, '')
+    .replace(/\bcorporation\b/g, '')
+    .replace(/\blimited\b/g, '')
+    .replace(/\bco\b/g, '')
+    .replace(/\bcompany\b/g, '')
+    .replace(/\bl\.?p\.?\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function insuredNameMatches(systemName: string, insuredName: string): boolean {
+  if (systemName.toLowerCase().trim() === insuredName.toLowerCase().trim()) return true;
+  const a = normalizeForMatch(systemName);
+  const b = normalizeForMatch(insuredName);
+  if (a === b) return true;
+  if (a.includes(b) || b.includes(a)) return true;
+  return false;
 }
 
 // ============================================================================
@@ -133,6 +163,7 @@ export function CertificateReviewClient({
   entityType,
   entityId,
   entityName,
+  insuredName,
   propertyName,
   reviewerName,
   expirationThresholdDays,
@@ -203,6 +234,7 @@ export function CertificateReviewClient({
       entityType={entityType}
       entityId={entityId}
       entityName={entityName}
+      insuredName={insuredName}
       propertyName={propertyName}
       reviewerName={reviewerName}
       isConfirmed={isConfirmed}
@@ -224,6 +256,7 @@ function ReviewInterface({
   entityType,
   entityId,
   entityName,
+  insuredName,
   propertyName,
   reviewerName,
   isConfirmed,
@@ -441,6 +474,41 @@ function ReviewInterface({
           )}
         </p>
       </div>
+
+      {/* Insured name matching */}
+      {insuredName && (
+        <div className={`flex items-start gap-3 rounded-lg border px-4 py-3 ${
+          insuredNameMatches(entityName, insuredName)
+            ? 'border-slate-200 bg-slate-50'
+            : 'border-amber-300 bg-amber-50'
+        }`}>
+          <AlertTriangle className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
+            insuredNameMatches(entityName, insuredName)
+              ? 'hidden'
+              : 'text-amber-600'
+          }`} />
+          {!insuredNameMatches(entityName, insuredName) && (
+            <Info className="hidden" />
+          )}
+          <div className="flex-1">
+            <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
+              <div>
+                <span className="text-muted-foreground">Insured on certificate: </span>
+                <span className="font-medium text-foreground">{insuredName}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">{entityType === 'vendor' ? 'Vendor' : 'Tenant'} in system: </span>
+                <span className="font-medium text-foreground">{entityName}</span>
+              </div>
+            </div>
+            {!insuredNameMatches(entityName, insuredName) && (
+              <p className="mt-1 text-xs text-amber-700">
+                The insured name on this certificate doesn&apos;t match the {entityType} name in your system. Please verify this is the correct certificate for this {entityType}.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Expired coverage banner — compact, consolidated */}
       {expirationSummary.expiredCount > 0 && (

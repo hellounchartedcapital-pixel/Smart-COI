@@ -215,6 +215,33 @@ export function VendorDetailClient({
             </dl>
           </div>
 
+          {/* Portal upload review banner */}
+          {(() => {
+            const pendingCert = certificates.find(
+              (c) => c.processing_status === 'extracted' && !c.reviewed_at
+            );
+            if (!pendingCert) return null;
+            return (
+              <div className="flex items-center justify-between gap-3 rounded-lg border-2 border-blue-300 bg-blue-50 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <svg className="h-5 w-5 flex-shrink-0 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="16" x2="12" y2="12" />
+                    <line x1="12" y1="8" x2="12.01" y2="8" />
+                  </svg>
+                  <p className="text-sm font-medium text-blue-800">
+                    New certificate uploaded via portal &mdash; review needed
+                  </p>
+                </div>
+                <Button size="sm" asChild>
+                  <Link href={`/dashboard/certificates/${pendingCert.id}/review`}>
+                    Review Certificate
+                  </Link>
+                </Button>
+              </div>
+            );
+          })()}
+
           {/* Expired alert banner — compact, consolidated */}
           {vendor.compliance_status === 'expired' && (() => {
             const summary = summarizeExpiredCoverages(extractedCoverages, formatDate);

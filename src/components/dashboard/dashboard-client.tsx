@@ -444,30 +444,41 @@ function ActionItemRow({ item }: { item: ActionItem }) {
         </p>
       </div>
       <div className="flex shrink-0 gap-1.5">
-        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
-          <Link
-            href={`/dashboard/certificates/upload?${item.entityType}Id=${item.id}`}
-          >
-            <Upload className="mr-1 h-3 w-3" />
-            Upload
-          </Link>
-        </Button>
-        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
-          <Link href={`/dashboard/${item.entityType}s/${item.id}`}>
-            <Eye className="mr-1 h-3 w-3" />
-            View
-          </Link>
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-7 px-2 text-xs"
-          disabled={sending}
-          onClick={handleFollowUp}
-        >
-          <Mail className="mr-1 h-3 w-3" />
-          {sending ? 'Sending...' : 'Follow-up'}
-        </Button>
+        {item.unreviewedCertId ? (
+          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
+            <Link href={`/dashboard/certificates/${item.unreviewedCertId}/review`}>
+              <Eye className="mr-1 h-3 w-3" />
+              Review
+            </Link>
+          </Button>
+        ) : (
+          <>
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
+              <Link
+                href={`/dashboard/certificates/upload?${item.entityType}Id=${item.id}`}
+              >
+                <Upload className="mr-1 h-3 w-3" />
+                Upload
+              </Link>
+            </Button>
+            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
+              <Link href={`/dashboard/${item.entityType}s/${item.id}`}>
+                <Eye className="mr-1 h-3 w-3" />
+                View
+              </Link>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              disabled={sending}
+              onClick={handleFollowUp}
+            >
+              <Mail className="mr-1 h-3 w-3" />
+              {sending ? 'Sending...' : 'Follow-up'}
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
