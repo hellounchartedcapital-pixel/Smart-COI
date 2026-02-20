@@ -72,7 +72,8 @@ export type NotificationType =
   | 'expiration_warning'
   | 'gap_notification'
   | 'follow_up_reminder'
-  | 'escalation';
+  | 'escalation'
+  | 'portal_upload';
 
 export type NotificationStatus = 'scheduled' | 'sent' | 'failed' | 'cancelled';
 
@@ -241,6 +242,7 @@ export interface Certificate {
   file_hash: string | null;
   upload_source: UploadSource;
   processing_status: ProcessingStatus;
+  insured_name: string | null;
   uploaded_at: string;
   reviewed_at: string | null;
   reviewed_by: string | null;

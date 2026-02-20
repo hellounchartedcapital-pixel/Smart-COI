@@ -359,12 +359,13 @@ export async function POST(
         await supabase.from('notifications').insert({
           organization_id: entityInfo.organization_id,
           [entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
-          type: 'gap_notification',
+          type: 'portal_upload',
           scheduled_date: new Date().toISOString(),
           sent_date: new Date().toISOString(),
           status: 'sent',
           email_subject: `New COI uploaded by ${entityInfo.company_name} via self-service portal`,
           email_body: `${entityInfo.company_name} has uploaded a new Certificate of Insurance through the self-service portal. Please review it at your earliest convenience.`,
+          portal_link: `/dashboard/certificates/${certificate_id}/review`,
         });
       }
     }

@@ -7,6 +7,7 @@ const TYPE_LABELS: Record<NotificationType, { label: string; className: string }
   gap_notification: { label: 'Gap Alert', className: 'bg-red-100 text-red-800' },
   follow_up_reminder: { label: 'Follow-up', className: 'bg-blue-100 text-blue-800' },
   escalation: { label: 'Escalation', className: 'bg-purple-100 text-purple-800' },
+  portal_upload: { label: 'Portal Upload', className: 'bg-slate-100 text-slate-700' },
 };
 
 const STATUS_LABELS: Record<NotificationStatus, { label: string; className: string }> = {

@@ -56,6 +56,7 @@ const TYPE_CONFIG: Record<NotificationType, { label: string; icon: typeof Bell }
   gap_notification: { label: 'Gap Notification', icon: ShieldAlert },
   follow_up_reminder: { label: 'Follow-Up Reminder', icon: Repeat },
   escalation: { label: 'Escalation', icon: Mail },
+  portal_upload: { label: 'Portal Upload', icon: Bell },
 };
 
 // ============================================================================
@@ -221,6 +222,11 @@ function NotificationRow({
           </div>
         </div>
 
+        {notification.portal_link && (
+          <Button size="sm" variant="outline" className="shrink-0 text-xs" asChild>
+            <Link href={notification.portal_link}>Review</Link>
+          </Button>
+        )}
         {notification.status === 'scheduled' && (
           <Button
             size="sm"

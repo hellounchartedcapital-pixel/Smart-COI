@@ -30,6 +30,7 @@ interface AIEntity {
 
 interface AIExtractionResponse {
   coverages: AICoverage[];
+  named_insured: string;
   certificate_holder: AIEntity;
   additional_insured_entities: AIEntity[];
 }
@@ -64,6 +65,7 @@ export interface ExtractionResult {
   success: boolean;
   coverages: ExtractedCoverageRow[];
   entities: ExtractedEntityRow[];
+  insuredName: string | null;
   error?: string;
 }
 
@@ -94,6 +96,7 @@ Return a JSON object with exactly this structure:
       "raw_text": "the original text from the document for this coverage section"
     }
   ],
+  "named_insured": "The insured / named insured entity name from the top of the certificate (the policyholder)",
   "certificate_holder": {
     "name": "string",
     "address": "string",
@@ -137,7 +140,7 @@ Extract ALL entity names mentioned as additional insureds from this section and 
 export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return { success: false, coverages: [], entities: [], error: 'ANTHROPIC_API_KEY is not configured' };
+    return { success: false, coverages: [], entities: [], insuredName: null, error: 'ANTHROPIC_API_KEY is not configured' };
   }
 
   // Call Claude API
@@ -181,6 +184,7 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
       success: false,
       coverages: [],
       entities: [],
+      insuredName: null,
       error: `AI extraction failed (status ${response.status})`,
     };
   }
@@ -196,6 +200,7 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
       success: false,
       coverages: [],
       entities: [],
+      insuredName: null,
       error: 'Could not parse structured data from AI response',
     };
   }
@@ -208,6 +213,7 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
       success: false,
       coverages: [],
       entities: [],
+      insuredName: null,
       error: 'AI returned malformed JSON',
     };
   }
@@ -287,5 +293,10 @@ function mapToDbRows(parsed: AIExtractionResponse): ExtractionResult {
     }
   }
 
-  return { success: true, coverages, entities };
+  return {
+    success: true,
+    coverages,
+    entities,
+    insuredName: parsed.named_insured || null,
+  };
 }

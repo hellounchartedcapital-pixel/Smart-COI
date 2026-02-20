@@ -159,6 +159,7 @@ export default async function CertificateReviewPage({ params }: Props) {
       entityType={entityType}
       entityId={entityId ?? ''}
       entityName={entityName}
+      insuredName={certificate.insured_name ?? null}
       propertyName={property?.name ?? null}
       reviewerName={reviewerName}
       expirationThresholdDays={expirationThresholdDays}

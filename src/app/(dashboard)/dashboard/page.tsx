@@ -35,6 +35,7 @@ export interface ActionItem {
   daysSinceExpired: number | null;
   hasCertificate: boolean;
   hasUnreviewedCert: boolean;
+  unreviewedCertId: string | null;
 }
 
 export interface PropertyOverview {
@@ -185,7 +186,7 @@ async function getDashboardData(orgId: string) {
   // Map entityId → cert info
   const entityCertMap = new Map<
     string,
-    { hasCert: boolean; hasUnreviewed: boolean; certId: string | null }
+    { hasCert: boolean; hasUnreviewed: boolean; certId: string | null; unreviewedCertId: string | null }
   >();
   for (const cert of allCerts) {
     const eid = cert.vendor_id ?? cert.tenant_id;
@@ -196,9 +197,13 @@ async function getDashboardData(orgId: string) {
         hasCert: true,
         hasUnreviewed: cert.processing_status === 'extracted',
         certId: cert.processing_status === 'review_confirmed' ? cert.id : null,
+        unreviewedCertId: cert.processing_status === 'extracted' ? cert.id : null,
       });
     } else {
-      if (cert.processing_status === 'extracted') existing.hasUnreviewed = true;
+      if (cert.processing_status === 'extracted') {
+        existing.hasUnreviewed = true;
+        if (!existing.unreviewedCertId) existing.unreviewedCertId = cert.id;
+      }
       if (cert.processing_status === 'review_confirmed' && !existing.certId)
         existing.certId = cert.id;
     }
@@ -273,6 +278,7 @@ async function getDashboardData(orgId: string) {
       daysSinceExpired,
       hasCertificate: certInfo?.hasCert ?? false,
       hasUnreviewedCert: certInfo?.hasUnreviewed ?? false,
+      unreviewedCertId: certInfo?.unreviewedCertId ?? null,
     };
   });
 

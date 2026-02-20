@@ -197,10 +197,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Update certificate status
+    // Update certificate status and store insured name for vendor name matching
     await serviceClient
       .from('certificates')
-      .update({ processing_status: 'extracted' })
+      .update({
+        processing_status: 'extracted',
+        ...(result.insuredName ? { insured_name: result.insuredName } : {}),
+      })
       .eq('id', certificateId);
 
     // ---- Log activity ----
