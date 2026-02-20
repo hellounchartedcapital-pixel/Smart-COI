@@ -62,7 +62,10 @@ export function CreateTemplateDialog({
         category,
         risk_level: riskLevel,
       });
-      if (handleActionResult(result, 'Failed to create template', showUpgradeModal)) return;
+      if (handleActionResult(result, 'Failed to create template', showUpgradeModal)) {
+        onOpenChange(false);
+        return;
+      }
       toast.success('Template created');
       reset();
       onOpenChange(false);

@@ -50,7 +50,10 @@ export function AddPropertyButton({
           entity_type: e.entity_type,
         })),
       });
-      if (handleActionResult(result, 'Failed to create property', showUpgradeModal)) return;
+      if (handleActionResult(result, 'Failed to create property', showUpgradeModal)) {
+        setOpen(false);
+        return;
+      }
       toast.success('Property created');
       setOpen(false);
     } catch (err) {

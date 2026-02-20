@@ -88,7 +88,10 @@ export function AddVendorDialog({
         vendor_type: vendorType.trim() || undefined,
         template_id: templateId || undefined,
       });
-      if (handleActionResult(result, 'Failed to add vendor', showUpgradeModal)) return;
+      if (handleActionResult(result, 'Failed to add vendor', showUpgradeModal)) {
+        onOpenChange(false);
+        return;
+      }
       toast.success('Vendor added');
       const name = companyName.trim();
       reset();
