@@ -21,7 +21,7 @@ import {
 import { createVendor } from '@/lib/actions/properties';
 import { toast } from 'sonner';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
-import { handleActionError } from '@/lib/handle-action-error';
+import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
 import type { RequirementTemplate } from '@/types';
 
 const VENDOR_TYPE_SUGGESTIONS = [
@@ -88,6 +88,7 @@ export function AddVendorDialog({
         vendor_type: vendorType.trim() || undefined,
         template_id: templateId || undefined,
       });
+      if (handleActionResult(result, 'Failed to add vendor', showUpgradeModal)) return;
       toast.success('Vendor added');
       const name = companyName.trim();
       reset();

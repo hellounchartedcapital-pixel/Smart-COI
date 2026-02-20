@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { sendManualFollowUp } from '@/lib/actions/notifications';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
-import { handleActionError } from '@/lib/handle-action-error';
+import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -387,7 +387,8 @@ function ActionItemRow({ item }: { item: ActionItem }) {
   const handleFollowUp = useCallback(async () => {
     setSending(true);
     try {
-      await sendManualFollowUp(item.entityType as 'vendor' | 'tenant', item.id);
+      const result = await sendManualFollowUp(item.entityType as 'vendor' | 'tenant', item.id);
+      if (handleActionResult(result, 'Failed to send follow-up', showUpgradeModal)) return;
       toast.success(`Follow-up sent to ${item.name}`);
     } catch (err) {
       handleActionError(err, 'Failed to send follow-up', showUpgradeModal);

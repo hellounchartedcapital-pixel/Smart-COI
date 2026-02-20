@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { requireActivePlan } from '@/lib/require-active-plan';
+import { checkActivePlan } from '@/lib/require-active-plan';
 import type {
   TemplateCategory,
   RiskLevel,
@@ -39,7 +39,8 @@ export interface CreateTemplateInput {
 }
 
 export async function createTemplate(input: CreateTemplateInput) {
-  await requireActivePlan('Subscribe to manage templates.');
+  const planCheck = await checkActivePlan('Subscribe to manage templates.');
+  if ('error' in planCheck) return { error: planCheck.error };
   const { supabase, userId, orgId } = await getAuthContext();
 
   const { data, error } = await supabase
@@ -92,7 +93,8 @@ export async function updateTemplate(
   templateId: string,
   input: UpdateTemplateInput
 ) {
-  await requireActivePlan('Subscribe to manage templates.');
+  const planCheck = await checkActivePlan('Subscribe to manage templates.');
+  if ('error' in planCheck) return { error: planCheck.error };
   const { supabase, userId, orgId } = await getAuthContext();
 
   // Verify org owns template and it's not a system default
@@ -376,7 +378,8 @@ export async function getTemplateUsageCount(templateId: string) {
 // ---------------------------------------------------------------------------
 
 export async function duplicateTemplate(sourceTemplateId: string) {
-  await requireActivePlan('Subscribe to manage templates.');
+  const planCheck = await checkActivePlan('Subscribe to manage templates.');
+  if ('error' in planCheck) return { error: planCheck.error };
   const { supabase, userId, orgId } = await getAuthContext();
 
   // Fetch source template
@@ -447,7 +450,8 @@ export async function duplicateTemplate(sourceTemplateId: string) {
 // ---------------------------------------------------------------------------
 
 export async function deleteTemplate(templateId: string) {
-  await requireActivePlan('Subscribe to manage templates.');
+  const planCheck = await checkActivePlan('Subscribe to manage templates.');
+  if ('error' in planCheck) return { error: planCheck.error };
   const { supabase, userId, orgId } = await getAuthContext();
 
   // Verify ownership

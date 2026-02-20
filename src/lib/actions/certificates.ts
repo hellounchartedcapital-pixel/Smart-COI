@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { requireActivePlan } from '@/lib/require-active-plan';
+import { checkActivePlan } from '@/lib/require-active-plan';
 import {
   calculateCompliance,
   type CoverageInput,
@@ -66,7 +66,8 @@ export async function saveExtractionEdits(
   coverages: SavedCoverage[],
   entities: SavedEntity[]
 ) {
-  await requireActivePlan('Subscribe to upload certificates.');
+  const planCheck = await checkActivePlan('Subscribe to upload certificates.');
+  if ('error' in planCheck) return { error: planCheck.error };
   const { supabase, orgId } = await getAuthContext();
 
   // Verify certificate belongs to this org
@@ -127,7 +128,8 @@ export async function confirmCertificate(
   coverages: SavedCoverage[],
   entities: SavedEntity[]
 ) {
-  await requireActivePlan('Subscribe to upload certificates.');
+  const planCheck = await checkActivePlan('Subscribe to upload certificates.');
+  if ('error' in planCheck) return { error: planCheck.error };
   const { supabase, userId, orgId } = await getAuthContext();
 
   // Verify certificate

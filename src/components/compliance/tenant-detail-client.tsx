@@ -20,7 +20,7 @@ import { summarizeExpiredCoverages } from '@/lib/compliance/calculate';
 import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
-import { handleActionError } from '@/lib/handle-action-error';
+import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
 import type {
   Tenant,
   Property,
@@ -76,7 +76,8 @@ export function TenantDetailClient({
     setSendingFollowUp(true);
     try {
       const result = await sendManualFollowUp('tenant', tenant.id);
-      if (result.devMode) {
+      if (handleActionResult(result, 'Failed to send follow-up', showUpgradeModal)) return;
+      if ('devMode' in result && result.devMode) {
         toast.info('Email logged to console (Resend not configured)');
       } else {
         toast.success('Follow-up email sent');
@@ -92,8 +93,9 @@ export function TenantDetailClient({
   async function handleGeneratePortalLink() {
     setGeneratingLink(true);
     try {
-      const link = await generatePortalLink('tenant', tenant.id);
-      await navigator.clipboard.writeText(link);
+      const result = await generatePortalLink('tenant', tenant.id);
+      if (handleActionResult(result, 'Failed to generate portal link', showUpgradeModal)) return;
+      await navigator.clipboard.writeText(result as string);
       toast.success('Portal link copied to clipboard');
     } catch (err) {
       handleActionError(err, 'Failed to generate portal link', showUpgradeModal);

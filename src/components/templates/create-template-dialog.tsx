@@ -22,7 +22,7 @@ import {
 import { createTemplate } from '@/lib/actions/templates';
 import { toast } from 'sonner';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
-import { handleActionError } from '@/lib/handle-action-error';
+import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
 import { RISK_LEVEL_LABELS, ALL_RISK_LEVELS } from './template-labels';
 import type { TemplateCategory, RiskLevel } from '@/types';
 
@@ -62,6 +62,7 @@ export function CreateTemplateDialog({
         category,
         risk_level: riskLevel,
       });
+      if (handleActionResult(result, 'Failed to create template', showUpgradeModal)) return;
       toast.success('Template created');
       reset();
       onOpenChange(false);

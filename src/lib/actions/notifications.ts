@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { requireActivePlan } from '@/lib/require-active-plan';
+import { checkActivePlan } from '@/lib/require-active-plan';
 import { sendNotificationEmail } from '@/lib/notifications/email-sender';
 import {
   gapNotification,
@@ -55,8 +55,9 @@ async function getAuthContext() {
 export async function generatePortalLink(
   entityType: 'vendor' | 'tenant',
   entityId: string
-): Promise<string> {
-  await requireActivePlan('Subscribe to use the upload portal.');
+): Promise<string | { error: string }> {
+  const planCheck = await checkActivePlan('Subscribe to use the upload portal.');
+  if ('error' in planCheck) return { error: planCheck.error };
   const { supabase, orgId } = await getAuthContext();
 
   // Verify entity belongs to org
@@ -109,8 +110,9 @@ export async function generatePortalLink(
 export async function sendManualFollowUp(
   entityType: 'vendor' | 'tenant',
   entityId: string
-): Promise<{ devMode?: boolean }> {
-  await requireActivePlan('Subscribe to send notifications.');
+): Promise<{ devMode?: boolean } | { error: string }> {
+  const planCheck = await checkActivePlan('Subscribe to send notifications.');
+  if ('error' in planCheck) return { error: planCheck.error };
   const { supabase, userId, orgId, pmName, pmEmail, orgName } = await getAuthContext();
 
   // Fetch entity
@@ -196,7 +198,9 @@ export async function sendManualFollowUp(
   }
 
   // Generate portal link
-  const portalLink = await generatePortalLink(entityType, entityId);
+  const portalLinkResult = await generatePortalLink(entityType, entityId);
+  if (typeof portalLinkResult !== 'string') return portalLinkResult;
+  const portalLink = portalLinkResult;
 
   // Build merge fields
   const fields: EmailMergeFields = {
