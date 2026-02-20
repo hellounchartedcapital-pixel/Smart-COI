@@ -229,8 +229,8 @@ export function StepUpload({ hasProperty, onGoBack, onFinish, saving }: StepUplo
                 </div>
               ))}
             </div>
-            <div className="mt-4 flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2">
-              <div className="h-2 w-2 rounded-full bg-emerald-500" />
+            <div className="mt-4 flex items-center gap-2 rounded-md bg-brand-lightest px-3 py-2">
+              <div className="h-2 w-2 rounded-full bg-brand" />
               <span className="text-xs font-medium text-emerald-800">
                 Compliance check: All requirements met
               </span>

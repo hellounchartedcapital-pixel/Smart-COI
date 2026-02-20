@@ -72,9 +72,17 @@ export function COIHistory({ certificates }: COIHistoryProps) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-5">
         <h3 className="text-sm font-semibold text-foreground">COI History</h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          No certificates uploaded yet.
-        </p>
+        <div className="mt-4 flex flex-col items-center py-6 text-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
+            <Eye className="h-5 w-5 text-slate-400" />
+          </div>
+          <p className="mt-3 text-sm font-medium text-foreground">
+            No certificates uploaded yet
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Upload a COI to start tracking compliance history.
+          </p>
+        </div>
       </div>
     );
   }

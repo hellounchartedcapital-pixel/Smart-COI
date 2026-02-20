@@ -56,38 +56,38 @@ const STATUS_CONFIG: Record<
   compliant: {
     label: 'Compliant',
     color: 'text-emerald-700',
-    bgColor: 'bg-emerald-500',
-    borderColor: 'border-l-emerald-500',
+    bgColor: 'bg-status-compliant',
+    borderColor: 'border-l-status-compliant',
   },
   expiring_soon: {
     label: 'Expiring Soon',
     color: 'text-amber-700',
-    bgColor: 'bg-amber-400',
-    borderColor: 'border-l-amber-400',
+    bgColor: 'bg-status-expiring',
+    borderColor: 'border-l-status-expiring',
   },
   non_compliant: {
     label: 'Non-Compliant',
     color: 'text-red-600',
-    bgColor: 'bg-red-500',
-    borderColor: 'border-l-red-500',
+    bgColor: 'bg-status-non-compliant',
+    borderColor: 'border-l-status-non-compliant',
   },
   expired: {
     label: 'Expired',
-    color: 'text-red-800',
-    bgColor: 'bg-red-800',
-    borderColor: 'border-l-red-800',
+    color: 'text-red-700',
+    bgColor: 'bg-status-expired',
+    borderColor: 'border-l-status-expired',
   },
   pending: {
     label: 'Pending',
     color: 'text-slate-500',
-    bgColor: 'bg-slate-400',
-    borderColor: 'border-l-slate-400',
+    bgColor: 'bg-status-pending',
+    borderColor: 'border-l-status-pending',
   },
   under_review: {
     label: 'Under Review',
     color: 'text-blue-600',
-    bgColor: 'bg-blue-500',
-    borderColor: 'border-l-blue-500',
+    bgColor: 'bg-status-under-review',
+    borderColor: 'border-l-status-under-review',
   },
 };
 
@@ -117,7 +117,7 @@ export function DashboardClient({
       {/* ---- Page Header with primary action ---- */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Overview</h2>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Overview</h1>
           <p className="text-sm text-muted-foreground">
             Compliance snapshot across all properties
           </p>

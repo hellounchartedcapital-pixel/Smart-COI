@@ -68,7 +68,7 @@ export function Navbar() {
           </Link>
           <Link
             href="/signup"
-            className="rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-brand-dark"
           >
             Get Started
           </Link>
@@ -130,7 +130,7 @@ export function Navbar() {
             <Link
               href="/signup"
               onClick={() => setMobileOpen(false)}
-              className="rounded-lg bg-slate-950 px-4 py-2.5 text-center text-sm font-semibold text-white"
+              className="rounded-lg bg-brand px-4 py-2.5 text-center text-sm font-semibold text-slate-950"
             >
               Get Started
             </Link>

@@ -10,6 +10,7 @@ import {
   Sparkles,
   ExternalLink,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { createCheckoutSession, createPortalSession, resetTrial } from '@/lib/actions/billing';
 import { PRICE_IDS } from '@/lib/stripe-prices';
 
@@ -147,13 +148,14 @@ export function BillingClient({
               interruption.
             </p>
           </div>
-          <button
+          <Button
+            variant="destructive"
+            size="sm"
             onClick={handleManageSubscription}
             disabled={loading === 'portal'}
-            className="inline-flex items-center rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
           >
             Update Payment Method
-          </button>
+          </Button>
         </div>
       )}
 
@@ -179,14 +181,14 @@ export function BillingClient({
             )}
           </div>
           {hasSubscription && plan !== 'canceled' && (
-            <button
+            <Button
+              variant="outline"
               onClick={handleManageSubscription}
               disabled={loading === 'portal'}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50"
             >
-              <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
               {loading === 'portal' ? 'Opening...' : 'Manage Subscription'}
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -203,8 +205,8 @@ export function BillingClient({
             </span>
             <button
               onClick={() => setInterval((i) => (i === 'monthly' ? 'annual' : 'monthly'))}
-              className={`relative inline-flex h-7 w-[52px] flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${
-                isAnnual ? 'bg-emerald-500' : 'bg-slate-300'
+              className={`relative inline-flex h-7 w-[52px] flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
+                isAnnual ? 'bg-brand' : 'bg-slate-300'
               }`}
               role="switch"
               aria-checked={isAnnual}
@@ -340,12 +342,12 @@ function PlanCard({
     <div
       className={`relative flex flex-col rounded-xl border p-6 ${
         popular
-          ? 'border-emerald-400 shadow-lg shadow-emerald-500/10'
+          ? 'border-brand shadow-lg shadow-brand/10'
           : 'border-slate-200'
       } bg-white`}
     >
       {popular && (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-emerald-500 px-3 py-0.5 text-xs font-bold text-white">
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-dark px-3 py-0.5 text-xs font-bold text-white">
           Most Popular
         </span>
       )}
@@ -387,7 +389,7 @@ function PlanCard({
           disabled={loading}
           className={`mt-6 flex h-10 w-full items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
             popular
-              ? 'bg-emerald-600 text-white shadow-sm hover:bg-emerald-700'
+              ? 'bg-brand-dark text-white shadow-sm hover:bg-[#3BB87A]'
               : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
           }`}
         >

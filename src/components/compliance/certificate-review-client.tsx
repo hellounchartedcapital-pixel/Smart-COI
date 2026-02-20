@@ -428,7 +428,7 @@ function ReviewInterface({
       {/* Header */}
       <div className="space-y-1">
         <BackLink entityType={entityType} entityId={entityId} entityName={entityName} />
-        <h1 className="text-2xl font-bold tracking-tight">Review Certificate</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Review Certificate</h1>
         <p className="text-sm text-muted-foreground">
           {entityType === 'vendor' ? 'Vendor' : 'Tenant'}:{' '}
           <span className="font-medium text-foreground">{entityName}</span>
@@ -764,7 +764,7 @@ function ReviewInterface({
           <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-3">
             {!isConfirmed && (
               <Button
-                className="w-full bg-emerald-600 font-semibold hover:bg-emerald-700"
+                className="w-full font-semibold"
                 disabled={confirming}
                 onClick={handleConfirm}
               >
@@ -1135,7 +1135,7 @@ function ToggleField({
         disabled={readOnly}
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-          checked ? 'bg-emerald-500' : 'bg-slate-300'
+          checked ? 'bg-brand' : 'bg-slate-300'
         } ${readOnly ? 'cursor-default opacity-70' : 'cursor-pointer'}`}
       >
         <span

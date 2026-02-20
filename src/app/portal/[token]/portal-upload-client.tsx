@@ -139,17 +139,17 @@ export function PortalUploadClient({ token, pmName }: PortalUploadClientProps) {
   // Success state
   if (uploadState === 'success') {
     return (
-      <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8">
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8">
         <div className="text-center">
           <div className="mx-auto h-14 w-14 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
             <svg className="h-7 w-7 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Certificate Received</h2>
-          <p className="text-sm text-gray-500 leading-relaxed max-w-md mx-auto">
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">Certificate Received</h2>
+          <p className="text-sm text-slate-500 leading-relaxed max-w-md mx-auto">
             Thank you! Your certificate has been received and will be reviewed by{' '}
-            <span className="font-medium text-gray-700">{pmName}</span>.
+            <span className="font-medium text-slate-700">{pmName}</span>.
             You&apos;ll be notified if any additional information is needed.
           </p>
         </div>
@@ -160,7 +160,7 @@ export function PortalUploadClient({ token, pmName }: PortalUploadClientProps) {
   // Rate limited state
   if (uploadState === 'rate_limited') {
     return (
-      <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8">
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8">
         <div className="text-center">
           <div className="mx-auto h-14 w-14 rounded-full bg-amber-100 flex items-center justify-center mb-4">
             <svg className="h-7 w-7 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -168,8 +168,8 @@ export function PortalUploadClient({ token, pmName }: PortalUploadClientProps) {
               <polyline points="12 6 12 12 16 14" />
             </svg>
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Upload Limit Reached</h2>
-          <p className="text-sm text-gray-500 leading-relaxed max-w-md mx-auto">
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">Upload Limit Reached</h2>
+          <p className="text-sm text-slate-500 leading-relaxed max-w-md mx-auto">
             {errorMessage}
           </p>
         </div>
@@ -180,17 +180,17 @@ export function PortalUploadClient({ token, pmName }: PortalUploadClientProps) {
   // Processing / uploading state
   if (uploadState === 'uploading' || uploadState === 'processing' || uploadState === 'validating') {
     return (
-      <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-8">
+      <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 sm:p-8">
         <div className="text-center">
           <div className="mx-auto mb-4">
             <div className="h-12 w-12 mx-auto rounded-full border-4 border-emerald-200 border-t-emerald-500 animate-spin" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">
+          <h2 className="text-lg font-semibold text-slate-900 mb-1">
             {uploadState === 'validating' && 'Validating...'}
             {uploadState === 'uploading' && 'Uploading...'}
             {uploadState === 'processing' && 'Processing your certificate...'}
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             {uploadState === 'processing'
               ? 'Our AI is extracting insurance data from your document. This may take a moment.'
               : 'Please wait while we handle your file.'}
@@ -202,8 +202,8 @@ export function PortalUploadClient({ token, pmName }: PortalUploadClientProps) {
 
   // Idle or error state — show upload zone
   return (
-    <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 sm:p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+    <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6">
+      <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
         <svg className="h-5 w-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
           <polyline points="17 8 12 3 7 8" />
@@ -242,7 +242,7 @@ export function PortalUploadClient({ token, pmName }: PortalUploadClientProps) {
           relative border-2 border-dashed rounded-xl p-8 sm:p-12 text-center cursor-pointer transition-all duration-200
           ${isDragging
             ? 'border-emerald-400 bg-emerald-50'
-            : 'border-gray-300 hover:border-emerald-400 hover:bg-emerald-50/50'
+            : 'border-slate-300 hover:border-emerald-400 hover:bg-emerald-50/50'
           }
         `}
       >
@@ -262,13 +262,13 @@ export function PortalUploadClient({ token, pmName }: PortalUploadClientProps) {
           </svg>
         </div>
 
-        <p className="text-sm font-medium text-gray-700 mb-1">
+        <p className="text-sm font-medium text-slate-700 mb-1">
           {isDragging ? 'Drop your PDF here' : 'Drag and drop your PDF here'}
         </p>
-        <p className="text-xs text-gray-500 mb-4">or click to browse files</p>
+        <p className="text-xs text-slate-500 mb-4">or click to browse files</p>
         <button
           type="button"
-          className="inline-flex items-center px-5 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors shadow-sm"
+          className="inline-flex items-center px-5 py-2.5 rounded-lg bg-brand-dark hover:bg-[#3BB87A] text-white text-sm font-semibold transition-colors shadow-sm"
           onClick={(e) => {
             e.stopPropagation();
             fileInputRef.current?.click();
@@ -276,7 +276,7 @@ export function PortalUploadClient({ token, pmName }: PortalUploadClientProps) {
         >
           Select PDF File
         </button>
-        <p className="text-xs text-gray-400 mt-4">PDF only, maximum 10 MB</p>
+        <p className="text-xs text-slate-400 mt-4">PDF only, maximum 10 MB</p>
       </div>
     </section>
   );

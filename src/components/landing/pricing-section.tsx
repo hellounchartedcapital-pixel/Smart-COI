@@ -64,8 +64,8 @@ export function PricingSection() {
               onClick={() =>
                 setInterval((i) => (i === 'monthly' ? 'annual' : 'monthly'))
               }
-              className={`relative inline-flex h-7 w-[52px] flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 ${
-                isAnnual ? 'bg-emerald-500' : 'bg-slate-300'
+              className={`relative inline-flex h-7 w-[52px] flex-shrink-0 cursor-pointer items-center rounded-full transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
+                isAnnual ? 'bg-brand' : 'bg-slate-300'
               }`}
               role="switch"
               aria-checked={isAnnual}
@@ -155,12 +155,12 @@ export function PricingSection() {
 
           {/* ── Professional — Most Popular ── */}
           <AnimateIn delay={200}>
-            <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-emerald-400 bg-white p-8 shadow-xl shadow-emerald-500/10 lg:-mt-4 lg:mb-[-1rem]">
-              <div className="absolute top-0 right-0 rounded-bl-xl bg-emerald-500 px-4 py-1.5 text-xs font-bold text-white">
+            <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-brand bg-white p-8 shadow-xl shadow-brand/10 lg:-mt-4 lg:mb-[-1rem]">
+              <div className="absolute top-0 right-0 rounded-bl-xl bg-brand-dark px-4 py-1.5 text-xs font-bold text-white">
                 Most Popular
               </div>
 
-              <p className="text-sm font-semibold uppercase tracking-wider text-emerald-600">
+              <p className="text-sm font-semibold uppercase tracking-wider text-brand-dark">
                 Professional
               </p>
               <div className="mt-3 flex items-baseline gap-1">
@@ -215,7 +215,7 @@ export function PricingSection() {
 
               <Link
                 href="/signup"
-                className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-emerald-600 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-700 hover:shadow-xl hover:shadow-emerald-600/30"
+                className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-brand-dark text-sm font-semibold text-white shadow-lg shadow-brand-dark/20 transition-all hover:bg-[#3BB87A] hover:shadow-xl hover:shadow-brand-dark/30"
               >
                 Start Free Trial
               </Link>
