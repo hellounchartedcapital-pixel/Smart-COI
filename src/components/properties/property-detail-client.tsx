@@ -47,6 +47,8 @@ import {
 } from '@/lib/actions/properties';
 import { sendManualFollowUp } from '@/lib/actions/notifications';
 import { toast } from 'sonner';
+import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
+import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
 import type {
   Property,
   PropertyEntity,
@@ -94,6 +96,7 @@ export function PropertyDetailClient({
   templates,
 }: PropertyDetailClientProps) {
   const router = useRouter();
+  const { showUpgradeModal } = useUpgradeModal();
 
   // Dialog states
   const [editOpen, setEditOpen] = useState(false);
@@ -222,14 +225,15 @@ export function PropertyDetailClient({
     setSendingFollowUp(true);
     try {
       const result = await sendManualFollowUp(entityType, entityId);
-      if (result.devMode) {
+      if (handleActionResult(result, 'Failed to send follow-up', showUpgradeModal)) return;
+      if ('devMode' in result && result.devMode) {
         toast.info('Email logged to console (Resend not configured)');
       } else {
         toast.success('Follow-up email sent');
       }
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to send follow-up');
+      handleActionError(err, 'Failed to send follow-up', showUpgradeModal);
     } finally {
       setSendingFollowUp(false);
     }

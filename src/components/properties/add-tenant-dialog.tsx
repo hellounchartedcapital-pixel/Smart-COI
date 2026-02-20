@@ -21,7 +21,7 @@ import {
 import { createTenant } from '@/lib/actions/properties';
 import { toast } from 'sonner';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
-import { handleActionError } from '@/lib/handle-action-error';
+import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
 import type { RequirementTemplate } from '@/types';
 
 const TENANT_TYPE_SUGGESTIONS = [
@@ -87,6 +87,7 @@ export function AddTenantDialog({
         tenant_type: tenantType.trim() || undefined,
         template_id: templateId || undefined,
       });
+      if (handleActionResult(result, 'Failed to add tenant', showUpgradeModal)) return;
       toast.success('Tenant added');
       const name = companyName.trim();
       reset();

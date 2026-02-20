@@ -23,7 +23,7 @@ import {
 } from '@/lib/actions/templates';
 import { toast } from 'sonner';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
-import { handleActionError } from '@/lib/handle-action-error';
+import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
 import {
   COVERAGE_LABELS,
   LIMIT_TYPE_LABELS,
@@ -141,7 +141,7 @@ export function TemplateEditorClient({
     setSaving(true);
     setCascadeOpen(false);
     try {
-      await updateTemplate(template.id, {
+      const result = await updateTemplate(template.id, {
         name: name.trim(),
         description: description.trim() || undefined,
         risk_level: riskLevel,
@@ -154,6 +154,7 @@ export function TemplateEditorClient({
           requires_waiver_of_subrogation: r.requires_waiver_of_subrogation,
         })),
       });
+      if (handleActionResult(result, 'Failed to save', showUpgradeModal)) return;
       toast.success('Template saved');
       router.refresh();
     } catch (err) {
@@ -166,7 +167,8 @@ export function TemplateEditorClient({
   async function handleDelete() {
     setDeleting(true);
     try {
-      await deleteTemplate(template.id);
+      const result = await deleteTemplate(template.id);
+      if (handleActionResult(result, 'Failed to delete', showUpgradeModal)) return;
       toast.success('Template deleted');
       router.push('/dashboard/templates');
     } catch (err) {
@@ -181,6 +183,7 @@ export function TemplateEditorClient({
     setDuplicating(true);
     try {
       const result = await duplicateTemplate(template.id);
+      if (handleActionResult(result, 'Failed to duplicate', showUpgradeModal)) return;
       toast.success('Template duplicated');
       router.push(`/dashboard/templates/${result.id}`);
     } catch (err) {

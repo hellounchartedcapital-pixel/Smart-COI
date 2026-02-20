@@ -58,3 +58,57 @@ export async function requireActivePlan(
 
   return { userId: user.id, orgId: profile.organization_id };
 }
+
+/**
+ * Non-throwing variant of `requireActivePlan`.
+ *
+ * Returns `{ userId, orgId }` on success, or `{ error: string }` when the
+ * plan is inactive.  Server actions should use this so that the
+ * `[PLAN_INACTIVE]` tag survives Next.js error serialisation (thrown errors
+ * have their message stripped in production).
+ *
+ * Auth/org-lookup failures still throw — those are genuine bugs, not
+ * user-facing plan gates.
+ */
+export async function checkActivePlan(
+  actionLabel: string,
+): Promise<{ userId: string; orgId: string } | { error: string }> {
+  /* ---- authenticate via the cookie-based (anon) client ---- */
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  /* ---- all DB reads go through the service role client ---- */
+  const service = createServiceClient();
+
+  const { data: profile, error: profileError } = await service
+    .from('users')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError || !profile?.organization_id) {
+    console.error('[checkActivePlan] profile lookup failed:', profileError);
+    throw new Error('No organization found');
+  }
+
+  const { data: org, error: orgError } = await service
+    .from('organizations')
+    .select('plan, trial_ends_at')
+    .eq('id', profile.organization_id)
+    .single();
+
+  if (orgError || !org) {
+    console.error('[checkActivePlan] org lookup failed:', orgError);
+    throw new Error('Organization not found');
+  }
+
+  const status = getActivePlanStatus(org);
+  if (!status.isActive) {
+    return { error: `${PLAN_INACTIVE_TAG} ${actionLabel}` };
+  }
+
+  return { userId: user.id, orgId: profile.organization_id };
+}

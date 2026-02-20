@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
-import { handleActionError } from '@/lib/handle-action-error';
+import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -394,6 +394,10 @@ function ReviewInterface({
       }));
 
       const result = await confirmCertificate(certificate.id, savedCovs, savedEnts);
+      if (handleActionResult(result, 'Failed to confirm certificate', showUpgradeModal)) {
+        setConfirming(false);
+        return;
+      }
       toast.success('Certificate confirmed. Compliance status updated.');
       router.push(`/dashboard/${result.entityType}s/${result.entityId}`);
     } catch (err) {
