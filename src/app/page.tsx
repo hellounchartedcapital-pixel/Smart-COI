@@ -175,7 +175,7 @@ export default function LandingPage() {
                 <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                   <Link
                     href="/signup"
-                    className="inline-flex h-12 items-center rounded-xl bg-slate-950 px-8 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 transition-all hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-950/25"
+                    className="inline-flex h-12 items-center rounded-xl bg-brand px-8 text-sm font-semibold text-slate-950 shadow-lg shadow-brand/20 transition-all hover:bg-brand-dark hover:shadow-xl hover:shadow-brand/30"
                   >
                     Start Your Free Trial
                     <IconArrowRight className="ml-2 h-4 w-4" />

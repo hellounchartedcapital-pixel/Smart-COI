@@ -19,7 +19,7 @@ const STATUS_CONFIG: Record<
   },
   expired: {
     label: 'Expired',
-    className: 'bg-red-500 text-white font-bold border-red-600',
+    className: 'bg-red-100 text-red-800 border-red-200',
   },
   pending: {
     label: 'Pending',

@@ -70,16 +70,16 @@ export function HeroDashboard() {
               Compliance Overview
             </p>
             <div className="mb-2.5 flex h-3.5 w-full overflow-hidden rounded-full bg-slate-100 sm:h-4">
-              <div className="bg-emerald-500" style={{ width: '87%' }} />
-              <div className="bg-amber-400" style={{ width: '8%' }} />
-              <div className="bg-red-500" style={{ width: '3%' }} />
-              <div className="bg-red-800" style={{ width: '2%' }} />
+              <div className="bg-status-compliant" style={{ width: '87%' }} />
+              <div className="bg-status-expiring" style={{ width: '8%' }} />
+              <div className="bg-status-non-compliant" style={{ width: '3%' }} />
+              <div className="bg-status-expired" style={{ width: '2%' }} />
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1 sm:gap-x-5">
-              <LegendDot color="bg-emerald-500" label="Compliant" count={128} />
-              <LegendDot color="bg-amber-400" label="Expiring Soon" count={12} />
-              <LegendDot color="bg-red-500" label="Non-Compliant" count={4} />
-              <LegendDot color="bg-red-800" label="Expired" count={3} />
+              <LegendDot color="bg-status-compliant" label="Compliant" count={128} />
+              <LegendDot color="bg-status-expiring" label="Expiring Soon" count={12} />
+              <LegendDot color="bg-status-non-compliant" label="Non-Compliant" count={4} />
+              <LegendDot color="bg-status-expired" label="Expired" count={3} />
             </div>
           </div>
 
@@ -304,7 +304,7 @@ function PropertyMini({
     <div className="rounded-lg border border-slate-100 p-2.5">
       <p className="truncate text-[11px] font-medium text-slate-900">{name}</p>
       <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-        <div className="bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+        <div className="bg-status-compliant rounded-full" style={{ width: `${pct}%` }} />
       </div>
       <p className="mt-1 text-[9px] text-slate-400">
         {compliant} of {total} compliant

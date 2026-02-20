@@ -193,25 +193,25 @@ export default async function PortalPage({ params }: PortalPageProps) {
   const organizationName = org?.name ?? 'Your Property Manager';
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white border-b border-slate-200">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 flex items-center gap-3">
           <img src="/logo-icon.svg" alt="SmartCOI" className="h-8 w-8 flex-shrink-0" />
-          <span className="text-lg font-bold text-gray-900 tracking-tight">SmartCOI</span>
+          <span className="text-lg font-bold text-slate-900 tracking-tight">SmartCOI</span>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Title Section */}
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">
             Certificate of Insurance Upload
           </h1>
-          <p className="text-base text-gray-500">
-            Requested by <span className="font-medium text-gray-700">{organizationName}</span>
+          <p className="text-base text-slate-500">
+            Requested by <span className="font-medium text-slate-700">{organizationName}</span>
             {propertyName && (
-              <> for <span className="font-medium text-gray-700">{propertyName}</span></>
+              <> for <span className="font-medium text-slate-700">{propertyName}</span></>
             )}
           </p>
         </div>
@@ -238,8 +238,8 @@ export default async function PortalPage({ params }: PortalPageProps) {
 
         {/* Requirements Section */}
         {(coverageRequirements.length > 0 || additionalInsured.length > 0 || certificateHolder) && (
-          <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 sm:p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sm:p-6 mb-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <svg className="h-5 w-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
                 <rect x="9" y="3" width="6" height="4" rx="1" />
@@ -254,7 +254,7 @@ export default async function PortalPage({ params }: PortalPageProps) {
                     <svg className="h-4 w-4 text-emerald-500 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm text-slate-700">
                       <span className="font-medium">{COVERAGE_LABELS[req.coverage_type]}</span>
                       {req.minimum_limit != null && req.limit_type && (
                         <>: minimum {formatCurrency(req.minimum_limit)} {LIMIT_TYPE_LABELS[req.limit_type].toLowerCase()}</>
@@ -267,16 +267,16 @@ export default async function PortalPage({ params }: PortalPageProps) {
             )}
 
             {additionalInsured.length > 0 && (
-              <div className="border-t border-gray-100 pt-4 mb-4">
-                <p className="text-sm font-medium text-gray-900 mb-2">
+              <div className="border-t border-slate-100 pt-4 mb-4">
+                <p className="text-sm font-medium text-slate-900 mb-2">
                   Your certificate must name the following as Additional Insured:
                 </p>
                 <div className="space-y-2 pl-1">
                   {additionalInsured.map((ai) => (
-                    <div key={ai.id} className="text-sm text-gray-600">
-                      <span className="font-medium text-gray-700">{ai.entity_name}</span>
+                    <div key={ai.id} className="text-sm text-slate-600">
+                      <span className="font-medium text-slate-700">{ai.entity_name}</span>
                       {ai.entity_address && (
-                        <span className="block text-gray-500 text-xs mt-0.5">{ai.entity_address}</span>
+                        <span className="block text-slate-500 text-xs mt-0.5">{ai.entity_address}</span>
                       )}
                     </div>
                   ))}
@@ -285,14 +285,14 @@ export default async function PortalPage({ params }: PortalPageProps) {
             )}
 
             {certificateHolder && (
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-sm font-medium text-gray-900 mb-2">
+              <div className="border-t border-slate-100 pt-4">
+                <p className="text-sm font-medium text-slate-900 mb-2">
                   Certificate Holder should be:
                 </p>
-                <div className="text-sm text-gray-600 pl-1">
-                  <span className="font-medium text-gray-700">{certificateHolder.entity_name}</span>
+                <div className="text-sm text-slate-600 pl-1">
+                  <span className="font-medium text-slate-700">{certificateHolder.entity_name}</span>
                   {certificateHolder.entity_address && (
-                    <span className="block text-gray-500 text-xs mt-0.5">{certificateHolder.entity_address}</span>
+                    <span className="block text-slate-500 text-xs mt-0.5">{certificateHolder.entity_address}</span>
                   )}
                 </div>
               </div>
@@ -326,7 +326,7 @@ export default async function PortalPage({ params }: PortalPageProps) {
         <PortalUploadClient token={token} pmName={pmName} />
 
         {/* Footer */}
-        <div className="mt-12 text-center text-xs text-gray-400 pb-8">
+        <div className="mt-12 text-center text-xs text-slate-400 pb-8">
           <p>Powered by SmartCOI</p>
           {pmUser?.email && (
             <p className="mt-1">
@@ -344,26 +344,26 @@ export default async function PortalPage({ params }: PortalPageProps) {
 
 function PortalErrorPage({ message }: { message: string }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white border-b border-slate-200">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5 flex items-center gap-3">
           <img src="/logo-icon.svg" alt="SmartCOI" className="h-8 w-8 flex-shrink-0" />
-          <span className="text-lg font-bold text-gray-900 tracking-tight">SmartCOI</span>
+          <span className="text-lg font-bold text-slate-900 tracking-tight">SmartCOI</span>
         </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4">
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8 sm:p-10 max-w-md w-full text-center">
-          <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <svg className="h-6 w-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 sm:p-10 max-w-md w-full text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+            <svg className="h-6 w-6 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <line x1="15" y1="9" x2="9" y2="15" />
               <line x1="9" y1="9" x2="15" y2="15" />
             </svg>
           </div>
-          <h1 className="text-xl font-semibold text-gray-900 mb-2">Upload Link Unavailable</h1>
-          <p className="text-sm text-gray-500 leading-relaxed">{message}</p>
+          <h1 className="text-xl font-semibold text-slate-900 mb-2">Upload Link Unavailable</h1>
+          <p className="text-sm text-slate-500 leading-relaxed">{message}</p>
         </div>
       </main>
     </div>
