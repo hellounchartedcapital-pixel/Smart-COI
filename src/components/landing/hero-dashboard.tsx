@@ -20,99 +20,157 @@ export function HeroDashboard() {
 
         {/* Dashboard content */}
         <div className="p-4 sm:p-6">
-          {/* Page title */}
+          {/* Page header */}
           <div className="mb-5 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-slate-900 sm:text-lg">Portfolio Overview</h3>
-              <p className="text-[11px] text-slate-400 sm:text-xs">Updated just now</p>
-            </div>
-            <div className="hidden items-center gap-2 sm:flex">
-              <div className="rounded-lg bg-slate-100 px-3 py-1.5 text-[11px] font-medium text-slate-500">
-                Last 30 days
-              </div>
-            </div>
-          </div>
-
-          {/* Stat cards */}
-          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatCard label="Properties" value="12" icon="building" />
-            <StatCard label="Tracked Entities" value="142" icon="users" />
-            <StatCard label="Compliance Rate" value="87%" icon="donut" accent="text-[#4CC78A]" />
-            <StatCard label="Expiring in 30 Days" value="16" icon="clock" accent="text-amber-500" />
-          </div>
-
-          {/* Two-column layout: compliance bar + priority queue */}
-          <div className="grid gap-4 lg:grid-cols-5">
-            {/* Compliance Breakdown */}
-            <div className="rounded-lg border border-slate-200 p-4 lg:col-span-2">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Compliance Status
+              <h3 className="text-sm font-semibold text-slate-900 sm:text-base">
+                Overview
+              </h3>
+              <p className="text-[10px] text-slate-400 sm:text-[11px]">
+                Compliance snapshot across all properties
               </p>
+            </div>
+            <div className="hidden items-center gap-1.5 sm:flex">
+              <div className="flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-medium text-white">
+                <UploadIcon />
+                Upload COI
+              </div>
+            </div>
+          </div>
 
-              {/* Segmented horizontal bar */}
-              <div className="mb-3 flex h-5 overflow-hidden rounded-full">
-                <div className="bg-emerald-400" style={{ width: '58%' }} />
-                <div className="bg-amber-400" style={{ width: '11%' }} />
-                <div className="bg-red-400" style={{ width: '6%' }} />
-                <div className="bg-red-700" style={{ width: '4%' }} />
-                <div className="bg-slate-300" style={{ width: '14%' }} />
-                <div className="bg-blue-400" style={{ width: '7%' }} />
+          {/* ── Stat cards ── */}
+          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard
+              label="Properties"
+              value="8"
+              icon={<BuildingIcon />}
+            />
+            <StatCard
+              label="Tracked Entities"
+              value="147"
+              sub="Vendors &amp; Tenants"
+              icon={<UsersIcon />}
+            />
+            <StatCard
+              label="Compliance Rate"
+              value="87%"
+              icon={<DonutIcon />}
+            />
+            <StatCard
+              label="Expiring in 30 Days"
+              value="12"
+              valueColor="text-amber-600"
+              icon={<ClockIcon />}
+            />
+          </div>
+
+          {/* ── Compliance Overview Bar ── */}
+          <div className="mb-5 rounded-lg border border-slate-200 p-3 sm:p-4">
+            <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:text-xs">
+              Compliance Overview
+            </p>
+            <div className="mb-2.5 flex h-3.5 w-full overflow-hidden rounded-full bg-slate-100 sm:h-4">
+              <div className="bg-emerald-500" style={{ width: '87%' }} />
+              <div className="bg-amber-400" style={{ width: '8%' }} />
+              <div className="bg-red-500" style={{ width: '3%' }} />
+              <div className="bg-red-800" style={{ width: '2%' }} />
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 sm:gap-x-5">
+              <LegendDot color="bg-emerald-500" label="Compliant" count={128} />
+              <LegendDot color="bg-amber-400" label="Expiring Soon" count={12} />
+              <LegendDot color="bg-red-500" label="Non-Compliant" count={4} />
+              <LegendDot color="bg-red-800" label="Expired" count={3} />
+            </div>
+          </div>
+
+          {/* ── Main content: Action Queue + Activity Sidebar ── */}
+          <div className="grid gap-4 xl:grid-cols-[1fr_260px]">
+            <div className="space-y-4">
+              {/* Needs Attention */}
+              <div className="rounded-lg border border-slate-200 p-3 sm:p-4">
+                <div className="mb-2.5 flex items-center gap-2">
+                  <p className="text-[11px] font-semibold text-slate-900 sm:text-xs">
+                    Needs Attention
+                  </p>
+                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">
+                    3
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {/* Acme Cleaning — Expired */}
+                  <ActionRow
+                    borderColor="border-l-red-800"
+                    name="Acme Cleaning"
+                    property="Westfield Tower"
+                    badge="Expired"
+                    badgeClass="bg-red-500 text-white"
+                    description="Certificate expired on Jan 15, 2026"
+                  />
+                  {/* Pacific Electric — Non-Compliant */}
+                  <ActionRow
+                    borderColor="border-l-red-500"
+                    name="Pacific Electric"
+                    property="Harbor Point"
+                    badge="Non-Compliant"
+                    badgeClass="bg-red-100 text-red-800"
+                    description="2 coverage gaps"
+                  />
+                  {/* Mesa Landscaping — Expiring Soon */}
+                  <ActionRow
+                    borderColor="border-l-amber-400"
+                    name="Mesa Landscaping"
+                    property="Parkview Commons"
+                    badge="Expiring Soon"
+                    badgeClass="bg-amber-100 text-amber-800"
+                    description="Expires in 8 days"
+                  />
+                </div>
               </div>
 
-              {/* Legend */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                <LegendItem color="bg-emerald-400" label="Compliant" count={82} />
-                <LegendItem color="bg-amber-400" label="Expiring Soon" count={16} />
-                <LegendItem color="bg-red-400" label="Non-Compliant" count={8} />
-                <LegendItem color="bg-red-700" label="Expired" count={6} />
-                <LegendItem color="bg-slate-300" label="Pending" count={20} />
-                <LegendItem color="bg-blue-400" label="Under Review" count={10} />
+              {/* Properties */}
+              <div className="rounded-lg border border-slate-200 p-3 sm:p-4">
+                <p className="mb-2.5 text-[11px] font-semibold text-slate-900 sm:text-xs">
+                  Properties
+                </p>
+                <div className="grid gap-2.5 sm:grid-cols-3">
+                  <PropertyMini name="Westfield Tower" compliant={12} total={14} />
+                  <PropertyMini name="Harbor Point" compliant={8} total={9} />
+                  <PropertyMini name="Parkview Commons" compliant={5} total={6} />
+                </div>
               </div>
             </div>
 
-            {/* Priority Action Queue */}
-            <div className="rounded-lg border border-slate-200 p-4 lg:col-span-3">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Priority Actions
-                </p>
-                <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-600">
-                  4 items
-                </span>
-              </div>
-
-              <div className="space-y-2">
-                <ActionItem
-                  borderColor="border-l-red-500"
-                  entity="Metro Electric LLC"
-                  property="200 Oak Avenue"
-                  badge="Expired"
-                  badgeColor="bg-red-50 text-red-600"
-                  action="Send Follow-Up"
+            {/* Recent Activity sidebar */}
+            <div className="hidden rounded-lg border border-slate-200 p-3 xl:block sm:p-4">
+              <p className="mb-2.5 text-[11px] font-semibold text-slate-900 sm:text-xs">
+                Recent Activity
+              </p>
+              <div className="space-y-0">
+                <ActivityRow
+                  icon={<UploadSmIcon />}
+                  text="COI uploaded for Acme Cleaning"
+                  time="Today"
                 />
-                <ActionItem
-                  borderColor="border-l-red-400"
-                  entity="SafeGuard Security"
-                  property="100 Main Street"
-                  badge="Gap Found"
-                  badgeColor="bg-red-50 text-red-600"
-                  action="Review COI"
+                <ActivityRow
+                  icon={<ShieldIcon />}
+                  text="Compliance calculated compliant"
+                  time="Today"
                 />
-                <ActionItem
-                  borderColor="border-l-amber-400"
-                  entity="CleanPro Services"
-                  property="350 Pine Boulevard"
-                  badge="Expires in 12 days"
-                  badgeColor="bg-amber-50 text-amber-700"
-                  action="Notify Vendor"
+                <ActivityRow
+                  icon={<BellIcon />}
+                  text="Manual follow-up sent to Pacific Electric"
+                  time="Today"
                 />
-                <ActionItem
-                  borderColor="border-l-blue-400"
-                  entity="Skyline HVAC Inc."
-                  property="200 Oak Avenue"
-                  badge="Under Review"
-                  badgeColor="bg-blue-50 text-blue-600"
-                  action="Review COI"
+                <ActivityRow
+                  icon={<PlusIcon />}
+                  text="Vendor Pacific Electric added"
+                  time="Today"
+                />
+                <ActivityRow
+                  icon={<FileIcon />}
+                  text="COI processed for Mesa Landscaping"
+                  time="Today"
+                  isLast
                 />
               </div>
             </div>
@@ -123,77 +181,47 @@ export function HeroDashboard() {
   );
 }
 
+/* ────────────────────────────────────────
+   Sub-components
+   ──────────────────────────────────────── */
+
 function StatCard({
   label,
   value,
   icon,
-  accent = 'text-slate-950',
+  sub,
+  valueColor = 'text-slate-950',
 }: {
   label: string;
   value: string;
-  icon: 'building' | 'users' | 'donut' | 'clock';
-  accent?: string;
+  icon: React.ReactNode;
+  sub?: string;
+  valueColor?: string;
 }) {
   return (
-    <div className="rounded-lg border border-slate-100 bg-white p-3 shadow-sm">
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400 sm:text-[11px]">
-          {label}
-        </p>
-        <StatIcon type={icon} />
+    <div className="rounded-lg border border-slate-100 bg-white p-2.5 shadow-sm sm:p-3">
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 sm:h-9 sm:w-9">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <p className="text-[9px] text-slate-400 sm:text-[10px]">{label}</p>
+          <p className={`text-lg font-bold leading-tight sm:text-xl ${valueColor}`}>
+            {value}
+          </p>
+          {sub && (
+            <p
+              className="text-[8px] text-slate-400 sm:text-[9px]"
+              dangerouslySetInnerHTML={{ __html: sub }}
+            />
+          )}
+        </div>
       </div>
-      <p className={`mt-1.5 text-xl font-bold sm:text-2xl ${accent}`}>{value}</p>
     </div>
   );
 }
 
-function StatIcon({ type }: { type: 'building' | 'users' | 'donut' | 'clock' }) {
-  const cls = 'h-4 w-4 text-slate-300';
-  switch (type) {
-    case 'building':
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
-          <path d="M9 22v-4h6v4" />
-          <path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01" />
-        </svg>
-      );
-    case 'users':
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M22 21v-2a4 4 0 00-3-3.87" />
-          <path d="M16 3.13a4 4 0 010 7.75" />
-        </svg>
-      );
-    case 'donut':
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" strokeWidth="2">
-          <circle cx="12" cy="12" r="9" stroke="#e2e8f0" />
-          <circle
-            cx="12"
-            cy="12"
-            r="9"
-            stroke="#4CC78A"
-            strokeDasharray="56.55"
-            strokeDashoffset="7.35"
-            strokeLinecap="round"
-            transform="rotate(-90 12 12)"
-          />
-        </svg>
-      );
-    case 'clock':
-      return (
-        <svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-      );
-  }
-}
-
-function LegendItem({
+function LegendDot({
   color,
   label,
   count,
@@ -203,41 +231,227 @@ function LegendItem({
   count: number;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className={`h-2.5 w-2.5 rounded-sm ${color}`} />
-      <span className="text-[11px] text-slate-500">{label}</span>
-      <span className="ml-auto text-[11px] font-semibold text-slate-700">{count}</span>
+    <div className="flex items-center gap-1.5">
+      <div className={`h-2 w-2 rounded-full ${color}`} />
+      <span className="text-[10px] text-slate-500">{label}</span>
+      <span className="text-[10px] font-semibold text-slate-700">{count}</span>
     </div>
   );
 }
 
-function ActionItem({
+function ActionRow({
   borderColor,
-  entity,
+  name,
   property,
   badge,
-  badgeColor,
-  action,
+  badgeClass,
+  description,
 }: {
   borderColor: string;
-  entity: string;
+  name: string;
   property: string;
   badge: string;
-  badgeColor: string;
-  action: string;
+  badgeClass: string;
+  description: string;
 }) {
   return (
-    <div className={`flex items-center gap-3 rounded-lg border border-slate-100 border-l-[3px] ${borderColor} bg-white py-2.5 pr-3 pl-3 transition-colors hover:bg-slate-50`}>
+    <div
+      className={`flex items-center gap-2.5 rounded-lg border border-slate-100 border-l-[3px] ${borderColor} bg-white p-2 sm:p-2.5`}
+    >
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-semibold text-slate-800 sm:text-sm">{entity}</p>
-        <p className="truncate text-[10px] text-slate-400 sm:text-[11px]">{property}</p>
+        <div className="flex items-center gap-1.5">
+          <p className="truncate text-[11px] font-medium text-slate-900 sm:text-xs">
+            {name}
+          </p>
+          <span
+            className={`shrink-0 rounded px-1.5 py-px text-[9px] font-semibold leading-tight ${badgeClass}`}
+          >
+            {badge}
+          </span>
+        </div>
+        <p className="text-[9px] text-slate-400 sm:text-[10px]">
+          {property} &middot; {description}
+        </p>
       </div>
-      <span className={`hidden whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold sm:inline-flex ${badgeColor}`}>
-        {badge}
-      </span>
-      <button className="whitespace-nowrap rounded-md bg-slate-100 px-2.5 py-1 text-[10px] font-semibold text-slate-600 transition-colors hover:bg-slate-200 sm:text-[11px]">
-        {action}
-      </button>
+      <div className="hidden shrink-0 gap-1 sm:flex">
+        <MiniBtn label="Upload" />
+        <MiniBtn label="View" />
+        <MiniBtn label="Follow-up" />
+      </div>
     </div>
+  );
+}
+
+function MiniBtn({ label }: { label: string }) {
+  return (
+    <span className="rounded bg-slate-50 px-1.5 py-0.5 text-[9px] font-medium text-slate-500 ring-1 ring-slate-200">
+      {label}
+    </span>
+  );
+}
+
+function PropertyMini({
+  name,
+  compliant,
+  total,
+}: {
+  name: string;
+  compliant: number;
+  total: number;
+}) {
+  const pct = (compliant / total) * 100;
+  return (
+    <div className="rounded-lg border border-slate-100 p-2.5">
+      <p className="truncate text-[11px] font-medium text-slate-900">{name}</p>
+      <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+        <div className="bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
+      </div>
+      <p className="mt-1 text-[9px] text-slate-400">
+        {compliant} of {total} compliant
+      </p>
+    </div>
+  );
+}
+
+function ActivityRow({
+  icon,
+  text,
+  time,
+  isLast = false,
+}: {
+  icon: React.ReactNode;
+  text: string;
+  time: string;
+  isLast?: boolean;
+}) {
+  return (
+    <div className="flex gap-2.5 py-1.5">
+      <div className="relative flex flex-col items-center">
+        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100">
+          {icon}
+        </div>
+        {!isLast && <div className="mt-0.5 w-px flex-1 bg-slate-200" />}
+      </div>
+      <div className="min-w-0 flex-1 pb-0.5">
+        <p className="text-[10px] leading-snug text-slate-700">{text}</p>
+        <p className="text-[9px] text-slate-400">{time}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────
+   Inline SVG icons (kept tiny, zero deps)
+   ──────────────────────────────────────── */
+
+const iconCls = 'h-4 w-4 text-slate-400';
+const smIconCls = 'h-2.5 w-2.5 text-slate-500';
+
+function BuildingIcon() {
+  return (
+    <svg className={iconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+      <path d="M9 22v-4h6v4" />
+      <path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01" />
+    </svg>
+  );
+}
+
+function UsersIcon() {
+  return (
+    <svg className={iconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 00-3-3.87" />
+      <path d="M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  );
+}
+
+function DonutIcon() {
+  return (
+    <svg className={iconCls} viewBox="0 0 36 36" fill="none">
+      <circle cx="18" cy="18" r="14" stroke="#e2e8f0" strokeWidth="3" />
+      <circle
+        cx="18"
+        cy="18"
+        r="14"
+        stroke="#4CC78A"
+        strokeWidth="3"
+        strokeDasharray={`${0.87 * 87.96} 87.96`}
+        strokeLinecap="round"
+        transform="rotate(-90 18 18)"
+      />
+      <text x="18" y="20" textAnchor="middle" className="fill-slate-700 text-[8px] font-bold">
+        87%
+      </text>
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg className={iconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
+function UploadIcon() {
+  return (
+    <svg className="mr-0.5 h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16,16 12,12 8,16" />
+      <line x1="12" y1="12" x2="12" y2="21" />
+      <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3" />
+    </svg>
+  );
+}
+
+function UploadSmIcon() {
+  return (
+    <svg className={smIconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16,16 12,12 8,16" />
+      <line x1="12" y1="12" x2="12" y2="21" />
+      <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg className={smIconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <polyline points="9,12 11,14 15,10" />
+    </svg>
+  );
+}
+
+function BellIcon() {
+  return (
+    <svg className={smIconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 01-3.46 0" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg className={smIconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="16" />
+      <line x1="8" y1="12" x2="16" y2="12" />
+    </svg>
+  );
+}
+
+function FileIcon() {
+  return (
+    <svg className={smIconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <polyline points="9,15 12,12 15,15" />
+    </svg>
   );
 }
