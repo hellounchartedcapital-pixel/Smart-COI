@@ -87,7 +87,10 @@ export function AddTenantDialog({
         tenant_type: tenantType.trim() || undefined,
         template_id: templateId || undefined,
       });
-      if (handleActionResult(result, 'Failed to add tenant', showUpgradeModal)) return;
+      if (handleActionResult(result, 'Failed to add tenant', showUpgradeModal)) {
+        onOpenChange(false);
+        return;
+      }
       toast.success('Tenant added');
       const name = companyName.trim();
       reset();

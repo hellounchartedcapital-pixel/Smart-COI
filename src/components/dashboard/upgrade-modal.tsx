@@ -45,8 +45,8 @@ export function UpgradeModalProvider({ children }: { children: ReactNode }) {
 
       {/* Overlay */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+          <div className="relative z-[100] w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
             <div className="flex flex-col items-center text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
                 <AlertTriangle className="h-7 w-7 text-amber-600" />
