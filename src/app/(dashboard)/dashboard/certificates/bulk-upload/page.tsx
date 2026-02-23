@@ -517,7 +517,7 @@ export default function BulkUploadPage() {
       const fileEntry = doneFiles[primaryEntry.index];
       if (!fileEntry?.certificateId) continue;
 
-      const insuredName = group.canonicalName || fileEntry.file.name.replace(/\.pdf$/i, '');
+      const insuredName = (group.canonicalName || fileEntry.file.name).replace(/\.pdf$/i, '');
 
       // Try to match against existing entities
       const match = findBestMatch(insuredName, existingEntities, selectedPropertyId);

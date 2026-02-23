@@ -629,13 +629,25 @@ export async function assignCertificateToEntity(input: {
       ? { vendor_id: input.entityId }
       : { tenant_id: input.entityId };
 
-  const { error } = await supabase
+  // Use .select() to verify the update actually matched a row
+  const { data: updated, error } = await supabase
     .from('certificates')
     .update(updateField)
     .eq('id', input.certificateId)
-    .eq('organization_id', orgId);
+    .eq('organization_id', orgId)
+    .select('id')
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
+
+  if (!updated) {
+    console.error(
+      `[assignCertificateToEntity] Certificate not found or not updated: certId=${input.certificateId} orgId=${orgId}`
+    );
+    throw new Error(
+      `Could not link certificate to ${input.entityType}. The certificate may belong to a different organization.`
+    );
+  }
 
   await supabase.from('activity_log').insert({
     organization_id: orgId,
@@ -653,34 +665,146 @@ export async function assignCertificateToEntity(input: {
 }
 
 /**
- * Diagnose and repair orphaned bulk-upload data. Finds:
- * 1. Certificates uploaded via bulk (file_path starts with 'bulk/') with no
- *    vendor_id or tenant_id — these were uploaded but never assigned.
- * 2. Revalidates all property pages for the org.
- *
- * Returns a summary of what was found.
+ * Diagnose and repair orphaned bulk-upload data:
+ * 1. Fix vendors/tenants whose company_name contains ".pdf" — replace with
+ *    the insured_name from their linked certificate
+ * 2. Link orphaned bulk-upload certificates (vendor_id/tenant_id null) to
+ *    matching vendors by insured_name
+ * 3. Revalidate all property pages
  */
 export async function repairBulkUploadData() {
-  const { supabase, orgId } = await getAuthContext();
+  const { supabase, userId, orgId } = await getAuthContext();
 
-  // Find orphaned bulk certificates (uploaded but never assigned to a vendor/tenant)
-  const { data: orphanedCerts, error: certErr } = await supabase
+  let vendorNamesFixed = 0;
+  let tenantNamesFixed = 0;
+  let certsLinked = 0;
+
+  // ---- Fix 1: Vendor/tenant names containing ".pdf" ----
+
+  // Find vendors with .pdf in their name
+  const { data: pdfVendors } = await supabase
+    .from('vendors')
+    .select('id, company_name')
+    .eq('organization_id', orgId)
+    .is('deleted_at', null)
+    .like('company_name', '%.pdf%');
+
+  for (const v of pdfVendors ?? []) {
+    // Find the most recent certificate for this vendor with an insured_name
+    const { data: cert } = await supabase
+      .from('certificates')
+      .select('insured_name')
+      .eq('vendor_id', v.id)
+      .eq('organization_id', orgId)
+      .not('insured_name', 'is', null)
+      .order('uploaded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const newName = cert?.insured_name || v.company_name.replace(/\.pdf$/i, '');
+    if (newName !== v.company_name) {
+      await supabase
+        .from('vendors')
+        .update({ company_name: newName })
+        .eq('id', v.id);
+      vendorNamesFixed++;
+    }
+  }
+
+  // Find tenants with .pdf in their name
+  const { data: pdfTenants } = await supabase
+    .from('tenants')
+    .select('id, company_name')
+    .eq('organization_id', orgId)
+    .is('deleted_at', null)
+    .like('company_name', '%.pdf%');
+
+  for (const t of pdfTenants ?? []) {
+    const { data: cert } = await supabase
+      .from('certificates')
+      .select('insured_name')
+      .eq('tenant_id', t.id)
+      .eq('organization_id', orgId)
+      .not('insured_name', 'is', null)
+      .order('uploaded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const newName = cert?.insured_name || t.company_name.replace(/\.pdf$/i, '');
+    if (newName !== t.company_name) {
+      await supabase
+        .from('tenants')
+        .update({ company_name: newName })
+        .eq('id', t.id);
+      tenantNamesFixed++;
+    }
+  }
+
+  // ---- Fix 2: Link orphaned bulk certificates to matching vendors ----
+
+  const { data: orphanedCerts } = await supabase
     .from('certificates')
-    .select('id, file_path, file_hash, insured_name, processing_status, uploaded_at')
+    .select('id, file_path, insured_name, processing_status')
     .eq('organization_id', orgId)
     .like('file_path', 'bulk/%')
     .is('vendor_id', null)
-    .is('tenant_id', null);
+    .is('tenant_id', null)
+    .eq('processing_status', 'extracted');
 
-  if (certErr) throw new Error(certErr.message);
+  if ((orphanedCerts ?? []).length > 0) {
+    // Load all vendors to try matching by name
+    const { data: allVendors } = await supabase
+      .from('vendors')
+      .select('id, company_name, property_id')
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .is('archived_at', null);
 
-  // Find all properties for revalidation
+    for (const cert of orphanedCerts ?? []) {
+      if (!cert.insured_name) continue;
+
+      // Try to find a vendor whose name matches the certificate's insured_name
+      const certName = cert.insured_name.toLowerCase().trim();
+      const matchedVendor = (allVendors ?? []).find((v) => {
+        const vName = v.company_name.toLowerCase().trim();
+        // Check: exact match, one contains the other, or stripped-pdf-name match
+        return (
+          vName === certName ||
+          vName.includes(certName) ||
+          certName.includes(vName) ||
+          vName === certName.replace(/\.pdf$/i, '')
+        );
+      });
+
+      if (matchedVendor) {
+        const { error: updateErr } = await supabase
+          .from('certificates')
+          .update({ vendor_id: matchedVendor.id })
+          .eq('id', cert.id);
+
+        if (!updateErr) {
+          certsLinked++;
+          await supabase.from('activity_log').insert({
+            organization_id: orgId,
+            certificate_id: cert.id,
+            vendor_id: matchedVendor.id,
+            property_id: matchedVendor.property_id,
+            action: 'coi_uploaded',
+            description: `COI auto-linked to vendor "${matchedVendor.company_name}" via data repair`,
+            performed_by: userId,
+          });
+        }
+      }
+    }
+  }
+
+  // ---- Fix 3: Revalidate all property pages ----
+
   const { data: properties } = await supabase
     .from('properties')
     .select('id')
     .eq('organization_id', orgId);
 
-  // Revalidate all property pages to clear stale cache
   for (const p of properties ?? []) {
     revalidatePath(`/dashboard/properties/${p.id}`);
   }
@@ -688,13 +812,10 @@ export async function repairBulkUploadData() {
   revalidatePath('/dashboard');
 
   return {
-    orphanedCertificates: (orphanedCerts ?? []).map((c) => ({
-      id: c.id,
-      filePath: c.file_path,
-      insuredName: c.insured_name,
-      status: c.processing_status,
-      uploadedAt: c.uploaded_at,
-    })),
+    vendorNamesFixed,
+    tenantNamesFixed,
+    certsLinked,
+    orphanedCertificates: (orphanedCerts ?? []).length - certsLinked,
     propertiesRevalidated: (properties ?? []).length,
   };
 }

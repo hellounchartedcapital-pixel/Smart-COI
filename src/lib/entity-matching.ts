@@ -166,8 +166,9 @@ export function deduplicateExtractions(entries: BatchEntry[]): DeduplicatedGroup
   for (const entry of entries) {
     if (!entry.insuredName) {
       // Entries without insured name go into their own group
+      // Use filename without extension as fallback name
       groups.push({
-        canonicalName: entry.fileName,
+        canonicalName: entry.fileName.replace(/\.pdf$/i, ''),
         entries: [entry],
       });
       continue;
