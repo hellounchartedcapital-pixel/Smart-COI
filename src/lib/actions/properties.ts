@@ -651,3 +651,50 @@ export async function assignCertificateToEntity(input: {
   revalidatePath(`/dashboard/${input.entityType}s/${input.entityId}`);
   return { success: true };
 }
+
+/**
+ * Diagnose and repair orphaned bulk-upload data. Finds:
+ * 1. Certificates uploaded via bulk (file_path starts with 'bulk/') with no
+ *    vendor_id or tenant_id — these were uploaded but never assigned.
+ * 2. Revalidates all property pages for the org.
+ *
+ * Returns a summary of what was found.
+ */
+export async function repairBulkUploadData() {
+  const { supabase, orgId } = await getAuthContext();
+
+  // Find orphaned bulk certificates (uploaded but never assigned to a vendor/tenant)
+  const { data: orphanedCerts, error: certErr } = await supabase
+    .from('certificates')
+    .select('id, file_path, file_hash, insured_name, processing_status, uploaded_at')
+    .eq('organization_id', orgId)
+    .like('file_path', 'bulk/%')
+    .is('vendor_id', null)
+    .is('tenant_id', null);
+
+  if (certErr) throw new Error(certErr.message);
+
+  // Find all properties for revalidation
+  const { data: properties } = await supabase
+    .from('properties')
+    .select('id')
+    .eq('organization_id', orgId);
+
+  // Revalidate all property pages to clear stale cache
+  for (const p of properties ?? []) {
+    revalidatePath(`/dashboard/properties/${p.id}`);
+  }
+  revalidatePath('/dashboard/properties');
+  revalidatePath('/dashboard');
+
+  return {
+    orphanedCertificates: (orphanedCerts ?? []).map((c) => ({
+      id: c.id,
+      filePath: c.file_path,
+      insuredName: c.insured_name,
+      status: c.processing_status,
+      uploadedAt: c.uploaded_at,
+    })),
+    propertiesRevalidated: (properties ?? []).length,
+  };
+}
