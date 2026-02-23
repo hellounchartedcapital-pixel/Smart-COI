@@ -150,6 +150,11 @@ export function DashboardClient({
           <Button variant="ghost" size="sm" onClick={startTutorial} className="text-xs text-muted-foreground">
             Take a Tour
           </Button>
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/certificates/bulk-upload">
+              Bulk Upload
+            </Link>
+          </Button>
           <Button onClick={() => setUploadOpen(true)} data-tutorial="upload-coi">
             <Upload className="mr-2 h-4 w-4" />
             Upload COI

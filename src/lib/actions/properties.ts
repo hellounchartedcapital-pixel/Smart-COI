@@ -2,9 +2,28 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { checkVendorTenantLimit } from '@/lib/plan-limits';
+import { checkVendorTenantLimit, getRemainingExtractions } from '@/lib/plan-limits';
 import { checkActivePlan } from '@/lib/require-active-plan';
 import type { PropertyType, EntityType } from '@/types';
+
+// ---------------------------------------------------------------------------
+// Bulk upload helpers
+// ---------------------------------------------------------------------------
+
+export async function getBulkUploadCapacity() {
+  const { orgId } = await getAuthContext();
+
+  const extractionCapacity = await getRemainingExtractions(orgId);
+  const entityCapacity = await checkVendorTenantLimit(orgId);
+
+  return {
+    extractionsRemaining: extractionCapacity.remaining,
+    extractionsLimit: extractionCapacity.limit,
+    extractionsUsed: extractionCapacity.used,
+    canAddEntities: entityCapacity.allowed,
+    entityError: entityCapacity.allowed ? null : entityCapacity.error,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers

@@ -123,3 +123,41 @@ export async function checkExtractionLimit(
 
   return { allowed: true };
 }
+
+/**
+ * Check how many extractions remain this month. Used by bulk upload to
+ * show the user how many files they can process in one batch.
+ */
+export async function getRemainingExtractions(
+  orgId: string,
+): Promise<{ remaining: number; limit: number; used: number }> {
+  const supabase = createServiceClient();
+
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('plan')
+    .eq('id', orgId)
+    .single();
+
+  const plan = org?.plan ?? 'trial';
+  const limits = getOrgLimits(plan);
+
+  if (plan === 'canceled') {
+    return { remaining: 0, limit: 0, used: 0 };
+  }
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  const { count } = await supabase
+    .from('certificates')
+    .select('id', { count: 'exact', head: true })
+    .eq('organization_id', orgId)
+    .neq('processing_status', 'failed')
+    .gte('uploaded_at', startOfMonth);
+
+  const used = count ?? 0;
+  const remaining = Math.max(0, limits.maxExtractionsPerMonth - used);
+
+  return { remaining, limit: limits.maxExtractionsPerMonth, used };
+}

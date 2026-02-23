@@ -436,9 +436,22 @@ export function PropertyDetailClient({
               value={vendorStatusFilter}
               onChange={setVendorStatusFilter}
             />
-            <Button size="sm" onClick={() => setAddVendorOpen(true)}>
-              + Add Vendor
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  router.push(
+                    `/dashboard/certificates/bulk-upload?propertyId=${property.id}`
+                  )
+                }
+              >
+                Bulk Upload
+              </Button>
+              <Button size="sm" onClick={() => setAddVendorOpen(true)}>
+                + Add Vendor
+              </Button>
+            </div>
           </div>
 
           {vendors.length === 0 ? (
@@ -446,13 +459,22 @@ export function PropertyDetailClient({
               <p className="text-sm text-muted-foreground">
                 No vendors for this property yet.
               </p>
-              <Button
-                size="sm"
-                className="mt-3"
-                onClick={() => setAddVendorOpen(true)}
-              >
-                + Add Vendor
-              </Button>
+              <div className="mt-3 flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    router.push(
+                      `/dashboard/certificates/bulk-upload?propertyId=${property.id}`
+                    )
+                  }
+                >
+                  Bulk Upload COIs
+                </Button>
+                <Button size="sm" onClick={() => setAddVendorOpen(true)}>
+                  + Add Vendor
+                </Button>
+              </div>
             </div>
           ) : filteredVendors.length === 0 ? (
             <div className="rounded-lg border border-slate-200 bg-white py-8 text-center">
