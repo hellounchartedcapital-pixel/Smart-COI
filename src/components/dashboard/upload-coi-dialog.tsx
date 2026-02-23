@@ -179,6 +179,21 @@ export function UploadCOIDialog({
                 Create a new entity and upload their certificate in one step
               </p>
             </button>
+            <button
+              type="button"
+              className="w-full rounded-lg border border-slate-200 p-4 text-left transition-colors hover:border-brand hover:bg-slate-50"
+              onClick={() => {
+                handleOpenChange(false);
+                router.push('/dashboard/certificates/bulk-upload');
+              }}
+            >
+              <p className="text-sm font-semibold text-foreground">
+                Bulk upload multiple COIs
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Drop all your COI PDFs and build your vendor/tenant roster at once
+              </p>
+            </button>
           </div>
         )}
 
