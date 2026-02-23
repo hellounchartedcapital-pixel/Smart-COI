@@ -63,6 +63,7 @@ interface FileEntry {
   certificateId?: string;
   fileHash?: string;
   isDuplicate?: boolean;
+  attempts: number; // how many extraction attempts
   extractedData?: {
     insuredName: string | null;
     coverageCount: number;
@@ -89,8 +90,14 @@ interface RosterRow {
 
 type BulkStep = 'files' | 'processing' | 'review' | 'summary';
 
-// Max concurrent extractions
-const MAX_CONCURRENT = 3;
+// Max concurrent extractions — keep low to avoid Anthropic rate limits
+const MAX_CONCURRENT = 2;
+
+// Delay between starting each extraction (ms)
+const STAGGER_DELAY_MS = 3_000;
+
+// Client-side retry backoff for failed extractions (ms)
+const CLIENT_RETRY_DELAYS = [5_000, 15_000];
 
 let nextFileId = 0;
 function generateFileId(): string {
@@ -126,6 +133,9 @@ export default function BulkUploadPage() {
   // Step 2: Processing
   const [processingStarted, setProcessingStarted] = useState(false);
   const abortRef = useRef(false);
+  const [processingMessage, setProcessingMessage] = useState<string | null>(null);
+  const [processStartTime, setProcessStartTime] = useState<number | null>(null);
+  const completedCountRef = useRef(0);
 
   // Step 3: Review roster
   const [roster, setRoster] = useState<RosterRow[]>([]);
@@ -227,12 +237,14 @@ export default function BulkUploadPage() {
             id: generateFileId(),
             status: 'failed',
             error: validation.error,
+            attempts: 0,
           });
         } else {
           entries.push({
             file: f,
             id: generateFileId(),
             status: 'pending',
+            attempts: 0,
           });
         }
       }
@@ -269,7 +281,7 @@ export default function BulkUploadPage() {
     [addFiles]
   );
 
-  // ---- Step 2: Process all files (upload + extract with concurrency limit) ----
+  // ---- Step 2: Process all files (upload + extract with staggered concurrency) ----
   const processFiles = useCallback(async () => {
     if (!orgId || !userId || !selectedPropertyId) return;
 
@@ -280,12 +292,19 @@ export default function BulkUploadPage() {
     }
 
     setProcessingStarted(true);
+    setProcessStartTime(Date.now());
+    completedCountRef.current = 0;
     abortRef.current = false;
 
     const pendingFiles = files.filter((f) => f.status === 'pending' || f.status === 'failed');
-    const queue = [...pendingFiles];
-    const active: Promise<void>[] = [];
+    const totalBatch = pendingFiles.length;
 
+    // Helper: update processing message with ETA
+    function updateProgress(completed: number) {
+      completedCountRef.current = completed;
+    }
+
+    // Process a single file: upload → create record → extract (with client-side retry)
     async function processOne(entry: FileEntry) {
       if (abortRef.current) return;
 
@@ -295,106 +314,171 @@ export default function BulkUploadPage() {
       );
 
       try {
-        // Compute hash
-        const fileHash = await computeFileHash(entry.file);
+        // Compute hash (only if not already uploaded)
+        let certId = entry.certificateId;
+        let fileHash = entry.fileHash;
 
-        // Check for duplicate in batch (same hash)
-        const isDuplicate = files.some(
-          (f) => f.id !== entry.id && f.fileHash === fileHash && f.status === 'done'
-        );
+        if (!certId) {
+          fileHash = await computeFileHash(entry.file);
 
-        // Upload to storage — use a temp path until entity is assigned
-        const storagePath = `bulk/${orgId}/${Date.now()}_${entry.file.name}`;
-        const { error: uploadError } = await supabase.storage
-          .from('coi-documents')
-          .upload(storagePath, entry.file, { upsert: false });
+          // Check for duplicate in batch (same hash)
+          const isDuplicate = files.some(
+            (f) => f.id !== entry.id && f.fileHash === fileHash && f.status === 'done'
+          );
 
-        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+          // Upload to storage
+          const storagePath = `bulk/${orgId}/${Date.now()}_${entry.file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from('coi-documents')
+            .upload(storagePath, entry.file, { upsert: false });
 
-        // Create certificate record (without vendor/tenant yet)
-        const { data: cert, error: certError } = await supabase
-          .from('certificates')
-          .insert({
-            organization_id: orgId,
-            file_path: storagePath,
-            file_hash: fileHash,
-            upload_source: 'pm_upload',
-            processing_status: 'processing',
-          })
-          .select('id')
-          .single();
+          if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
 
-        if (certError || !cert) throw new Error(`Record failed: ${certError?.message}`);
+          // Create certificate record (without vendor/tenant yet)
+          const { data: cert, error: certError } = await supabase
+            .from('certificates')
+            .insert({
+              organization_id: orgId,
+              file_path: storagePath,
+              file_hash: fileHash,
+              upload_source: 'pm_upload',
+              processing_status: 'processing',
+            })
+            .select('id')
+            .single();
 
-        // Update status: extracting
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.id === entry.id
-              ? { ...f, status: 'extracting', certificateId: cert.id, fileHash, isDuplicate }
-              : f
-          )
-        );
+          if (certError || !cert) throw new Error(`Record failed: ${certError?.message}`);
+          certId = cert.id;
 
-        // Call extraction API
-        const extractRes = await fetch('/api/certificates/extract', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ certificateId: cert.id }),
-        });
-
-        if (!extractRes.ok) {
-          const body = await extractRes.json().catch(() => ({}));
-          throw new Error(body.error ?? 'Extraction failed');
+          // Update with cert ID
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === entry.id
+                ? { ...f, status: 'extracting', certificateId: certId, fileHash, isDuplicate }
+                : f
+            )
+          );
+        } else {
+          // Already uploaded — skip to extraction
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === entry.id ? { ...f, status: 'extracting', error: undefined } : f
+            )
+          );
         }
 
-        const extractBody = await extractRes.json();
+        // Call extraction API with client-side retry for transient errors
+        let lastError = '';
+        const maxAttempts = CLIENT_RETRY_DELAYS.length + 1; // 3 total
 
-        // Fetch the insured name from the updated certificate
-        const { data: updatedCert } = await supabase
-          .from('certificates')
-          .select('insured_name')
-          .eq('id', cert.id)
-          .single();
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          if (abortRef.current) return;
 
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.id === entry.id
-              ? {
-                  ...f,
-                  status: 'done',
-                  extractedData: {
-                    insuredName: updatedCert?.insured_name ?? null,
-                    coverageCount: extractBody.coverages ?? 0,
-                    entityCount: extractBody.entities ?? 0,
-                  },
-                }
-              : f
-          )
-        );
+          const extractRes = await fetch('/api/certificates/extract', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ certificateId: certId }),
+          });
+
+          if (extractRes.ok) {
+            const extractBody = await extractRes.json();
+
+            // Fetch the insured name from the updated certificate
+            const { data: updatedCert } = await supabase
+              .from('certificates')
+              .select('insured_name')
+              .eq('id', certId!)
+              .single();
+
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.id === entry.id
+                  ? {
+                      ...f,
+                      status: 'done',
+                      attempts: attempt + 1,
+                      extractedData: {
+                        insuredName: updatedCert?.insured_name ?? null,
+                        coverageCount: extractBody.coverages ?? 0,
+                        entityCount: extractBody.entities ?? 0,
+                      },
+                    }
+                  : f
+              )
+            );
+            updateProgress(completedCountRef.current + 1);
+            return; // success
+          }
+
+          // Failed — check if retryable
+          const body = await extractRes.json().catch(() => ({}));
+          lastError = body.error ?? 'Extraction failed';
+
+          // Plan-related errors should not retry
+          if (isPlanInactiveError(lastError) || extractRes.status === 403) {
+            throw new Error(lastError);
+          }
+
+          // 422 is extraction failure (bad PDF, etc.) — don't retry
+          if (extractRes.status === 422 && !lastError.includes('busy')) {
+            throw new Error(lastError);
+          }
+
+          // Retryable — wait with backoff
+          if (attempt < CLIENT_RETRY_DELAYS.length) {
+            const delay = CLIENT_RETRY_DELAYS[attempt];
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.id === entry.id
+                  ? { ...f, error: `Retrying in ${delay / 1000}s...`, attempts: attempt + 1 }
+                  : f
+              )
+            );
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          }
+        }
+
+        // All retries exhausted
+        throw new Error(lastError);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Processing failed';
+        const message = err instanceof Error ? err.message : 'Processing failed';
         if (isPlanInactiveError(message)) {
           showUpgradeModal(message.replace(PLAN_INACTIVE_TAG, '').trim());
           abortRef.current = true;
         }
         setFiles((prev) =>
           prev.map((f) =>
-            f.id === entry.id ? { ...f, status: 'failed', error: message } : f
+            f.id === entry.id
+              ? { ...f, status: 'failed', error: message, attempts: (f.attempts || 0) + 1 }
+              : f
           )
         );
+        updateProgress(completedCountRef.current + 1);
       }
     }
 
-    // Process with concurrency limit
+    // Process with staggered concurrency
+    const queue = [...pendingFiles];
+    const active: Promise<void>[] = [];
+
     async function runQueue() {
       while (queue.length > 0 && !abortRef.current) {
+        // Wait until a slot is available
         while (active.length >= MAX_CONCURRENT && !abortRef.current) {
           await Promise.race(active);
         }
         if (abortRef.current) break;
+
         const next = queue.shift();
         if (!next) break;
+
+        // Stagger: wait between starting each extraction
+        if (active.length > 0) {
+          setProcessingMessage(`Pacing requests to avoid API limits...`);
+          await new Promise((resolve) => setTimeout(resolve, STAGGER_DELAY_MS));
+          setProcessingMessage(null);
+        }
+
         const promise = processOne(next).then(() => {
           const idx = active.indexOf(promise);
           if (idx >= 0) active.splice(idx, 1);
@@ -579,15 +663,19 @@ export default function BulkUploadPage() {
     }
   }, [orgId, userId, roster, supabase]);
 
-  // ---- Retry failed extractions ----
-  const retryFailed = useCallback(() => {
+  // ---- Retry all failed extractions ----
+  const retryAllFailed = useCallback(() => {
     setFiles((prev) =>
-      prev.map((f) => (f.status === 'failed' ? { ...f, status: 'pending', error: undefined } : f))
+      prev.map((f) =>
+        f.status === 'failed'
+          ? { ...f, status: 'pending', error: undefined }
+          : f
+      )
     );
+    setProcessingStarted(false);
   }, []);
 
   // ---- Computed state ----
-  const validFiles = files.filter((f) => f.status !== 'failed' || f.certificateId);
   const pendingCount = files.filter((f) => f.status === 'pending').length;
   const processingCount = files.filter(
     (f) => f.status === 'uploading' || f.status === 'extracting'
@@ -612,11 +700,26 @@ export default function BulkUploadPage() {
   }
 
   // ---- Progress for step 2 ----
-  const totalToProcess = files.filter(
-    (f) => f.status !== 'failed' || f.certificateId
-  ).length;
+  const finishedCount = doneCount + failedCount;
   const progressPercent =
-    totalToProcess > 0 ? ((doneCount + failedCount) / files.length) * 100 : 0;
+    files.length > 0 ? (finishedCount / files.length) * 100 : 0;
+
+  // Time estimate
+  const estimatedTimeRemaining = (() => {
+    if (!processStartTime || finishedCount === 0) return null;
+    const elapsed = Date.now() - processStartTime;
+    const avgPerFile = elapsed / finishedCount;
+    const remaining = files.length - finishedCount;
+    if (remaining <= 0) return null;
+    const remainMs = avgPerFile * remaining;
+    const mins = Math.ceil(remainMs / 60_000);
+    if (mins <= 1) return 'less than a minute';
+    return `~${mins} minute${mins !== 1 ? 's' : ''}`;
+  })();
+
+  // High failure detection
+  const failureRate = files.length > 0 ? failedCount / files.length : 0;
+  const hasHighFailures = failedCount >= 3 && failureRate > 0.3;
 
   // ============================================================================
   // Render
@@ -859,12 +962,14 @@ export default function BulkUploadPage() {
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium">
                 {allProcessed
-                  ? 'Processing complete'
-                  : `Processing ${doneCount + failedCount} of ${files.length} files...`}
+                  ? `Processing complete — ${doneCount} of ${files.length} extracted successfully`
+                  : `Processing ${finishedCount} of ${files.length} files...`}
               </span>
-              <span className="text-muted-foreground">
-                {doneCount} done{failedCount > 0 && `, ${failedCount} failed`}
-              </span>
+              {!allProcessed && estimatedTimeRemaining && (
+                <span className="text-muted-foreground">
+                  {estimatedTimeRemaining} remaining
+                </span>
+              )}
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
               <div
@@ -872,7 +977,22 @@ export default function BulkUploadPage() {
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
+            {/* Pacing / status message */}
+            {!allProcessed && processingMessage && (
+              <p className="text-xs text-muted-foreground italic">
+                {processingMessage}
+              </p>
+            )}
           </div>
+
+          {/* High failure warning */}
+          {hasHighFailures && !allProcessed && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <AlertTriangle className="mr-1.5 inline h-4 w-4" />
+              Some extractions are failing due to high demand. The system will automatically retry.
+              This may take a few extra minutes.
+            </div>
+          )}
 
           {/* File status list */}
           <div className="max-h-80 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
@@ -900,7 +1020,10 @@ export default function BulkUploadPage() {
                   <p className="truncate font-medium">{entry.file.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {entry.status === 'uploading' && 'Uploading...'}
-                    {entry.status === 'extracting' && 'Extracting data...'}
+                    {entry.status === 'extracting' &&
+                      (entry.error
+                        ? entry.error // shows "Retrying in Xs..." during backoff
+                        : 'Extracting data...')}
                     {entry.status === 'done' &&
                       entry.extractedData &&
                       `${entry.extractedData.insuredName ?? 'Unknown'} — ${entry.extractedData.coverageCount} coverages`}
@@ -918,25 +1041,41 @@ export default function BulkUploadPage() {
             ))}
           </div>
 
-          {/* Actions */}
+          {/* Completion summary & actions */}
           {allProcessed && (
-            <div className="flex justify-end gap-2">
-              {failedCount > 0 && (
-                <Button variant="outline" onClick={() => {
-                  retryFailed();
-                  setProcessingStarted(false);
-                  setTimeout(() => processFiles(), 100);
-                }}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Retry {failedCount} Failed
-                </Button>
+            <div className="space-y-4">
+              {/* Summary banner */}
+              {failedCount > 0 ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  {doneCount} of {files.length} extracted successfully. {failedCount} failed
+                  — click &ldquo;Retry All Failed&rdquo; to try again.
+                </div>
+              ) : (
+                <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                  All {doneCount} files extracted successfully.
+                </div>
               )}
-              <Button
-                disabled={doneCount === 0}
-                onClick={buildRoster}
-              >
-                Continue to Review ({doneCount} file{doneCount !== 1 ? 's' : ''})
-              </Button>
+
+              <div className="flex justify-end gap-2">
+                {failedCount > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      retryAllFailed();
+                      setTimeout(() => processFiles(), 100);
+                    }}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Retry All Failed ({failedCount})
+                  </Button>
+                )}
+                <Button
+                  disabled={doneCount === 0}
+                  onClick={buildRoster}
+                >
+                  Continue to Review ({doneCount} file{doneCount !== 1 ? 's' : ''})
+                </Button>
+              </div>
             </div>
           )}
         </div>
