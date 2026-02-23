@@ -28,6 +28,21 @@ function isPublicRoute(pathname: string): boolean {
 const authRoutes = ['/login', '/signup'];
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Public routes that are never auth-gated (portal, webhooks, marketing, etc.)
+  // skip auth entirely. This is critical for the portal flow where vendors/tenants
+  // are unauthenticated — checking BEFORE creating the Supabase client avoids
+  // unnecessary auth calls and cookie mutations that can interfere with rendering.
+  const isPublic = isPublicRoute(pathname);
+  const isAuthPage = authRoutes.includes(pathname);
+
+  // If the route is public AND not an auth page (login/signup), skip auth entirely.
+  // Auth pages need the Supabase check so logged-in users can be redirected to dashboard.
+  if (isPublic && !isAuthPage) {
+    return NextResponse.next();
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -64,17 +79,16 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-
   // Authenticated user trying to visit login/signup → redirect to dashboard
-  if (user && authRoutes.includes(pathname)) {
+  if (user && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
 
   // Unauthenticated user trying to visit a protected route → redirect to login
-  if (!user && !isPublicRoute(pathname)) {
+  // (public routes were already handled above, so anything here is protected)
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('next', pathname);
