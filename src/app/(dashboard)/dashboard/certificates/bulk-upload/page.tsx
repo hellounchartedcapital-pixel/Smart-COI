@@ -7,7 +7,12 @@ import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash, formatFileSize } from '@/lib/utils/file-validation';
 import { isPlanInactiveError, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
-import { getBulkUploadCapacity } from '@/lib/actions/properties';
+import {
+  getBulkUploadCapacity,
+  createVendor,
+  createTenant,
+  assignCertificateToEntity,
+} from '@/lib/actions/properties';
 import {
   normalizeEntityName,
   findBestMatch,
@@ -558,7 +563,7 @@ export default function BulkUploadPage() {
     setStep('review');
   }, [files, existingEntities, selectedPropertyId, defaultEntityType]);
 
-  // ---- Step 4: Create entities & assign certificates ----
+  // ---- Step 4: Create entities & assign certificates via server actions ----
   const finalizeRoster = useCallback(async () => {
     if (!orgId || !userId) return;
     setSummaryStarted(true);
@@ -591,54 +596,35 @@ export default function BulkUploadPage() {
           // Use existing entity
           entityId = first.matchedEntityId;
         } else {
-          // Create new vendor or tenant
-          const table = first.entityType === 'vendor' ? 'vendors' : 'tenants';
-          const { data: created, error: createErr } = await supabase
-            .from(table)
-            .insert({
-              organization_id: orgId,
+          // Create new entity via server action (handles RLS, revalidation, logging)
+          if (first.entityType === 'vendor') {
+            const result = await createVendor({
               property_id: first.propertyId,
               company_name: first.insuredName,
-              contact_email: first.contactEmail || null,
-              compliance_status: 'pending',
-            })
-            .select('id')
-            .single();
-
-          if (createErr) throw new Error(createErr.message);
-          entityId = created.id;
-
-          // Log activity
-          await supabase.from('activity_log').insert({
-            organization_id: orgId,
-            property_id: first.propertyId,
-            [first.entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
-            action: `${first.entityType}_created`,
-            description: `${first.entityType === 'vendor' ? 'Vendor' : 'Tenant'} "${first.insuredName}" created via bulk upload`,
-            performed_by: userId,
-          });
+              contact_email: first.contactEmail || undefined,
+            });
+            if ('error' in result) throw new Error(result.error);
+            entityId = result.id;
+          } else {
+            const result = await createTenant({
+              property_id: first.propertyId,
+              company_name: first.insuredName,
+              contact_email: first.contactEmail || undefined,
+            });
+            if ('error' in result) throw new Error(result.error);
+            entityId = result.id;
+          }
         }
 
-        // Assign all certificates in this group to the entity
+        // Assign all certificates in this group to the entity via server action
         for (const row of groupRows) {
-          const updateField =
-            row.entityType === 'vendor'
-              ? { vendor_id: entityId }
-              : { tenant_id: entityId };
-
-          await supabase
-            .from('certificates')
-            .update(updateField)
-            .eq('id', row.certificateId);
-
-          // Log upload activity
-          await supabase.from('activity_log').insert({
-            organization_id: orgId,
-            certificate_id: row.certificateId,
-            [row.entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
-            action: 'coi_uploaded',
-            description: `COI "${row.fileName}" assigned to ${row.entityType} "${row.insuredName}" via bulk upload`,
-            performed_by: userId,
+          await assignCertificateToEntity({
+            certificateId: row.certificateId,
+            entityId,
+            entityType: row.entityType,
+            entityName: row.insuredName,
+            fileName: row.fileName,
+            propertyId: row.propertyId,
           });
         }
 
@@ -661,7 +647,7 @@ export default function BulkUploadPage() {
         );
       }
     }
-  }, [orgId, userId, roster, supabase]);
+  }, [orgId, userId, roster]);
 
   // ---- Retry all failed extractions ----
   const retryAllFailed = useCallback(() => {
