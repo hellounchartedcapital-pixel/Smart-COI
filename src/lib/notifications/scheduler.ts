@@ -251,8 +251,10 @@ export async function checkAndScheduleNotifications(): Promise<number> {
             .in('status', ['missing', 'partial_match']);
 
           for (const eg of entityGapResults ?? []) {
+            // Supabase returns a single object for many-to-one FK joins, not an array
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const pe = (eg.property_entity as any)?.[0];
+            const raw = (eg as any).property_entity;
+            const pe = Array.isArray(raw) ? raw[0] : raw;
             if (!pe) continue;
             if (pe.entity_type === 'additional_insured') {
               gaps.push(`Your certificate needs to list ${pe.entity_name} as an Additional Insured. Please ask your insurance broker to add this endorsement.`);

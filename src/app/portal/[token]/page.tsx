@@ -33,9 +33,16 @@ interface ComplianceGap {
 interface EntityComplianceGap {
   match_details: string | null;
   status: string;
+  // Supabase PostgREST returns a single object for many-to-one FK joins,
+  // but we handle both array and object shapes defensively.
   property_entity: {
     entity_name: string;
     entity_type: string;
+    entity_address?: string | null;
+  } | {
+    entity_name: string;
+    entity_type: string;
+    entity_address?: string | null;
   }[] | null;
 }
 
@@ -175,7 +182,9 @@ export default async function PortalPage({ params }: PortalPageProps) {
 
     if (entityGaps && entityGaps.length > 0) {
       for (const eg of entityGaps as EntityComplianceGap[]) {
-        const pe = eg.property_entity?.[0] as unknown as { entity_name: string; entity_address?: string | null; entity_type: string } | undefined;
+        // Supabase returns a single object for many-to-one FK joins, not an array
+        const raw = eg.property_entity;
+        const pe = (Array.isArray(raw) ? raw[0] : raw) as { entity_name: string; entity_address?: string | null; entity_type: string } | undefined;
         if (!pe) continue;
         if (pe.entity_type === 'additional_insured') {
           complianceGaps.push(`Your certificate needs to list ${pe.entity_name} as an Additional Insured. Please ask your insurance broker to add this endorsement.`);
