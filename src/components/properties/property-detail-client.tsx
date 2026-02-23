@@ -44,6 +44,8 @@ import {
   deleteProperty,
   softDeleteVendor,
   softDeleteTenant,
+  restoreVendor,
+  restoreTenant,
 } from '@/lib/actions/properties';
 import { sendManualFollowUp } from '@/lib/actions/notifications';
 import { toast } from 'sonner';
@@ -85,6 +87,8 @@ interface PropertyDetailClientProps {
   entities: PropertyEntity[];
   vendors: (Vendor & { template?: RequirementTemplate | null; latest_coi_date?: string | null })[];
   tenants: (Tenant & { template?: RequirementTemplate | null; latest_coi_date?: string | null })[];
+  archivedVendors: (Vendor & { template?: RequirementTemplate | null })[];
+  archivedTenants: (Tenant & { template?: RequirementTemplate | null })[];
   templates: RequirementTemplate[];
 }
 
@@ -93,6 +97,8 @@ export function PropertyDetailClient({
   entities,
   vendors,
   tenants,
+  archivedVendors,
+  archivedTenants,
   templates,
 }: PropertyDetailClientProps) {
   const router = useRouter();
@@ -218,6 +224,34 @@ export function PropertyDetailClient({
     } finally {
       setDeleting(false);
       setDeleteTenantId(null);
+    }
+  }
+
+  const [restoring, setRestoring] = useState(false);
+
+  async function handleRestoreVendor(vendorId: string) {
+    setRestoring(true);
+    try {
+      await restoreVendor(vendorId, property.id);
+      toast.success('Vendor restored');
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to restore vendor');
+    } finally {
+      setRestoring(false);
+    }
+  }
+
+  async function handleRestoreTenant(tenantId: string) {
+    setRestoring(true);
+    try {
+      await restoreTenant(tenantId, property.id);
+      toast.success('Tenant restored');
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to restore tenant');
+    } finally {
+      setRestoring(false);
     }
   }
 
@@ -379,7 +413,7 @@ export function PropertyDetailClient({
         </div>
       </div>
 
-      {/* Vendors / Tenants Tabs */}
+      {/* Vendors / Tenants / Archived Tabs */}
       <Tabs defaultValue="vendors">
         <TabsList>
           <TabsTrigger value="vendors">
@@ -388,6 +422,11 @@ export function PropertyDetailClient({
           <TabsTrigger value="tenants">
             Tenants ({tenants.length})
           </TabsTrigger>
+          {(archivedVendors.length > 0 || archivedTenants.length > 0) && (
+            <TabsTrigger value="archived">
+              Archived ({archivedVendors.length + archivedTenants.length})
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Vendors Tab */}
@@ -509,10 +548,10 @@ export function PropertyDetailClient({
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
+                              className="text-amber-600 focus:text-amber-600"
                               onClick={() => setDeleteVendorId(v.id)}
                             >
-                              Delete
+                              Archive
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -649,10 +688,10 @@ export function PropertyDetailClient({
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
+                              className="text-amber-600 focus:text-amber-600"
                               onClick={() => setDeleteTenantId(t.id)}
                             >
-                              Delete
+                              Archive
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -661,6 +700,104 @@ export function PropertyDetailClient({
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Archived Tab */}
+        <TabsContent value="archived" className="space-y-4">
+          {archivedVendors.length === 0 && archivedTenants.length === 0 ? (
+            <div className="rounded-lg border border-slate-200 bg-white py-8 text-center">
+              <p className="text-sm text-muted-foreground">No archived vendors or tenants.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {archivedVendors.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Archived Vendors
+                  </h3>
+                  <div className="rounded-lg border border-slate-200 bg-white">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead className="hidden md:table-cell">Contact</TableHead>
+                          <TableHead className="hidden lg:table-cell">Template</TableHead>
+                          <TableHead className="w-24" />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {archivedVendors.map((v) => (
+                          <TableRow key={v.id} className="text-muted-foreground">
+                            <TableCell className="font-medium">{v.company_name}</TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {v.contact_email ?? '—'}
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              {v.template?.name ?? '—'}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                disabled={restoring}
+                                onClick={() => handleRestoreVendor(v.id)}
+                              >
+                                Restore
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+              {archivedTenants.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Archived Tenants
+                  </h3>
+                  <div className="rounded-lg border border-slate-200 bg-white">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead className="hidden md:table-cell">Contact</TableHead>
+                          <TableHead className="hidden lg:table-cell">Template</TableHead>
+                          <TableHead className="w-24" />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {archivedTenants.map((t) => (
+                          <TableRow key={t.id} className="text-muted-foreground">
+                            <TableCell className="font-medium">{t.company_name}</TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              {t.contact_email ?? '—'}
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              {t.template?.name ?? '—'}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs"
+                                disabled={restoring}
+                                onClick={() => handleRestoreTenant(t.id)}
+                              >
+                                Restore
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </TabsContent>
@@ -704,20 +841,20 @@ export function PropertyDetailClient({
       <ConfirmDialog
         open={deleteVendorId !== null}
         onOpenChange={(open) => !open && setDeleteVendorId(null)}
-        title="Remove Vendor"
-        description="Are you sure you want to remove this vendor? They will be archived and can be restored later."
-        confirmLabel="Remove"
-        destructive
+        title="Archive Vendor"
+        description="Archive this vendor? They won't appear in your active lists or compliance calculations, but their data and history will be preserved. You can restore them anytime from the Archived tab."
+        confirmLabel="Archive"
+        destructive={false}
         loading={deleting}
         onConfirm={handleDeleteVendor}
       />
       <ConfirmDialog
         open={deleteTenantId !== null}
         onOpenChange={(open) => !open && setDeleteTenantId(null)}
-        title="Remove Tenant"
-        description="Are you sure you want to remove this tenant? They will be archived and can be restored later."
-        confirmLabel="Remove"
-        destructive
+        title="Archive Tenant"
+        description="Archive this tenant? They won't appear in your active lists or compliance calculations, but their data and history will be preserved. You can restore them anytime from the Archived tab."
+        confirmLabel="Archive"
+        destructive={false}
         loading={deleting}
         onConfirm={handleDeleteTenant}
       />

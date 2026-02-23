@@ -205,6 +205,7 @@ export interface Vendor {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  archived_at: string | null;
   // Joined relations
   property?: Property;
   template?: RequirementTemplate;
@@ -227,6 +228,7 @@ export interface Tenant {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  archived_at: string | null;
   // Joined relations
   property?: Property;
   template?: RequirementTemplate;

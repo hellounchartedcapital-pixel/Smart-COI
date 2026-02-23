@@ -47,14 +47,16 @@ export default async function TemplateEditorPage({ params }: Props) {
     .select('id', { count: 'exact', head: true })
     .eq('template_id', id)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const { count: tenantCount } = await supabase
     .from('tenants')
     .select('id', { count: 'exact', head: true })
     .eq('template_id', id)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   // Count distinct properties
   const { data: vendorProps } = await supabase
@@ -62,14 +64,16 @@ export default async function TemplateEditorPage({ params }: Props) {
     .select('property_id')
     .eq('template_id', id)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const { data: tenantProps } = await supabase
     .from('tenants')
     .select('property_id')
     .eq('template_id', id)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const propertyIds = new Set([
     ...(vendorProps ?? []).map((v) => v.property_id).filter(Boolean),

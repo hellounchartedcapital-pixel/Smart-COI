@@ -162,14 +162,16 @@ export async function deleteProperty(propertyId: string) {
     .select('id', { count: 'exact', head: true })
     .eq('property_id', propertyId)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const { count: tenantCount } = await supabase
     .from('tenants')
     .select('id', { count: 'exact', head: true })
     .eq('property_id', propertyId)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   if ((vendorCount ?? 0) > 0 || (tenantCount ?? 0) > 0) {
     throw new Error(
@@ -264,6 +266,10 @@ export async function createVendor(input: CreateVendorInput) {
 }
 
 export async function softDeleteVendor(vendorId: string, propertyId: string) {
+  return archiveVendor(vendorId, propertyId);
+}
+
+export async function archiveVendor(vendorId: string, propertyId: string) {
   const { supabase, userId, orgId } = await getAuthContext();
 
   const { data: vendor } = await supabase
@@ -274,7 +280,7 @@ export async function softDeleteVendor(vendorId: string, propertyId: string) {
 
   const { error } = await supabase
     .from('vendors')
-    .update({ deleted_at: new Date().toISOString() })
+    .update({ archived_at: new Date().toISOString() })
     .eq('id', vendorId)
     .eq('organization_id', orgId);
 
@@ -285,11 +291,43 @@ export async function softDeleteVendor(vendorId: string, propertyId: string) {
     property_id: propertyId,
     vendor_id: vendorId,
     action: 'status_changed',
-    description: `Vendor "${vendor?.company_name ?? vendorId}" removed`,
+    description: `Vendor "${vendor?.company_name ?? vendorId}" archived`,
     performed_by: userId,
   });
 
   revalidatePath(`/dashboard/properties/${propertyId}`);
+  revalidatePath(`/dashboard/vendors/${vendorId}`);
+  return { success: true };
+}
+
+export async function restoreVendor(vendorId: string, propertyId: string) {
+  const { supabase, userId, orgId } = await getAuthContext();
+
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('company_name')
+    .eq('id', vendorId)
+    .single();
+
+  const { error } = await supabase
+    .from('vendors')
+    .update({ archived_at: null })
+    .eq('id', vendorId)
+    .eq('organization_id', orgId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    property_id: propertyId,
+    vendor_id: vendorId,
+    action: 'status_changed',
+    description: `Vendor "${vendor?.company_name ?? vendorId}" restored`,
+    performed_by: userId,
+  });
+
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  revalidatePath(`/dashboard/vendors/${vendorId}`);
   return { success: true };
 }
 
@@ -350,6 +388,10 @@ export async function createTenant(input: CreateTenantInput) {
 }
 
 export async function softDeleteTenant(tenantId: string, propertyId: string) {
+  return archiveTenant(tenantId, propertyId);
+}
+
+export async function archiveTenant(tenantId: string, propertyId: string) {
   const { supabase, userId, orgId } = await getAuthContext();
 
   const { data: tenant } = await supabase
@@ -360,7 +402,7 @@ export async function softDeleteTenant(tenantId: string, propertyId: string) {
 
   const { error } = await supabase
     .from('tenants')
-    .update({ deleted_at: new Date().toISOString() })
+    .update({ archived_at: new Date().toISOString() })
     .eq('id', tenantId)
     .eq('organization_id', orgId);
 
@@ -371,11 +413,43 @@ export async function softDeleteTenant(tenantId: string, propertyId: string) {
     property_id: propertyId,
     tenant_id: tenantId,
     action: 'status_changed',
-    description: `Tenant "${tenant?.company_name ?? tenantId}" removed`,
+    description: `Tenant "${tenant?.company_name ?? tenantId}" archived`,
     performed_by: userId,
   });
 
   revalidatePath(`/dashboard/properties/${propertyId}`);
+  revalidatePath(`/dashboard/tenants/${tenantId}`);
+  return { success: true };
+}
+
+export async function restoreTenant(tenantId: string, propertyId: string) {
+  const { supabase, userId, orgId } = await getAuthContext();
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('company_name')
+    .eq('id', tenantId)
+    .single();
+
+  const { error } = await supabase
+    .from('tenants')
+    .update({ archived_at: null })
+    .eq('id', tenantId)
+    .eq('organization_id', orgId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    property_id: propertyId,
+    tenant_id: tenantId,
+    action: 'status_changed',
+    description: `Tenant "${tenant?.company_name ?? tenantId}" restored`,
+    performed_by: userId,
+  });
+
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  revalidatePath(`/dashboard/tenants/${tenantId}`);
   return { success: true };
 }
 

@@ -182,7 +182,8 @@ async function recalculateComplianceForTemplate(
     .select('id')
     .eq('template_id', templateId)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   // Find all tenants using this template
   const { data: tenants } = await supabase
@@ -190,7 +191,8 @@ async function recalculateComplianceForTemplate(
     .select('id')
     .eq('template_id', templateId)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const entityIds = [
     ...(vendors ?? []).map((v) => ({ id: v.id, type: 'vendor' as const })),
@@ -336,14 +338,16 @@ export async function getTemplateUsageCount(templateId: string) {
     .select('id', { count: 'exact', head: true })
     .eq('template_id', templateId)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const { count: tenantCount } = await supabase
     .from('tenants')
     .select('id', { count: 'exact', head: true })
     .eq('template_id', templateId)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   // Count distinct properties
   const { data: vendorProps } = await supabase
@@ -351,14 +355,16 @@ export async function getTemplateUsageCount(templateId: string) {
     .select('property_id')
     .eq('template_id', templateId)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const { data: tenantProps } = await supabase
     .from('tenants')
     .select('property_id')
     .eq('template_id', templateId)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const propertyIds = new Set([
     ...(vendorProps ?? []).map((v) => v.property_id).filter(Boolean),
@@ -471,14 +477,16 @@ export async function deleteTemplate(templateId: string) {
     .select('id', { count: 'exact', head: true })
     .eq('template_id', templateId)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const { count: tenantCount } = await supabase
     .from('tenants')
     .select('id', { count: 'exact', head: true })
     .eq('template_id', templateId)
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const total = (vendorCount ?? 0) + (tenantCount ?? 0);
   if (total > 0) {

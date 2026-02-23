@@ -387,15 +387,39 @@ export function VendorDetailClient({
             </div>
           </div>
 
-          <div className="rounded-lg border border-red-100 bg-white p-4">
-            <Button
-              variant="destructive"
-              size="sm"
-              className="w-full"
-              onClick={() => setDeleteOpen(true)}
-            >
-              Delete Vendor
-            </Button>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            {vendor.archived_at ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true);
+                  try {
+                    const { restoreVendor } = await import('@/lib/actions/properties');
+                    await restoreVendor(vendor.id, vendor.property_id ?? '');
+                    toast.success('Vendor restored');
+                    router.refresh();
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : 'Failed to restore');
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+              >
+                {deleting ? 'Restoring...' : 'Restore Vendor'}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
+                onClick={() => setDeleteOpen(true)}
+              >
+                Archive Vendor
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -410,10 +434,10 @@ export function VendorDetailClient({
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title="Delete Vendor"
-        description="Are you sure you want to remove this vendor? They will be archived and can be restored later."
-        confirmLabel="Delete"
-        destructive
+        title="Archive Vendor"
+        description={`Archive ${vendor.company_name}? They won't appear in your active lists or compliance calculations, but their data and history will be preserved. You can restore them anytime.`}
+        confirmLabel="Archive"
+        destructive={false}
         loading={deleting}
         onConfirm={handleDelete}
       />

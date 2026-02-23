@@ -10,6 +10,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatRelativeDate } from '@/lib/utils';
+import { UploadCOIDialog } from '@/components/dashboard/upload-coi-dialog';
+import { DashboardTutorial, useTutorial } from '@/components/dashboard/dashboard-tutorial';
 import {
   Building2,
   Users,
@@ -37,12 +39,26 @@ import type { ActivityAction } from '@/types';
 // Props
 // ============================================================================
 
+interface UploadDialogEntity {
+  id: string;
+  company_name: string;
+  property_id: string | null;
+}
+
+interface UploadDialogProperty {
+  id: string;
+  name: string;
+}
+
 interface DashboardClientProps {
   stats: DashboardStats;
   statusDistribution: StatusDistribution;
   actionItems: ActionItem[];
   propertyOverviews: PropertyOverview[];
   activity: ActivityEntry[];
+  propertyList: UploadDialogProperty[];
+  vendorList: UploadDialogEntity[];
+  tenantList: UploadDialogEntity[];
 }
 
 // ============================================================================
@@ -111,24 +127,43 @@ export function DashboardClient({
   actionItems,
   propertyOverviews,
   activity,
+  propertyList,
+  vendorList,
+  tenantList,
 }: DashboardClientProps) {
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const { showTutorial, startTutorial, closeTutorial } = useTutorial();
+
   return (
     <div className="space-y-6">
+      <DashboardTutorial active={showTutorial} onClose={closeTutorial} />
+
       {/* ---- Page Header with primary action ---- */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between" data-tutorial="dashboard-overview">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Overview</h1>
           <p className="text-sm text-muted-foreground">
             Compliance snapshot across all properties
           </p>
         </div>
-        <Button asChild>
-          <Link href="/dashboard/certificates/upload">
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={startTutorial} className="text-xs text-muted-foreground">
+            Take a Tour
+          </Button>
+          <Button onClick={() => setUploadOpen(true)} data-tutorial="upload-coi">
             <Upload className="mr-2 h-4 w-4" />
             Upload COI
-          </Link>
-        </Button>
+          </Button>
+        </div>
       </div>
+
+      <UploadCOIDialog
+        open={uploadOpen}
+        onOpenChange={setUploadOpen}
+        properties={propertyList}
+        vendors={vendorList}
+        tenants={tenantList}
+      />
 
       {/* ---- Stats Row ---- */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

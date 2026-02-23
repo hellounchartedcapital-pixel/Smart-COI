@@ -32,12 +32,14 @@ export async function checkAndScheduleNotifications(): Promise<number> {
       .from('vendors')
       .select('id, company_name, contact_email, property_id, organization_id, compliance_status, notifications_paused, properties(name), organizations(name)')
       .is('deleted_at', null)
+      .is('archived_at', null)
       .or('notifications_paused.eq.false,notifications_paused.is.null')
       .neq('compliance_status', 'compliant'),
     supabase
       .from('tenants')
       .select('id, company_name, contact_email, property_id, organization_id, compliance_status, notifications_paused, properties(name), organizations(name)')
       .is('deleted_at', null)
+      .is('archived_at', null)
       .or('notifications_paused.eq.false,notifications_paused.is.null')
       .neq('compliance_status', 'compliant'),
   ]);

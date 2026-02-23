@@ -52,13 +52,15 @@ export async function checkVendorTenantLimit(
     .from('vendors')
     .select('id', { count: 'exact', head: true })
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const { count: tenantCount } = await supabase
     .from('tenants')
     .select('id', { count: 'exact', head: true })
     .eq('organization_id', orgId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .is('archived_at', null);
 
   const total = (vendorCount ?? 0) + (tenantCount ?? 0);
 

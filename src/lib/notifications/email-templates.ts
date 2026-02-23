@@ -260,8 +260,8 @@ export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
       <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">1</div>
     </td>
     <td style="vertical-align:top;padding:12px 0 12px 12px;">
-      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Set up your organization</p>
-      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Add your company name, certificate holder entity, and additional insured entities that appear on your vendor and tenant certificates.</p>
+      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Add your properties and vendors/tenants</p>
+      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Create your properties, then add the vendors and tenants whose insurance you need to track.</p>
     </td>
   </tr>
   <!-- Divider -->
@@ -272,8 +272,8 @@ export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
       <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">2</div>
     </td>
     <td style="vertical-align:top;padding:12px 0 12px 12px;">
-      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Add properties &amp; requirements</p>
-      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Create your first property and select the insurance requirement templates that match your vendor and tenant contracts.</p>
+      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Upload your first Certificate of Insurance</p>
+      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Upload a COI and watch SmartCOI extract coverage details and check compliance in seconds.</p>
     </td>
   </tr>
   <!-- Divider -->
@@ -284,8 +284,20 @@ export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
       <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">3</div>
     </td>
     <td style="vertical-align:top;padding:12px 0 12px 12px;">
-      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Upload your first COI</p>
-      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Upload a certificate of insurance and watch SmartCOI extract coverage details and check compliance in seconds.</p>
+      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Set up your compliance requirement templates</p>
+      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Define the insurance coverages and limits each vendor or tenant type needs to meet.</p>
+    </td>
+  </tr>
+  <!-- Divider -->
+  <tr><td colspan="2" style="padding:0;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
+  <!-- Step 4 -->
+  <tr>
+    <td style="width:40px;vertical-align:top;padding:12px 0;">
+      <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">4</div>
+    </td>
+    <td style="vertical-align:top;padding:12px 0 12px 12px;">
+      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Share portal links for self-service uploads</p>
+      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Generate a portal link for each vendor or tenant so they can upload their own certificates directly.</p>
     </td>
   </tr>
 </table>
@@ -293,7 +305,7 @@ export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
 <!-- CTA Button -->
 <table cellpadding="0" cellspacing="0" style="margin:24px auto;" align="center">
 <tr><td style="background:#059669;border-radius:6px;padding:12px 32px;" align="center">
-  <a href="${fields.setup_link}" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;display:inline-block;">Go to Setup</a>
+  <a href="${fields.setup_link}" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;display:inline-block;">Go to Dashboard</a>
 </td></tr>
 </table>
 
