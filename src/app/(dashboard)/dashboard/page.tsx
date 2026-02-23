@@ -75,12 +75,14 @@ async function getDashboardData(orgId: string) {
       .from('vendors')
       .select('id, company_name, property_id, compliance_status, properties(name)')
       .eq('organization_id', orgId)
-      .is('deleted_at', null),
+      .is('deleted_at', null)
+      .is('archived_at', null),
     supabase
       .from('tenants')
       .select('id, company_name, property_id, compliance_status, properties(name)')
       .eq('organization_id', orgId)
-      .is('deleted_at', null),
+      .is('deleted_at', null)
+      .is('archived_at', null),
     supabase
       .from('activity_log')
       .select('id, action, description, created_at')
@@ -317,12 +319,28 @@ async function getDashboardData(orgId: string) {
     };
   });
 
+  // For the upload dialog, provide flat property/vendor/tenant lists
+  const propertyList = properties.map((p) => ({ id: p.id, name: p.name }));
+  const vendorList = vendors.map((v) => ({
+    id: v.id,
+    company_name: v.company_name,
+    property_id: v.property_id,
+  }));
+  const tenantList = tenants.map((t) => ({
+    id: t.id,
+    company_name: t.company_name,
+    property_id: t.property_id,
+  }));
+
   return {
     stats,
     statusDistribution: statusCounts,
     actionItems,
     propertyOverviews,
     activity,
+    propertyList,
+    vendorList,
+    tenantList,
   };
 }
 

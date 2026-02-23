@@ -59,6 +59,7 @@ export default async function TemplatesPage() {
     .select('template_id')
     .eq('organization_id', orgId)
     .is('deleted_at', null)
+    .is('archived_at', null)
     .in('template_id', templateIds.length > 0 ? templateIds : ['__none__']);
 
   const { data: tenants } = await supabase
@@ -66,6 +67,7 @@ export default async function TemplatesPage() {
     .select('template_id')
     .eq('organization_id', orgId)
     .is('deleted_at', null)
+    .is('archived_at', null)
     .in('template_id', templateIds.length > 0 ? templateIds : ['__none__']);
 
   // Count per template

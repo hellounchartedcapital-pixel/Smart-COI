@@ -22,12 +22,12 @@ import { signOut } from '@/lib/auth';
 const COLLAPSED_KEY = 'smartcoi-sidebar-collapsed';
 
 const navItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Properties', href: '/dashboard/properties', icon: Building2 },
-  { label: 'Templates', href: '/dashboard/templates', icon: FileCheck },
-  { label: 'Notifications', href: '/dashboard/notifications', icon: Bell },
-  { label: 'Settings', href: '/dashboard/settings', icon: Settings },
-  { label: 'Billing', href: '/dashboard/settings/billing', icon: CreditCard },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, tutorialId: null },
+  { label: 'Properties', href: '/dashboard/properties', icon: Building2, tutorialId: 'nav-properties' },
+  { label: 'Templates', href: '/dashboard/templates', icon: FileCheck, tutorialId: 'nav-templates' },
+  { label: 'Notifications', href: '/dashboard/notifications', icon: Bell, tutorialId: 'nav-notifications' },
+  { label: 'Settings', href: '/dashboard/settings', icon: Settings, tutorialId: null },
+  { label: 'Billing', href: '/dashboard/settings/billing', icon: CreditCard, tutorialId: null },
 ] as const;
 
 function getPageTitle(pathname: string): string {
@@ -156,6 +156,7 @@ export function DashboardShell({
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    data-tutorial={item.tutorialId ?? undefined}
                     className={cn(
                       'group flex h-10 items-center gap-3 rounded-lg text-sm font-medium transition-colors',
                       collapsed ? 'md:justify-center md:px-0' : '',

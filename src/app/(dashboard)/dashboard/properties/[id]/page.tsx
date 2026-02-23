@@ -44,22 +44,44 @@ export default async function PropertyDetailPage({ params }: Props) {
     .order('entity_type')
     .order('entity_name');
 
-  // Fetch vendors (not soft-deleted) with their templates
+  // Fetch vendors (not soft-deleted, not archived) with their templates
   const { data: vendors } = await supabase
     .from('vendors')
     .select('*, template:requirement_templates(id, name)')
     .eq('property_id', id)
     .eq('organization_id', orgId)
     .is('deleted_at', null)
+    .is('archived_at', null)
     .order('company_name');
 
-  // Fetch tenants (not soft-deleted) with their templates
+  // Fetch tenants (not soft-deleted, not archived) with their templates
   const { data: tenants } = await supabase
     .from('tenants')
     .select('*, template:requirement_templates(id, name)')
     .eq('property_id', id)
     .eq('organization_id', orgId)
     .is('deleted_at', null)
+    .is('archived_at', null)
+    .order('company_name');
+
+  // Fetch archived vendors
+  const { data: archivedVendors } = await supabase
+    .from('vendors')
+    .select('*, template:requirement_templates(id, name)')
+    .eq('property_id', id)
+    .eq('organization_id', orgId)
+    .is('deleted_at', null)
+    .not('archived_at', 'is', null)
+    .order('company_name');
+
+  // Fetch archived tenants
+  const { data: archivedTenants } = await supabase
+    .from('tenants')
+    .select('*, template:requirement_templates(id, name)')
+    .eq('property_id', id)
+    .eq('organization_id', orgId)
+    .is('deleted_at', null)
+    .not('archived_at', 'is', null)
     .order('company_name');
 
   // Fetch latest COI date per vendor
@@ -116,6 +138,8 @@ export default async function PropertyDetailPage({ params }: Props) {
       entities={entities ?? []}
       vendors={vendorList}
       tenants={tenantList}
+      archivedVendors={(archivedVendors ?? []) as (Vendor & { template?: RequirementTemplate | null })[]}
+      archivedTenants={(archivedTenants ?? []) as (Tenant & { template?: RequirementTemplate | null })[]}
       templates={(templates ?? []) as RequirementTemplate[]}
     />
   );

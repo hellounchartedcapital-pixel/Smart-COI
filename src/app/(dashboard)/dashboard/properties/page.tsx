@@ -120,13 +120,15 @@ export default async function PropertiesPage() {
         .from('vendors')
         .select('compliance_status')
         .eq('property_id', prop.id)
-        .is('deleted_at', null);
+        .is('deleted_at', null)
+        .is('archived_at', null);
 
       const { data: tenants } = await supabase
         .from('tenants')
         .select('compliance_status')
         .eq('property_id', prop.id)
-        .is('deleted_at', null);
+        .is('deleted_at', null)
+        .is('archived_at', null);
 
       const vList = vendors ?? [];
       const tList = tenants ?? [];

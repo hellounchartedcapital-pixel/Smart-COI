@@ -174,6 +174,7 @@ export default function CertificateUploadPage() {
           .eq('organization_id', orgId)
           .eq('property_id', selectedPropertyId)
           .is('deleted_at', null)
+          .is('archived_at', null)
           .order('company_name'),
         supabase
           .from('tenants')
@@ -181,6 +182,7 @@ export default function CertificateUploadPage() {
           .eq('organization_id', orgId)
           .eq('property_id', selectedPropertyId)
           .is('deleted_at', null)
+          .is('archived_at', null)
           .order('company_name'),
       ]);
 

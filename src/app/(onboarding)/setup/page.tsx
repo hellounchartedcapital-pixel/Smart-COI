@@ -7,9 +7,8 @@ import { createOrgAfterSignup, completeOnboarding } from '@/lib/actions/auth';
 import { StepOrgSetup, type OrgSetupData } from '@/components/onboarding/step-org-setup';
 import { StepProperty, type PropertyData } from '@/components/onboarding/step-property';
 import { StepTemplates, type SelectedTemplate } from '@/components/onboarding/step-templates';
-import { StepUpload } from '@/components/onboarding/step-upload';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 3;
 
 export default function OnboardingSetupPage() {
   const router = useRouter();
@@ -27,7 +26,6 @@ export default function OnboardingSetupPage() {
     additionalInsured: [],
   });
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
-  const [propertyId, setPropertyId] = useState<string | null>(null);
 
   // Store auth user ID for creating org/profile when missing
   const authUserIdRef = useRef<string | null>(null);
@@ -82,6 +80,7 @@ export default function OnboardingSetupPage() {
 
   // Helper: ensure org and user profile exist, return orgId
   // Uses a server action with service role to bypass RLS
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function ensureOrgAndProfile(companyName: string): Promise<string> {
     // If we already have an orgId, just return it
     if (orgId) return orgId;
@@ -190,7 +189,6 @@ export default function OnboardingSetupPage() {
         .single();
 
       if (propError) throw propError;
-      setPropertyId(property.id);
 
       // Insert property entities
       if (data.entities.length > 0) {
@@ -219,7 +217,7 @@ export default function OnboardingSetupPage() {
     setCurrentStep(3);
   }
 
-  // Step 3: Duplicate selected system templates into org templates
+  // Step 3: Duplicate selected system templates into org templates, then finish
   async function handleTemplatesNext(selected: SelectedTemplate[]) {
     if (!orgId) {
       setError('Organization not set up. Please go back to Step 1.');
@@ -265,7 +263,10 @@ export default function OnboardingSetupPage() {
         }
       }
 
-      setCurrentStep(4);
+      // Complete onboarding and go to dashboard
+      await completeOnboarding(orgId);
+      router.push('/dashboard');
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save templates');
     } finally {
@@ -273,25 +274,15 @@ export default function OnboardingSetupPage() {
     }
   }
 
-  function handleTemplatesSkip() {
-    setCurrentStep(4);
-  }
-
-  // Step 4: Finish onboarding
-  // Uses a server action with service role to bypass RLS — the client-side
-  // UPDATE on organizations can be silently blocked by RLS (0 rows affected,
-  // no error), causing onboarding_completed to never be set.
-  async function handleFinish() {
+  async function handleTemplatesSkip() {
     if (!orgId) {
       setError('Organization not set up. Please go back to Step 1.');
       return;
     }
     setSaving(true);
     setError(null);
-
     try {
       await completeOnboarding(orgId);
-
       router.push('/dashboard');
       router.refresh();
     } catch (err) {
@@ -299,10 +290,6 @@ export default function OnboardingSetupPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  function goBackToProperty() {
-    setCurrentStep(2);
   }
 
   const progressPercent = (currentStep / TOTAL_STEPS) * 100;
@@ -319,7 +306,6 @@ export default function OnboardingSetupPage() {
             {currentStep === 1 && 'Organization'}
             {currentStep === 2 && 'Property'}
             {currentStep === 3 && 'Templates'}
-            {currentStep === 4 && 'Upload'}
           </span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
@@ -354,14 +340,6 @@ export default function OnboardingSetupPage() {
         <StepTemplates
           onNext={handleTemplatesNext}
           onSkip={handleTemplatesSkip}
-          saving={saving}
-        />
-      )}
-      {currentStep === 4 && (
-        <StepUpload
-          hasProperty={propertyId !== null}
-          onGoBack={goBackToProperty}
-          onFinish={handleFinish}
           saving={saving}
         />
       )}
