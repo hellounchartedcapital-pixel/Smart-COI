@@ -218,12 +218,17 @@ async function getDashboardData(orgId: string) {
   const expirationMap = new Map<string, string | null>();
 
   if (confirmedCertIds.length > 0) {
-    const [compResultsRes, covRes] = await Promise.all([
+    const [compResultsRes, entityGapsRes, covRes] = await Promise.all([
       supabase
         .from('compliance_results')
         .select('certificate_id, status')
         .in('certificate_id', confirmedCertIds)
         .in('status', ['not_met', 'missing']),
+      supabase
+        .from('entity_compliance_results')
+        .select('certificate_id, status')
+        .in('certificate_id', confirmedCertIds)
+        .in('status', ['missing', 'partial_match']),
       supabase
         .from('extracted_coverages')
         .select('certificate_id, expiration_date')
@@ -234,6 +239,9 @@ async function getDashboardData(orgId: string) {
 
     const gapsByCert = new Map<string, number>();
     for (const r of compResultsRes.data ?? []) {
+      gapsByCert.set(r.certificate_id, (gapsByCert.get(r.certificate_id) ?? 0) + 1);
+    }
+    for (const r of entityGapsRes.data ?? []) {
       gapsByCert.set(r.certificate_id, (gapsByCert.get(r.certificate_id) ?? 0) + 1);
     }
 

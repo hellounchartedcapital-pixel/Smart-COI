@@ -171,7 +171,9 @@ export async function sendManualFollowUp(
       .in('status', ['missing', 'partial_match']);
 
     for (const eg of entityGaps ?? []) {
-      const pe = (eg.property_entity as unknown as { entity_name: string; entity_address: string | null; entity_type: string }[] | null)?.[0];
+      // Supabase returns a single object for many-to-one FK joins, not an array
+      const raw = eg.property_entity as unknown as { entity_name: string; entity_address: string | null; entity_type: string } | { entity_name: string; entity_address: string | null; entity_type: string }[] | null;
+      const pe = Array.isArray(raw) ? raw[0] : raw;
       if (!pe) continue;
       if (pe.entity_type === 'additional_insured') {
         gaps.push(`Your certificate needs to list ${pe.entity_name} as an Additional Insured. Please ask your insurance broker to add this endorsement.`);

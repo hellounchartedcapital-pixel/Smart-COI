@@ -216,7 +216,7 @@ ${contactBlock(fields)}`;
 // ============================================================================
 
 export function formatGapsAsHtml(gaps: string[]): string {
-  if (gaps.length === 0) return '<p style="font-size:13px;color:#475569;">No specific items listed.</p>';
+  if (gaps.length === 0) return '<p style="font-size:13px;color:#475569;">Please provide an updated Certificate of Insurance.</p>';
   return `<ul style="margin:0;padding:0 0 0 18px;font-size:13px;color:#334155;line-height:2;">
 ${gaps.map((g) => {
     const safe = escapeHtml(g);
