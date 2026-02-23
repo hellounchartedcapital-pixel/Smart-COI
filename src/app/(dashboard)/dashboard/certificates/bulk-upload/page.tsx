@@ -12,6 +12,7 @@ import {
   createVendor,
   createTenant,
   assignCertificateToEntity,
+  repairBulkUploadData,
 } from '@/lib/actions/properties';
 import {
   normalizeEntityName,
@@ -646,6 +647,13 @@ export default function BulkUploadPage() {
           )
         );
       }
+    }
+
+    // Force revalidation of all property pages + dashboard to clear any stale cache
+    try {
+      await repairBulkUploadData();
+    } catch {
+      // Non-critical — revalidation is best-effort
     }
   }, [orgId, userId, roster]);
 
@@ -1316,13 +1324,22 @@ export default function BulkUploadPage() {
           {/* Actions */}
           {allRosterDone && (
             <div className="flex justify-end gap-2">
-              <Button variant="outline" asChild>
-                <Link href={`/dashboard/properties/${selectedPropertyId}`}>
-                  View Property
-                </Link>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  router.refresh();
+                  router.push(`/dashboard/properties/${selectedPropertyId}`);
+                }}
+              >
+                View Property
               </Button>
-              <Button asChild>
-                <Link href="/dashboard">Go to Dashboard</Link>
+              <Button
+                onClick={() => {
+                  router.refresh();
+                  router.push('/dashboard');
+                }}
+              >
+                Go to Dashboard
               </Button>
             </div>
           )}
