@@ -140,8 +140,10 @@ Extract ALL entity names mentioned as additional insureds from this section and 
  */
 function getExtractionErrorMessage(status: number): string {
   switch (status) {
+    case 429:
+      return 'AI service is busy. Click retry to try again later.';
     case 529:
-      return 'Our AI service is temporarily busy. Please try uploading again in a moment.';
+      return 'AI service is busy. Click retry to try again later.';
     case 500:
     case 502:
     case 503:
@@ -156,11 +158,17 @@ function getExtractionErrorMessage(status: number): string {
   }
 }
 
+/** Status codes that are retryable (transient overload / rate limiting). */
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status === 529 || status === 502 || status === 503;
+}
+
 /**
  * Send a PDF (as base64) to the Anthropic Claude API and extract
  * structured COI data. Returns rows ready for database insertion.
  *
- * Automatically retries once for 529 (overloaded) errors after a 2-second delay.
+ * Automatically retries up to 3 times for transient errors (429, 529, 502, 503)
+ * with exponential backoff: 5s → 15s → 30s.
  */
 export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -204,62 +212,76 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
     'anthropic-version': '2023-06-01',
   };
 
-  // Call Claude API with automatic retry for 529 (overloaded)
-  let response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers,
-    body: requestBody,
-  });
+  // Retry with exponential backoff for transient errors
+  const BACKOFF_MS = [5_000, 15_000, 30_000];
+  let lastStatus = 0;
+  let lastErrorText = '';
 
-  if (response.status === 529) {
-    console.warn('Claude API overloaded (529), retrying in 2s…');
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    response = await fetch('https://api.anthropic.com/v1/messages', {
+  for (let attempt = 0; attempt <= BACKOFF_MS.length; attempt++) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers,
       body: requestBody,
     });
-  }
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Claude API error:', response.status, errorText);
+    if (response.ok) {
+      // Successful response — parse and return
+      const messageResponse = await response.json();
+      const responseText =
+        messageResponse.content?.[0]?.type === 'text' ? messageResponse.content[0].text : '';
+
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        return {
+          success: false, coverages: [], entities: [], insuredName: null,
+          error: 'Could not parse structured data from AI response',
+          userMessage: "We couldn't read this PDF. Please make sure it's a valid, non-corrupted PDF file.",
+        };
+      }
+
+      let parsed: AIExtractionResponse;
+      try {
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch {
+        return {
+          success: false, coverages: [], entities: [], insuredName: null,
+          error: 'AI returned malformed JSON',
+          userMessage: "We couldn't read this PDF. Please make sure it's a valid, non-corrupted PDF file.",
+        };
+      }
+
+      return mapToDbRows(parsed);
+    }
+
+    // Non-OK response
+    lastStatus = response.status;
+    lastErrorText = await response.text();
+    console.error(
+      `[extraction] Anthropic API error (attempt ${attempt + 1}/${BACKOFF_MS.length + 1}): status=${response.status} body=${lastErrorText.slice(0, 500)}`
+    );
+
     if (response.status === 401 || response.status === 403) {
       console.error('[CRITICAL] Anthropic API key issue — check ANTHROPIC_API_KEY');
     }
-    return {
-      success: false, coverages: [], entities: [], insuredName: null,
-      error: `AI extraction failed (status ${response.status})`,
-      userMessage: getExtractionErrorMessage(response.status),
-    };
+
+    // Only retry on transient errors
+    if (!isRetryableStatus(response.status) || attempt >= BACKOFF_MS.length) {
+      break;
+    }
+
+    const delay = BACKOFF_MS[attempt];
+    console.warn(
+      `[extraction] Retryable error (${response.status}), waiting ${delay / 1000}s before retry…`
+    );
+    await new Promise((resolve) => setTimeout(resolve, delay));
   }
 
-  const messageResponse = await response.json();
-  const responseText =
-    messageResponse.content?.[0]?.type === 'text' ? messageResponse.content[0].text : '';
-
-  // Parse JSON from the response
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    return {
-      success: false, coverages: [], entities: [], insuredName: null,
-      error: 'Could not parse structured data from AI response',
-      userMessage: "We couldn't read this PDF. Please make sure it's a valid, non-corrupted PDF file.",
-    };
-  }
-
-  let parsed: AIExtractionResponse;
-  try {
-    parsed = JSON.parse(jsonMatch[0]);
-  } catch {
-    return {
-      success: false, coverages: [], entities: [], insuredName: null,
-      error: 'AI returned malformed JSON',
-      userMessage: "We couldn't read this PDF. Please make sure it's a valid, non-corrupted PDF file.",
-    };
-  }
-
-  return mapToDbRows(parsed);
+  // All retries exhausted or non-retryable error
+  return {
+    success: false, coverages: [], entities: [], insuredName: null,
+    error: `AI extraction failed (status ${lastStatus})`,
+    userMessage: getExtractionErrorMessage(lastStatus),
+  };
 }
 
 // ============================================================================
