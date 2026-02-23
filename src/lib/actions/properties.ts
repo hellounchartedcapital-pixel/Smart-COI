@@ -605,3 +605,49 @@ export async function toggleTenantNotifications(tenantId: string, paused: boolea
   revalidatePath(`/dashboard/tenants/${tenantId}`);
   return { success: true };
 }
+
+// ---------------------------------------------------------------------------
+// Bulk certificate assignment
+// ---------------------------------------------------------------------------
+
+/**
+ * Assign a certificate to a vendor or tenant. Updates the certificate record
+ * and logs the activity. Called from bulk upload Step 4.
+ */
+export async function assignCertificateToEntity(input: {
+  certificateId: string;
+  entityId: string;
+  entityType: 'vendor' | 'tenant';
+  entityName: string;
+  fileName: string;
+  propertyId: string;
+}) {
+  const { supabase, userId, orgId } = await getAuthContext();
+
+  const updateField =
+    input.entityType === 'vendor'
+      ? { vendor_id: input.entityId }
+      : { tenant_id: input.entityId };
+
+  const { error } = await supabase
+    .from('certificates')
+    .update(updateField)
+    .eq('id', input.certificateId)
+    .eq('organization_id', orgId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    certificate_id: input.certificateId,
+    property_id: input.propertyId,
+    [input.entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: input.entityId,
+    action: 'coi_uploaded',
+    description: `COI "${input.fileName}" assigned to ${input.entityType} "${input.entityName}" via bulk upload`,
+    performed_by: userId,
+  });
+
+  revalidatePath(`/dashboard/properties/${input.propertyId}`);
+  revalidatePath(`/dashboard/${input.entityType}s/${input.entityId}`);
+  return { success: true };
+}
