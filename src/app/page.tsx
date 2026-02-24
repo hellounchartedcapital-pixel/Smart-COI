@@ -367,7 +367,7 @@ export default function LandingPage() {
               </div>
             </AnimateIn>
 
-            <div className="mt-16 grid gap-12 lg:grid-cols-3">
+            <div className="mt-16 grid gap-12 md:grid-cols-2 lg:grid-cols-4">
               {[
                 {
                   icon: <IconShield className="h-7 w-7" />,
@@ -414,6 +414,24 @@ export default function LandingPage() {
                           <span className="ml-auto text-xs text-slate-500">Auto-sent</span>
                         </div>
                       ))}
+                    </div>
+                  ),
+                },
+                {
+                  icon: <IconUpload className="h-7 w-7" />,
+                  title: 'Bulk COI Upload',
+                  desc: 'Upload all your COIs at once — our AI extracts coverage data and builds your vendor roster automatically. Go from a folder of PDFs to a complete compliance picture in minutes.',
+                  visual: (
+                    <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
+                      <div className="space-y-2">
+                        {['vendor-a-coi.pdf', 'vendor-b-coi.pdf', 'vendor-c-coi.pdf'].map((name, j) => (
+                          <div key={name} className="flex items-center gap-3 text-sm">
+                            <div className={`h-2 w-2 rounded-full ${j < 2 ? 'bg-[#73E2A7]' : 'bg-blue-400 animate-pulse'}`} />
+                            <span className="text-slate-300">{name}</span>
+                            <span className="ml-auto text-xs text-slate-500">{j < 2 ? 'Extracted' : 'Processing...'}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ),
                 },
@@ -492,8 +510,8 @@ export default function LandingPage() {
                 {
                   step: '02',
                   icon: <IconUpload className="h-6 w-6" />,
-                  title: 'Upload a COI',
-                  desc: 'Drag and drop a certificate PDF. Our AI handles the rest.',
+                  title: 'Upload Your COIs',
+                  desc: 'Upload a single COI or use Bulk Upload to process your entire portfolio at once. Our AI extracts the data automatically.',
                 },
                 {
                   step: '03',

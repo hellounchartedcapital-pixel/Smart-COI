@@ -295,6 +295,37 @@ export async function softDeleteVendor(vendorId: string, propertyId: string) {
   return archiveVendor(vendorId, propertyId);
 }
 
+export async function permanentlyDeleteVendor(vendorId: string, propertyId: string) {
+  const { supabase, userId, orgId } = await getAuthContext();
+
+  const { data: vendor } = await supabase
+    .from('vendors')
+    .select('company_name')
+    .eq('id', vendorId)
+    .single();
+
+  const { error } = await supabase
+    .from('vendors')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', vendorId)
+    .eq('organization_id', orgId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    property_id: propertyId,
+    vendor_id: vendorId,
+    action: 'status_changed',
+    description: `Vendor "${vendor?.company_name ?? vendorId}" deleted`,
+    performed_by: userId,
+  });
+
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  revalidatePath(`/dashboard/vendors/${vendorId}`);
+  return { success: true };
+}
+
 export async function archiveVendor(vendorId: string, propertyId: string) {
   const { supabase, userId, orgId } = await getAuthContext();
 
@@ -417,6 +448,37 @@ export async function softDeleteTenant(tenantId: string, propertyId: string) {
   return archiveTenant(tenantId, propertyId);
 }
 
+export async function permanentlyDeleteTenant(tenantId: string, propertyId: string) {
+  const { supabase, userId, orgId } = await getAuthContext();
+
+  const { data: tenant } = await supabase
+    .from('tenants')
+    .select('company_name')
+    .eq('id', tenantId)
+    .single();
+
+  const { error } = await supabase
+    .from('tenants')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', tenantId)
+    .eq('organization_id', orgId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    property_id: propertyId,
+    tenant_id: tenantId,
+    action: 'status_changed',
+    description: `Tenant "${tenant?.company_name ?? tenantId}" deleted`,
+    performed_by: userId,
+  });
+
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  revalidatePath(`/dashboard/tenants/${tenantId}`);
+  return { success: true };
+}
+
 export async function archiveTenant(tenantId: string, propertyId: string) {
   const { supabase, userId, orgId } = await getAuthContext();
 
@@ -476,6 +538,106 @@ export async function restoreTenant(tenantId: string, propertyId: string) {
 
   revalidatePath(`/dashboard/properties/${propertyId}`);
   revalidatePath(`/dashboard/tenants/${tenantId}`);
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Bulk vendor/tenant operations
+// ---------------------------------------------------------------------------
+
+export async function bulkArchiveVendors(vendorIds: string[], propertyId: string) {
+  const { supabase, userId, orgId } = await getAuthContext();
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from('vendors')
+    .update({ archived_at: now })
+    .in('id', vendorIds)
+    .eq('organization_id', orgId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    property_id: propertyId,
+    action: 'status_changed',
+    description: `${vendorIds.length} vendor(s) archived`,
+    performed_by: userId,
+  });
+
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  return { success: true };
+}
+
+export async function bulkDeleteVendors(vendorIds: string[], propertyId: string) {
+  const { supabase, userId, orgId } = await getAuthContext();
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from('vendors')
+    .update({ deleted_at: now })
+    .in('id', vendorIds)
+    .eq('organization_id', orgId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    property_id: propertyId,
+    action: 'status_changed',
+    description: `${vendorIds.length} vendor(s) deleted`,
+    performed_by: userId,
+  });
+
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  return { success: true };
+}
+
+export async function bulkArchiveTenants(tenantIds: string[], propertyId: string) {
+  const { supabase, userId, orgId } = await getAuthContext();
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from('tenants')
+    .update({ archived_at: now })
+    .in('id', tenantIds)
+    .eq('organization_id', orgId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    property_id: propertyId,
+    action: 'status_changed',
+    description: `${tenantIds.length} tenant(s) archived`,
+    performed_by: userId,
+  });
+
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  return { success: true };
+}
+
+export async function bulkDeleteTenants(tenantIds: string[], propertyId: string) {
+  const { supabase, userId, orgId } = await getAuthContext();
+  const now = new Date().toISOString();
+
+  const { error } = await supabase
+    .from('tenants')
+    .update({ deleted_at: now })
+    .in('id', tenantIds)
+    .eq('organization_id', orgId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    property_id: propertyId,
+    action: 'status_changed',
+    description: `${tenantIds.length} tenant(s) deleted`,
+    performed_by: userId,
+  });
+
+  revalidatePath(`/dashboard/properties/${propertyId}`);
   return { success: true };
 }
 
