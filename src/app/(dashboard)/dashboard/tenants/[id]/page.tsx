@@ -80,20 +80,37 @@ export default async function TenantDetailPage({ params }: Props) {
     }
   }
 
-  // Fetch most recent confirmed certificate
+  // Fetch most recent certificate (prefer confirmed, fall back to extracted)
   let extractedCoverages: ExtractedCoverage[] = [];
   let complianceResults: ComplianceResult[] = [];
   let entityResults: EntityComplianceResult[] = [];
   let hasCertificate = false;
 
-  const { data: latestCert } = await supabase
+  // Try confirmed first
+  let latestCert: { id: string } | null = null;
+  const { data: confirmedCert } = await supabase
     .from('certificates')
     .select('id')
     .eq('tenant_id', t.id)
     .eq('processing_status', 'review_confirmed')
     .order('uploaded_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
+
+  if (confirmedCert) {
+    latestCert = confirmedCert;
+  } else {
+    // Fall back to extracted certificate
+    const { data: extractedCert } = await supabase
+      .from('certificates')
+      .select('id')
+      .eq('tenant_id', t.id)
+      .eq('processing_status', 'extracted')
+      .order('uploaded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    latestCert = extractedCert;
+  }
 
   if (latestCert) {
     hasCertificate = true;
@@ -117,7 +134,7 @@ export default async function TenantDetailPage({ params }: Props) {
     entityResults = (entResults ?? []) as EntityComplianceResult[];
   }
 
-  // If no confirmed cert, check if any cert exists at all
+  // If no cert found above, check if any cert exists at all
   if (!hasCertificate) {
     const { count } = await supabase
       .from('certificates')

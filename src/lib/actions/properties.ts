@@ -4,6 +4,13 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { checkVendorTenantLimit, getRemainingExtractions } from '@/lib/plan-limits';
 import { checkActivePlan } from '@/lib/require-active-plan';
+import {
+  calculateCompliance,
+  type CoverageInput,
+  type EntityInput,
+  type RequirementInput,
+  type PropertyEntityInput,
+} from '@/lib/compliance/calculate';
 import type { PropertyType, EntityType } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -511,6 +518,15 @@ export async function updateVendor(vendorId: string, input: UpdateVendorInput) {
     performed_by: userId,
   });
 
+  // Recalculate compliance when template is changed
+  if (input.template_id) {
+    try {
+      await runComplianceForEntity(vendorId, 'vendor');
+    } catch (err) {
+      console.error(`[updateVendor] Compliance recalculation failed:`, err);
+    }
+  }
+
   revalidatePath(`/dashboard/vendors/${vendorId}`);
   return { success: true };
 }
@@ -579,6 +595,15 @@ export async function updateTenant(tenantId: string, input: UpdateTenantInput) {
     performed_by: userId,
   });
 
+  // Recalculate compliance when template is changed
+  if (input.template_id) {
+    try {
+      await runComplianceForEntity(tenantId, 'tenant');
+    } catch (err) {
+      console.error(`[updateTenant] Compliance recalculation failed:`, err);
+    }
+  }
+
   revalidatePath(`/dashboard/tenants/${tenantId}`);
   return { success: true };
 }
@@ -604,6 +629,200 @@ export async function toggleTenantNotifications(tenantId: string, paused: boolea
 
   revalidatePath(`/dashboard/tenants/${tenantId}`);
   return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// Compliance calculation for entities (works with extracted certificates)
+// ---------------------------------------------------------------------------
+
+/**
+ * Run compliance calculation for an entity against its most recent certificate.
+ * Unlike confirmCertificate() which only runs on review_confirmed certs, this
+ * works on both 'extracted' and 'review_confirmed' certificates so that
+ * compliance is visible immediately after bulk upload.
+ */
+export async function runComplianceForEntity(
+  entityId: string,
+  entityType: 'vendor' | 'tenant',
+) {
+  const { supabase, userId, orgId } = await getAuthContext();
+
+  const tableName = entityType === 'vendor' ? 'vendors' : 'tenants';
+  const { data: entity } = await supabase
+    .from(tableName)
+    .select('template_id, property_id')
+    .eq('id', entityId)
+    .eq('organization_id', orgId)
+    .single();
+
+  if (!entity?.template_id) {
+    // No template assigned — can't calculate compliance, set under_review if cert exists
+    const certFilter = entityType === 'vendor'
+      ? { vendor_id: entityId }
+      : { tenant_id: entityId };
+    const { data: anyCert } = await supabase
+      .from('certificates')
+      .select('id')
+      .match(certFilter)
+      .eq('organization_id', orgId)
+      .in('processing_status', ['extracted', 'review_confirmed'])
+      .limit(1)
+      .maybeSingle();
+
+    if (anyCert) {
+      await supabase
+        .from(tableName)
+        .update({ compliance_status: 'under_review' })
+        .eq('id', entityId);
+    }
+    return;
+  }
+
+  // Find most recent certificate (prefer confirmed, fall back to extracted)
+  const certFilter = entityType === 'vendor'
+    ? { vendor_id: entityId }
+    : { tenant_id: entityId };
+
+  let cert: { id: string } | null = null;
+
+  // Try confirmed first
+  const { data: confirmedCert } = await supabase
+    .from('certificates')
+    .select('id')
+    .match(certFilter)
+    .eq('organization_id', orgId)
+    .eq('processing_status', 'review_confirmed')
+    .order('uploaded_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (confirmedCert) {
+    cert = confirmedCert;
+  } else {
+    // Fall back to extracted
+    const { data: extractedCert } = await supabase
+      .from('certificates')
+      .select('id')
+      .match(certFilter)
+      .eq('organization_id', orgId)
+      .eq('processing_status', 'extracted')
+      .order('uploaded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    cert = extractedCert;
+  }
+
+  if (!cert) {
+    // No certificate at all — leave as pending
+    return;
+  }
+
+  // Fetch extracted coverages + entities
+  const [covRes, entRes] = await Promise.all([
+    supabase.from('extracted_coverages').select('*').eq('certificate_id', cert.id),
+    supabase.from('extracted_entities').select('*').eq('certificate_id', cert.id),
+  ]);
+
+  // Fetch template requirements
+  const { data: reqs } = await supabase
+    .from('template_coverage_requirements')
+    .select('*')
+    .eq('template_id', entity.template_id);
+
+  const requirements = (reqs ?? []) as RequirementInput[];
+
+  // Fetch property entities
+  let propertyEntities: PropertyEntityInput[] = [];
+  if (entity.property_id) {
+    const { data: pes } = await supabase
+      .from('property_entities')
+      .select('*')
+      .eq('property_id', entity.property_id);
+    propertyEntities = (pes ?? []) as PropertyEntityInput[];
+  }
+
+  // Map to inputs
+  const covInputs: CoverageInput[] = (covRes.data ?? []).map((c) => ({
+    id: c.id,
+    coverage_type: c.coverage_type,
+    carrier_name: c.carrier_name,
+    policy_number: c.policy_number,
+    limit_amount: c.limit_amount,
+    limit_type: c.limit_type,
+    effective_date: c.effective_date,
+    expiration_date: c.expiration_date,
+    additional_insured_listed: c.additional_insured_listed,
+    waiver_of_subrogation: c.waiver_of_subrogation,
+  }));
+
+  const entInputs: EntityInput[] = (entRes.data ?? []).map((e) => ({
+    id: e.id,
+    entity_name: e.entity_name,
+    entity_address: e.entity_address,
+    entity_type: e.entity_type,
+  }));
+
+  // Get expiration threshold
+  const { data: org } = await supabase
+    .from('organizations')
+    .select('settings')
+    .eq('id', orgId)
+    .single();
+  const thresholdDays = org?.settings?.expiration_warning_threshold_days ?? 30;
+
+  // Run compliance
+  const result = calculateCompliance(
+    covInputs,
+    entInputs,
+    requirements,
+    propertyEntities,
+    thresholdDays,
+  );
+
+  // Clear old compliance results for this certificate
+  await supabase.from('compliance_results').delete().eq('certificate_id', cert.id);
+  await supabase.from('entity_compliance_results').delete().eq('certificate_id', cert.id);
+
+  // Insert coverage compliance results
+  if (result.coverageResults.length > 0) {
+    const rows = result.coverageResults.map((r) => ({
+      certificate_id: cert!.id,
+      coverage_requirement_id: r.coverage_requirement_id,
+      extracted_coverage_id: r.extracted_coverage_id,
+      status: r.status,
+      gap_description: r.gap_description,
+    }));
+    await supabase.from('compliance_results').insert(rows);
+  }
+
+  // Insert entity compliance results
+  if (result.entityResults.length > 0) {
+    const rows = result.entityResults.map((r) => ({
+      certificate_id: cert!.id,
+      property_entity_id: r.property_entity_id,
+      extracted_entity_id: r.extracted_entity_id,
+      status: r.status,
+      match_details: r.match_details,
+    }));
+    await supabase.from('entity_compliance_results').insert(rows);
+  }
+
+  // Update entity compliance status
+  await supabase
+    .from(tableName)
+    .update({ compliance_status: result.overallStatus })
+    .eq('id', entityId);
+
+  // Log
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    certificate_id: cert.id,
+    [entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
+    action: 'compliance_checked',
+    description: `Compliance calculated: ${result.overallStatus}`,
+    performed_by: userId,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -649,6 +868,14 @@ export async function assignCertificateToEntity(input: {
     );
   }
 
+  // Update entity status to under_review (has COI, not yet confirmed)
+  const entityTable = input.entityType === 'vendor' ? 'vendors' : 'tenants';
+  await supabase
+    .from(entityTable)
+    .update({ compliance_status: 'under_review' })
+    .eq('id', input.entityId)
+    .eq('organization_id', orgId);
+
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     certificate_id: input.certificateId,
@@ -658,6 +885,14 @@ export async function assignCertificateToEntity(input: {
     description: `COI "${input.fileName}" assigned to ${input.entityType} "${input.entityName}" via bulk upload`,
     performed_by: userId,
   });
+
+  // Run compliance if the entity has a template assigned
+  try {
+    await runComplianceForEntity(input.entityId, input.entityType);
+  } catch (err) {
+    // Non-critical — compliance can be recalculated later
+    console.error(`[assignCertificateToEntity] Compliance calculation failed:`, err);
+  }
 
   revalidatePath(`/dashboard/properties/${input.propertyId}`);
   revalidatePath(`/dashboard/${input.entityType}s/${input.entityId}`);
