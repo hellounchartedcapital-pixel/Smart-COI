@@ -50,6 +50,8 @@ import {
   ArrowLeft,
   Plus,
   RotateCcw,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -77,6 +79,12 @@ interface FileEntry {
   };
 }
 
+interface TemplateOption {
+  id: string;
+  name: string;
+  category: string;
+}
+
 interface RosterRow {
   fileEntryId: string;
   fileName: string;
@@ -87,7 +95,11 @@ interface RosterRow {
   matchScore: number;
   isNew: boolean;
   propertyId: string;
+  contactName: string;
   contactEmail: string;
+  contactPhone: string;
+  entitySubType: string; // vendor_type or tenant_type
+  templateId: string;
   coverageCount: number;
   status: 'pending' | 'creating' | 'done' | 'failed';
   error?: string;
@@ -95,6 +107,28 @@ interface RosterRow {
 }
 
 type BulkStep = 'files' | 'processing' | 'review' | 'summary';
+
+const VENDOR_TYPE_SUGGESTIONS = [
+  'Janitorial',
+  'HVAC',
+  'Electrical',
+  'Plumbing',
+  'Roofing',
+  'Landscaping',
+  'Security',
+  'Elevator',
+  'Fire Protection',
+  'General Contractor',
+];
+
+const TENANT_TYPE_SUGGESTIONS = [
+  'Retail',
+  'Restaurant',
+  'Office',
+  'Medical',
+  'Warehouse',
+  'Industrial',
+];
 
 // Max concurrent extractions — keep low to avoid Anthropic rate limits
 const MAX_CONCURRENT = 2;
@@ -146,6 +180,8 @@ export default function BulkUploadPage() {
   // Step 3: Review roster
   const [roster, setRoster] = useState<RosterRow[]>([]);
   const [existingEntities, setExistingEntities] = useState<ExistingEntity[]>([]);
+  const [templates, setTemplates] = useState<TemplateOption[]>([]);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Step 4: Summary
   const [summaryStarted, setSummaryStarted] = useState(false);
@@ -180,11 +216,13 @@ export default function BulkUploadPage() {
   useEffect(() => {
     if (!orgId) return;
     (async () => {
-      const [propsRes, capacity] = await Promise.all([
+      const [propsRes, capacity, templatesRes] = await Promise.all([
         supabase.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
         getBulkUploadCapacity(),
+        supabase.from('requirement_templates').select('id, name, category').eq('organization_id', orgId).order('name'),
       ]);
       if (propsRes.data) setProperties(propsRes.data);
+      if (templatesRes.data) setTemplates(templatesRes.data);
       setExtractionsRemaining(capacity.extractionsRemaining);
       setExtractionsLimit(capacity.extractionsLimit);
       if (!capacity.canAddEntities) {
@@ -532,7 +570,11 @@ export default function BulkUploadPage() {
         matchScore: match?.score ?? 0,
         isNew: !match,
         propertyId: selectedPropertyId,
+        contactName: '',
         contactEmail: '',
+        contactPhone: '',
+        entitySubType: '',
+        templateId: '',
         coverageCount: fileEntry.extractedData?.coverageCount ?? 0,
         status: 'pending',
       });
@@ -553,7 +595,11 @@ export default function BulkUploadPage() {
           matchScore: match?.score ?? 0,
           isNew: !match,
           propertyId: selectedPropertyId,
+          contactName: '',
           contactEmail: '',
+          contactPhone: '',
+          entitySubType: '',
+          templateId: '',
           coverageCount: fe.extractedData?.coverageCount ?? 0,
           status: 'pending',
         });
@@ -602,7 +648,11 @@ export default function BulkUploadPage() {
             const result = await createVendor({
               property_id: first.propertyId,
               company_name: first.insuredName,
+              contact_name: first.contactName || undefined,
               contact_email: first.contactEmail || undefined,
+              contact_phone: first.contactPhone || undefined,
+              vendor_type: first.entitySubType || undefined,
+              template_id: first.templateId || undefined,
             });
             if ('error' in result) throw new Error(result.error);
             entityId = result.id;
@@ -610,7 +660,11 @@ export default function BulkUploadPage() {
             const result = await createTenant({
               property_id: first.propertyId,
               company_name: first.insuredName,
+              contact_name: first.contactName || undefined,
               contact_email: first.contactEmail || undefined,
+              contact_phone: first.contactPhone || undefined,
+              tenant_type: first.entitySubType || undefined,
+              template_id: first.templateId || undefined,
             });
             if ('error' in result) throw new Error(result.error);
             entityId = result.id;
@@ -691,6 +745,20 @@ export default function BulkUploadPage() {
     setRoster((prev) =>
       prev.map((r) => (r.fileEntryId === fileEntryId ? { ...r, ...updates } : r))
     );
+  }
+
+  function toggleRowExpanded(fileEntryId: string) {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(fileEntryId)) next.delete(fileEntryId);
+      else next.add(fileEntryId);
+      return next;
+    });
+  }
+
+  // Filter templates by entity type for roster
+  function getTemplatesForType(entityType: 'vendor' | 'tenant') {
+    return templates.filter((t) => t.category === entityType);
   }
 
   // ---- Progress for step 2 ----
@@ -1083,47 +1151,47 @@ export default function BulkUploadPage() {
           <div>
             <h2 className="text-lg font-semibold">Review & Complete Roster</h2>
             <p className="text-sm text-muted-foreground">
-              Verify the extracted data, fix names, set entity types, and confirm matches.
+              Verify the extracted data, fix names, set entity types, assign templates, and confirm matches.
             </p>
           </div>
 
-          {/* Roster table */}
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[200px]">Company Name</TableHead>
-                  <TableHead className="w-[100px]">Type</TableHead>
-                  <TableHead className="w-[120px]">Match</TableHead>
-                  <TableHead className="w-[180px]">Email</TableHead>
-                  <TableHead className="w-[80px] text-center">Coverages</TableHead>
-                  <TableHead className="w-[140px]">File</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {roster.map((row) => (
-                  <TableRow key={row.fileEntryId}>
-                    <TableCell>
+          {/* Roster entries */}
+          <div className="space-y-3">
+            {roster.map((row) => {
+              const isExpanded = expandedRows.has(row.fileEntryId);
+              const typeSuggestions = row.entityType === 'vendor' ? VENDOR_TYPE_SUGGESTIONS : TENANT_TYPE_SUGGESTIONS;
+              const availableTemplates = getTemplatesForType(row.entityType);
+
+              return (
+                <div key={row.fileEntryId} className="rounded-lg border border-slate-200 bg-white">
+                  {/* Primary row — always visible */}
+                  <div className="grid gap-3 p-4" style={{ gridTemplateColumns: '1fr auto auto auto auto' }}>
+                    {/* Company Name — full width input */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Company Name</Label>
                       <Input
                         value={row.insuredName}
                         onChange={(e) =>
-                          updateRosterRow(row.fileEntryId, {
-                            insuredName: e.target.value,
-                          })
+                          updateRosterRow(row.fileEntryId, { insuredName: e.target.value })
                         }
-                        className="h-8 text-sm"
+                        className="h-9 text-sm w-full min-w-[320px]"
                       />
-                    </TableCell>
-                    <TableCell>
+                    </div>
+
+                    {/* Entity type */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Type</Label>
                       <Select
                         value={row.entityType}
                         onValueChange={(v) =>
                           updateRosterRow(row.fileEntryId, {
                             entityType: v as 'vendor' | 'tenant',
+                            entitySubType: '', // reset subtype on type change
+                            templateId: '', // reset template on type change
                           })
                         }
                       >
-                        <SelectTrigger className="h-8 text-xs">
+                        <SelectTrigger className="h-9 w-[110px] text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1131,49 +1199,158 @@ export default function BulkUploadPage() {
                           <SelectItem value="tenant">Tenant</SelectItem>
                         </SelectContent>
                       </Select>
-                    </TableCell>
-                    <TableCell>
-                      {row.matchedEntityId && !row.isNew ? (
-                        <Badge
-                          variant="outline"
-                          className="text-xs text-green-700 border-green-200 bg-green-50"
-                        >
-                          Matched
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="text-xs text-blue-700 border-blue-200 bg-blue-50"
-                        >
-                          <Plus className="mr-0.5 h-3 w-3" />
-                          New
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
+                    </div>
+
+                    {/* Match badge */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Match</Label>
+                      <div className="flex h-9 items-center">
+                        {row.matchedEntityId && !row.isNew ? (
+                          <Badge
+                            variant="outline"
+                            className="text-xs text-green-700 border-green-200 bg-green-50"
+                          >
+                            Matched
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="text-xs text-blue-700 border-blue-200 bg-blue-50"
+                          >
+                            <Plus className="mr-0.5 h-3 w-3" />
+                            New
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Coverages count */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Coverages</Label>
+                      <div className="flex h-9 items-center text-sm">{row.coverageCount}</div>
+                    </div>
+
+                    {/* Expand toggle */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground invisible">More</Label>
+                      <button
+                        type="button"
+                        onClick={() => toggleRowExpanded(row.fileEntryId)}
+                        className="flex h-9 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-slate-100 transition-colors"
+                      >
+                        {isExpanded ? (
+                          <>Less <ChevronUp className="h-3 w-3" /></>
+                        ) : (
+                          <>More <ChevronDown className="h-3 w-3" /></>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Second row — template + email (always visible) */}
+                  <div className="grid gap-3 px-4 pb-3 sm:grid-cols-2" style={{ marginTop: '-4px' }}>
+                    {/* Requirement Template */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Requirement Template</Label>
+                      <Select
+                        value={row.templateId}
+                        onValueChange={(v) =>
+                          updateRosterRow(row.fileEntryId, { templateId: v })
+                        }
+                      >
+                        <SelectTrigger className="h-9 text-xs w-full">
+                          <SelectValue placeholder="Select template..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">None</SelectItem>
+                          {availableTemplates.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Email */}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Contact Email</Label>
                       <Input
                         value={row.contactEmail}
                         onChange={(e) =>
-                          updateRosterRow(row.fileEntryId, {
-                            contactEmail: e.target.value,
-                          })
+                          updateRosterRow(row.fileEntryId, { contactEmail: e.target.value })
                         }
                         placeholder="contact@example.com"
-                        className="h-8 text-xs"
+                        className="h-9 text-sm w-full min-w-[250px]"
                       />
-                    </TableCell>
-                    <TableCell className="text-center text-sm">
-                      {row.coverageCount}
-                    </TableCell>
-                    <TableCell>
-                      <p className="truncate text-xs text-muted-foreground" title={row.fileName}>
-                        {row.fileName}
+                    </div>
+                  </div>
+
+                  {/* Expandable details */}
+                  {isExpanded && (
+                    <div className="border-t border-slate-100 bg-slate-50/50 px-4 py-3">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        {/* Contact Name */}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Contact Name</Label>
+                          <Input
+                            value={row.contactName}
+                            onChange={(e) =>
+                              updateRosterRow(row.fileEntryId, { contactName: e.target.value })
+                            }
+                            placeholder="John Smith"
+                            className="h-9 text-sm"
+                          />
+                        </div>
+
+                        {/* Phone */}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">Phone Number</Label>
+                          <Input
+                            value={row.contactPhone}
+                            onChange={(e) =>
+                              updateRosterRow(row.fileEntryId, { contactPhone: e.target.value })
+                            }
+                            placeholder="(555) 123-4567"
+                            className="h-9 text-sm"
+                          />
+                        </div>
+
+                        {/* Vendor/Tenant Sub-type */}
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">
+                            {row.entityType === 'vendor' ? 'Vendor' : 'Tenant'} Type
+                          </Label>
+                          <Select
+                            value={row.entitySubType}
+                            onValueChange={(v) =>
+                              updateRosterRow(row.fileEntryId, { entitySubType: v })
+                            }
+                          >
+                            <SelectTrigger className="h-9 text-xs">
+                              <SelectValue placeholder="Select type..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">None</SelectItem>
+                              {typeSuggestions.map((t) => (
+                                <SelectItem key={t} value={t}>
+                                  {t}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* File name */}
+                      <p className="mt-2 truncate text-xs text-muted-foreground" title={row.fileName}>
+                        Source file: {row.fileName}
                       </p>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Summary counts */}

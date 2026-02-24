@@ -206,17 +206,31 @@ async function recalculateComplianceForTemplate(
         ? { vendor_id: entity.id }
         : { tenant_id: entity.id };
 
-    const { data: cert } = await supabase
+    // Try confirmed first, then fall back to extracted
+    const { data: confirmedCert } = await supabase
       .from('certificates')
       .select('id')
       .match(certFilter)
       .eq('processing_status', 'review_confirmed')
       .order('uploaded_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    let cert = confirmedCert;
+    if (!cert) {
+      const { data: extractedCert } = await supabase
+        .from('certificates')
+        .select('id')
+        .match(certFilter)
+        .eq('processing_status', 'extracted')
+        .order('uploaded_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      cert = extractedCert;
+    }
 
     if (!cert) {
-      // No confirmed cert — set to pending
+      // No cert at all — set to pending
       const table = entity.type === 'vendor' ? 'vendors' : 'tenants';
       await supabase
         .from(table)
