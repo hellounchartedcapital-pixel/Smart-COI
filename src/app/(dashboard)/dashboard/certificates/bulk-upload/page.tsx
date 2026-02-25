@@ -139,6 +139,12 @@ const STAGGER_DELAY_MS = 3_000;
 // Client-side retry backoff for failed extractions (ms)
 const CLIENT_RETRY_DELAYS = [5_000, 15_000];
 
+// Per-request fetch timeout (ms) — prevents indefinite hangs
+const FETCH_TIMEOUT_MS = 120_000;
+
+// Rough estimate per file for initial ETA before any complete
+const EST_SECONDS_PER_FILE = 25;
+
 let nextFileId = 0;
 function generateFileId(): string {
   return `file_${Date.now()}_${nextFileId++}`;
@@ -372,6 +378,8 @@ export default function BulkUploadPage() {
     async function processOne(entry: FileEntry) {
       if (abortRef.current) return;
 
+      console.log(`[bulk] Starting file: ${entry.file.name} (id=${entry.id})`);
+
       // Update status: uploading
       setFiles((prev) =>
         prev.map((f) => (f.id === entry.id ? { ...f, status: 'uploading', error: undefined } : f))
@@ -392,6 +400,7 @@ export default function BulkUploadPage() {
 
           // Upload to storage
           const storagePath = `bulk/${orgId}/${Date.now()}_${entry.file.name}`;
+          console.log(`[bulk] Uploading ${entry.file.name} → ${storagePath}`);
           const { error: uploadError } = await supabase.storage
             .from('coi-documents')
             .upload(storagePath, entry.file, { upsert: false });
@@ -413,6 +422,7 @@ export default function BulkUploadPage() {
 
           if (certError || !cert) throw new Error(`Record failed: ${certError?.message}`);
           certId = cert.id;
+          console.log(`[bulk] Uploaded ${entry.file.name} → certId=${certId}`);
 
           // Update with cert ID
           setFiles((prev) =>
@@ -424,6 +434,7 @@ export default function BulkUploadPage() {
           );
         } else {
           // Already uploaded — skip to extraction
+          console.log(`[bulk] Resuming extraction for ${entry.file.name} (certId=${certId})`);
           setFiles((prev) =>
             prev.map((f) =>
               f.id === entry.id ? { ...f, status: 'extracting', error: undefined } : f
@@ -438,11 +449,56 @@ export default function BulkUploadPage() {
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
           if (abortRef.current) return;
 
-          const extractRes = await fetch('/api/certificates/extract', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ certificateId: certId }),
-          });
+          // Clear stale retry message — show active extraction status
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === entry.id
+                ? {
+                    ...f,
+                    status: 'extracting',
+                    error: attempt > 0 ? `Attempt ${attempt + 1} of ${maxAttempts}...` : undefined,
+                  }
+                : f
+            )
+          );
+
+          console.log(`[bulk] Extracting ${entry.file.name} attempt ${attempt + 1}/${maxAttempts} (certId=${certId})`);
+
+          // Fetch with timeout to prevent indefinite hangs
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+          let extractRes: Response;
+          try {
+            extractRes = await fetch('/api/certificates/extract', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ certificateId: certId }),
+              signal: controller.signal,
+            });
+          } catch (fetchErr) {
+            clearTimeout(timeoutId);
+            // AbortController timeout or network error
+            const isTimeout = fetchErr instanceof DOMException && fetchErr.name === 'AbortError';
+            lastError = isTimeout ? 'Extraction timed out' : 'Network error';
+            console.warn(`[bulk] Fetch error for ${entry.file.name}: ${lastError}`);
+            // Fall through to retry logic below
+            if (attempt < CLIENT_RETRY_DELAYS.length) {
+              const delay = CLIENT_RETRY_DELAYS[attempt];
+              setFiles((prev) =>
+                prev.map((f) =>
+                  f.id === entry.id
+                    ? { ...f, error: `${lastError}. Retrying in ${delay / 1000}s...`, attempts: attempt + 1 }
+                    : f
+                )
+              );
+              await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+            continue;
+          }
+          clearTimeout(timeoutId);
+
+          console.log(`[bulk] Extract response for ${entry.file.name}: status=${extractRes.status}`);
 
           if (extractRes.ok) {
             const extractBody = await extractRes.json();
@@ -454,12 +510,15 @@ export default function BulkUploadPage() {
               .eq('id', certId!)
               .single();
 
+            console.log(`[bulk] ✓ Done: ${entry.file.name} — insured="${updatedCert?.insured_name}", coverages=${extractBody.coverages}`);
+
             setFiles((prev) =>
               prev.map((f) =>
                 f.id === entry.id
                   ? {
                       ...f,
                       status: 'done',
+                      error: undefined,
                       attempts: attempt + 1,
                       extractedData: {
                         insuredName: updatedCert?.insured_name ?? null,
@@ -476,7 +535,8 @@ export default function BulkUploadPage() {
 
           // Failed — check if retryable
           const body = await extractRes.json().catch(() => ({}));
-          lastError = body.error ?? 'Extraction failed';
+          lastError = body.error ?? `Extraction failed (HTTP ${extractRes.status})`;
+          console.warn(`[bulk] ✗ Failed: ${entry.file.name} — ${lastError} (status=${extractRes.status}, attempt=${attempt + 1})`);
 
           // Plan-related errors should not retry
           if (isPlanInactiveError(lastError) || extractRes.status === 403) {
@@ -494,7 +554,7 @@ export default function BulkUploadPage() {
             setFiles((prev) =>
               prev.map((f) =>
                 f.id === entry.id
-                  ? { ...f, error: `Retrying in ${delay / 1000}s...`, attempts: attempt + 1 }
+                  ? { ...f, error: `${lastError}. Retrying in ${delay / 1000}s...`, attempts: attempt + 1 }
                   : f
               )
             );
@@ -506,6 +566,7 @@ export default function BulkUploadPage() {
         throw new Error(lastError);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Processing failed';
+        console.error(`[bulk] ✗ Final failure: ${entry.file.name} — ${message}`);
         if (isPlanInactiveError(message)) {
           showUpgradeModal(message.replace(PLAN_INACTIVE_TAG, '').trim());
           abortRef.current = true;
@@ -524,6 +585,7 @@ export default function BulkUploadPage() {
     // Process with staggered concurrency
     const queue = [...pendingFiles];
     const active: Promise<void>[] = [];
+    console.log(`[bulk] Starting queue: ${queue.length} files, max concurrency=${MAX_CONCURRENT}`);
 
     async function runQueue() {
       while (queue.length > 0 && !abortRef.current) {
@@ -550,6 +612,7 @@ export default function BulkUploadPage() {
         active.push(promise);
       }
       await Promise.all(active);
+      console.log(`[bulk] Queue complete. Aborted=${abortRef.current}`);
     }
 
     await runQueue();
@@ -788,12 +851,21 @@ export default function BulkUploadPage() {
 
   // Time estimate
   const estimatedTimeRemaining = (() => {
-    if (!processStartTime || finishedCount === 0) return null;
-    const elapsed = Date.now() - processStartTime;
-    const avgPerFile = elapsed / finishedCount;
+    if (!processStartTime) return null;
     const remaining = files.length - finishedCount;
     if (remaining <= 0) return null;
-    const remainMs = avgPerFile * remaining;
+
+    let remainMs: number;
+    if (finishedCount > 0) {
+      // Use actual average once we have data
+      const elapsed = Date.now() - processStartTime;
+      const avgPerFile = elapsed / finishedCount;
+      remainMs = avgPerFile * remaining;
+    } else {
+      // Initial rough estimate before any file completes
+      remainMs = remaining * EST_SECONDS_PER_FILE * 1000;
+    }
+
     const mins = Math.ceil(remainMs / 60_000);
     if (mins <= 1) return 'less than a minute';
     return `~${mins} minute${mins !== 1 ? 's' : ''}`;

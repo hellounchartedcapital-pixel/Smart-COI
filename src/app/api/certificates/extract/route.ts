@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
     if (!certificateId) {
       return NextResponse.json({ error: 'certificateId is required' }, { status: 400 });
     }
+    console.log(`[extract] Starting extraction for certId=${certificateId}, org=${orgId}`);
 
     // ---- Fetch certificate record ----
     const serviceClient = createServiceClient();
@@ -133,7 +134,10 @@ export async function POST(req: NextRequest) {
     const pdfBase64 = buffer.toString('base64');
 
     // ---- AI extraction ----
+    console.log(`[extract] Calling AI extraction for certId=${certificateId}, fileSize=${buffer.length} bytes`);
+    const extractStart = Date.now();
     const result = await extractCOIFromPDF(pdfBase64);
+    console.log(`[extract] AI extraction completed for certId=${certificateId} in ${Date.now() - extractStart}ms, success=${result.success}`);
 
     if (!result.success) {
       await serviceClient
@@ -222,6 +226,7 @@ export async function POST(req: NextRequest) {
       performed_by: user.id,
     });
 
+    console.log(`[extract] ✓ Done certId=${certificateId}: ${result.coverages.length} coverages, ${result.entities.length} entities, insured="${result.insuredName}"`);
     return NextResponse.json({
       success: true,
       certificateId,
@@ -229,7 +234,7 @@ export async function POST(req: NextRequest) {
       entities: result.entities.length,
     });
   } catch (err) {
-    console.error('Certificate extraction error:', err);
+    console.error('[extract] Certificate extraction error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
