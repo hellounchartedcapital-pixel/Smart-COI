@@ -1357,16 +1357,16 @@ export default function BulkUploadPage() {
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Requirement Template</Label>
                       <Select
-                        value={row.templateId}
+                        value={row.templateId || '_none'}
                         onValueChange={(v) =>
-                          updateRosterRow(row.fileEntryId, { templateId: v })
+                          updateRosterRow(row.fileEntryId, { templateId: v === '_none' ? '' : v })
                         }
                       >
                         <SelectTrigger className="h-9 text-xs w-full">
                           <SelectValue placeholder="Select template..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="_none">None</SelectItem>
                           {availableTemplates.map((t) => (
                             <SelectItem key={t.id} value={t.id}>
                               {t.name}
@@ -1426,16 +1426,16 @@ export default function BulkUploadPage() {
                             {row.entityType === 'vendor' ? 'Vendor' : 'Tenant'} Type
                           </Label>
                           <Select
-                            value={row.entitySubType}
+                            value={row.entitySubType || '_none'}
                             onValueChange={(v) =>
-                              updateRosterRow(row.fileEntryId, { entitySubType: v })
+                              updateRosterRow(row.fileEntryId, { entitySubType: v === '_none' ? '' : v })
                             }
                           >
                             <SelectTrigger className="h-9 text-xs">
                               <SelectValue placeholder="Select type..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">None</SelectItem>
+                              <SelectItem value="_none">None</SelectItem>
                               {typeSuggestions.map((t) => (
                                 <SelectItem key={t} value={t}>
                                   {t}
