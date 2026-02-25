@@ -48,10 +48,7 @@ import {
   CheckCircle2,
   Loader2,
   ArrowLeft,
-  Plus,
   RotateCcw,
-  ChevronDown,
-  ChevronUp,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -191,7 +188,6 @@ export default function BulkUploadPage() {
   const [roster, setRoster] = useState<RosterRow[]>([]);
   const [existingEntities, setExistingEntities] = useState<ExistingEntity[]>([]);
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Step 4: Summary
   const [summaryStarted, setSummaryStarted] = useState(false);
@@ -285,14 +281,32 @@ export default function BulkUploadPage() {
   const isProcessing = step === 'processing' && processingStarted && !files.every(
     (f) => f.status === 'done' || f.status === 'failed'
   );
+  const [navWarningHref, setNavWarningHref] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isProcessing) return;
     function handleBeforeUnload(e: BeforeUnloadEvent) {
       e.preventDefault();
     }
+    // Intercept client-side <a> clicks to prevent Next.js navigation
+    function handleLinkClick(e: MouseEvent) {
+      const anchor = (e.target as Element).closest('a[href]');
+      if (!anchor) return;
+      const href = anchor.getAttribute('href');
+      if (!href || href.startsWith('http') || href.startsWith('mailto:')) return;
+      // Allow hash-only links
+      if (href.startsWith('#')) return;
+      // This is an internal navigation — intercept it
+      e.preventDefault();
+      e.stopPropagation();
+      setNavWarningHref(href);
+    }
     window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('click', handleLinkClick, true);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('click', handleLinkClick, true);
+    };
   }, [isProcessing]);
 
   // ---- File handlers ----
@@ -830,15 +844,6 @@ export default function BulkUploadPage() {
     );
   }
 
-  function toggleRowExpanded(fileEntryId: string) {
-    setExpandedRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(fileEntryId)) next.delete(fileEntryId);
-      else next.add(fileEntryId);
-      return next;
-    });
-  }
-
   // Filter templates by entity type for roster
   function getTemplatesForType(entityType: 'vendor' | 'tenant') {
     return templates.filter((t) => t.category === entityType);
@@ -1255,105 +1260,74 @@ export default function BulkUploadPage() {
           <div>
             <h2 className="text-lg font-semibold">Review & Complete Roster</h2>
             <p className="text-sm text-muted-foreground">
-              Verify the extracted data, fix names, set entity types, assign templates, and confirm matches.
+              Verify names, add contact info, and assign requirement templates.
             </p>
           </div>
 
           {/* Roster entries */}
           <div className="space-y-3">
             {roster.map((row) => {
-              const isExpanded = expandedRows.has(row.fileEntryId);
-              const typeSuggestions = row.entityType === 'vendor' ? VENDOR_TYPE_SUGGESTIONS : TENANT_TYPE_SUGGESTIONS;
               const availableTemplates = getTemplatesForType(row.entityType);
 
               return (
-                <div key={row.fileEntryId} className="rounded-lg border border-slate-200 bg-white">
-                  {/* Primary row — always visible */}
-                  <div className="grid gap-3 p-4" style={{ gridTemplateColumns: '1fr auto auto auto auto' }}>
-                    {/* Company Name — full width input */}
-                    <div className="space-y-1">
+                <div key={row.fileEntryId} className="rounded-lg border border-slate-200 bg-white p-4">
+                  {/* Row 1: Company Name (full width) */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 space-y-1">
                       <Label className="text-xs text-muted-foreground">Company Name</Label>
                       <Input
                         value={row.insuredName}
                         onChange={(e) =>
                           updateRosterRow(row.fileEntryId, { insuredName: e.target.value })
                         }
-                        className="h-9 text-sm w-full min-w-[320px]"
+                        className="h-9 text-sm w-full"
                       />
                     </div>
-
-                    {/* Entity type */}
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Type</Label>
-                      <Select
-                        value={row.entityType}
-                        onValueChange={(v) =>
-                          updateRosterRow(row.fileEntryId, {
-                            entityType: v as 'vendor' | 'tenant',
-                            entitySubType: '', // reset subtype on type change
-                            templateId: '', // reset template on type change
-                          })
-                        }
-                      >
-                        <SelectTrigger className="h-9 w-[110px] text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="vendor">Vendor</SelectItem>
-                          <SelectItem value="tenant">Tenant</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Match badge */}
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Match</Label>
-                      <div className="flex h-9 items-center">
-                        {row.matchedEntityId && !row.isNew ? (
-                          <Badge
-                            variant="outline"
-                            className="text-xs text-green-700 border-green-200 bg-green-50"
-                          >
-                            Matched
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="text-xs text-blue-700 border-blue-200 bg-blue-50"
-                          >
-                            <Plus className="mr-0.5 h-3 w-3" />
-                            New
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Coverages count */}
-                    <div className="space-y-1">
+                    <div className="space-y-1 text-right">
                       <Label className="text-xs text-muted-foreground">Coverages</Label>
-                      <div className="flex h-9 items-center text-sm">{row.coverageCount}</div>
-                    </div>
-
-                    {/* Expand toggle */}
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground invisible">More</Label>
-                      <button
-                        type="button"
-                        onClick={() => toggleRowExpanded(row.fileEntryId)}
-                        className="flex h-9 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:text-foreground hover:bg-slate-100 transition-colors"
-                      >
-                        {isExpanded ? (
-                          <>Less <ChevronUp className="h-3 w-3" /></>
-                        ) : (
-                          <>More <ChevronDown className="h-3 w-3" /></>
-                        )}
-                      </button>
+                      <div className="flex h-9 items-center justify-end text-sm">{row.coverageCount}</div>
                     </div>
                   </div>
 
-                  {/* Second row — template + email (always visible) */}
-                  <div className="grid gap-3 px-4 pb-3 sm:grid-cols-2" style={{ marginTop: '-4px' }}>
-                    {/* Requirement Template */}
+                  {/* Row 2: Contact Name, Email, Phone */}
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Contact Name</Label>
+                      <Input
+                        value={row.contactName}
+                        onChange={(e) =>
+                          updateRosterRow(row.fileEntryId, { contactName: e.target.value })
+                        }
+                        placeholder="Optional"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Contact Email</Label>
+                      <Input
+                        value={row.contactEmail}
+                        onChange={(e) =>
+                          updateRosterRow(row.fileEntryId, { contactEmail: e.target.value })
+                        }
+                        placeholder="Optional"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Phone Number</Label>
+                      <Input
+                        value={row.contactPhone}
+                        onChange={(e) =>
+                          updateRosterRow(row.fileEntryId, { contactPhone: e.target.value })
+                        }
+                        placeholder="Optional"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row 3: Requirement Template */}
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Requirement Template</Label>
                       <Select
@@ -1375,83 +1349,12 @@ export default function BulkUploadPage() {
                         </SelectContent>
                       </Select>
                     </div>
-
-                    {/* Email */}
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Contact Email</Label>
-                      <Input
-                        value={row.contactEmail}
-                        onChange={(e) =>
-                          updateRosterRow(row.fileEntryId, { contactEmail: e.target.value })
-                        }
-                        placeholder="contact@example.com"
-                        className="h-9 text-sm w-full min-w-[250px]"
-                      />
-                    </div>
                   </div>
 
-                  {/* Expandable details */}
-                  {isExpanded && (
-                    <div className="border-t border-slate-100 bg-slate-50/50 px-4 py-3">
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        {/* Contact Name */}
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Contact Name</Label>
-                          <Input
-                            value={row.contactName}
-                            onChange={(e) =>
-                              updateRosterRow(row.fileEntryId, { contactName: e.target.value })
-                            }
-                            placeholder="John Smith"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-
-                        {/* Phone */}
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Phone Number</Label>
-                          <Input
-                            value={row.contactPhone}
-                            onChange={(e) =>
-                              updateRosterRow(row.fileEntryId, { contactPhone: e.target.value })
-                            }
-                            placeholder="(555) 123-4567"
-                            className="h-9 text-sm"
-                          />
-                        </div>
-
-                        {/* Vendor/Tenant Sub-type */}
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">
-                            {row.entityType === 'vendor' ? 'Vendor' : 'Tenant'} Type
-                          </Label>
-                          <Select
-                            value={row.entitySubType || '_none'}
-                            onValueChange={(v) =>
-                              updateRosterRow(row.fileEntryId, { entitySubType: v === '_none' ? '' : v })
-                            }
-                          >
-                            <SelectTrigger className="h-9 text-xs">
-                              <SelectValue placeholder="Select type..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="_none">None</SelectItem>
-                              {typeSuggestions.map((t) => (
-                                <SelectItem key={t} value={t}>
-                                  {t}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-
-                      {/* File name */}
-                      <p className="mt-2 truncate text-xs text-muted-foreground" title={row.fileName}>
-                        Source file: {row.fileName}
-                      </p>
-                    </div>
-                  )}
+                  {/* File name */}
+                  <p className="mt-2 truncate text-xs text-muted-foreground" title={row.fileName}>
+                    Source file: {row.fileName}
+                  </p>
                 </div>
               );
             })}
@@ -1460,16 +1363,8 @@ export default function BulkUploadPage() {
           {/* Summary counts */}
           <div className="flex gap-4 text-sm text-muted-foreground">
             <span>
-              <span className="font-medium text-foreground">
-                {roster.filter((r) => r.isNew).length}
-              </span>{' '}
-              new entities
-            </span>
-            <span>
-              <span className="font-medium text-foreground">
-                {roster.filter((r) => !r.isNew).length}
-              </span>{' '}
-              matched to existing
+              <span className="font-medium text-foreground">{roster.length}</span>{' '}
+              {roster[0]?.entityType === 'tenant' ? 'tenant' : 'vendor'}{roster.length !== 1 ? 's' : ''} to create
             </span>
           </div>
 
@@ -1625,6 +1520,37 @@ export default function BulkUploadPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Navigation warning dialog — shown when user tries to navigate during processing */}
+      {navWarningHref && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/50" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 shadow-xl">
+              <h3 className="text-base font-semibold text-foreground">Leave this page?</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Extraction is in progress. Leaving will stop processing and you may lose extraction credits.
+              </p>
+              <div className="mt-5 flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setNavWarningHref(null)}>
+                  Stay
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    abortRef.current = true;
+                    router.push(navWarningHref);
+                    setNavWarningHref(null);
+                  }}
+                >
+                  Leave
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

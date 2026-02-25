@@ -119,7 +119,7 @@ export async function sendManualFollowUp(
   const table = entityType === 'vendor' ? 'vendors' : 'tenants';
   const { data: entity } = await supabase
     .from(table)
-    .select('id, company_name, contact_email, property_id, compliance_status')
+    .select('id, company_name, contact_name, contact_email, property_id, compliance_status')
     .eq('id', entityId)
     .eq('organization_id', orgId)
     .single();
@@ -207,6 +207,7 @@ export async function sendManualFollowUp(
   // Build merge fields
   const fields: EmailMergeFields = {
     entity_name: entity.company_name,
+    contact_name: entity.contact_name ?? undefined,
     entity_type: entityType,
     property_name: propertyName,
     organization_name: orgName,

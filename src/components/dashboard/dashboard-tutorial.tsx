@@ -144,70 +144,81 @@ function TutorialOverlay({
 }) {
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
   const [spotlightStyle, setSpotlightStyle] = useState<React.CSSProperties>({});
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    function positionElements() {
-      const el = document.querySelector(`[data-tutorial="${target}"]`);
-      if (el) {
-        // Scroll element into view if needed
-        el.scrollIntoView({ behavior: 'instant', block: 'nearest' });
+    setReady(false);
+    let cancelled = false;
 
-        // Wait a frame for scroll to settle, then measure
-        requestAnimationFrame(() => {
-          const rect = el.getBoundingClientRect();
-          const pad = 8;
-          setSpotlightStyle({
-            position: 'fixed',
-            top: rect.top - pad,
-            left: rect.left - pad,
-            width: rect.width + pad * 2,
-            height: rect.height + pad * 2,
-            borderRadius: '8px',
-          });
+    const el = document.querySelector(`[data-tutorial="${target}"]`);
+    if (!el) {
+      // Fallback: center tooltip on screen (e.g. "finish" step)
+      setSpotlightStyle({ display: 'none' });
+      setTooltipStyle({
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 10002,
+      });
+      setReady(true);
+      return;
+    }
 
-          // Determine if element is in the sidebar (left side of viewport)
-          const isSidebarElement = rect.left < 250 && rect.width < 250;
+    // Scroll the element into view
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-          if (isSidebarElement) {
-            // Position tooltip to the right of sidebar elements
-            const tooltipLeft = rect.right + pad + 12;
-            const tooltipTop = Math.max(16, Math.min(rect.top, window.innerHeight - 250));
-            setTooltipStyle({
-              position: 'fixed',
-              top: tooltipTop,
-              left: tooltipLeft,
-              zIndex: 10002,
-            });
-          } else {
-            // Position tooltip below the element
-            const tooltipTop = rect.bottom + pad + 12;
-            const tooltipLeft = Math.max(16, Math.min(rect.left, window.innerWidth - 360));
-            setTooltipStyle({
-              position: 'fixed',
-              top: tooltipTop > window.innerHeight - 200 ? rect.top - 200 : tooltipTop,
-              left: tooltipLeft,
-              zIndex: 10002,
-            });
-          }
-        });
-      } else {
-        // Fallback: center on screen (e.g. for "finish" step)
-        setSpotlightStyle({ display: 'none' });
+    // Wait 500ms for scroll to settle, then measure
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      positionFromElement(el);
+      setReady(true);
+    }, 500);
+
+    function positionFromElement(element: Element) {
+      const rect = element.getBoundingClientRect();
+      const pad = 8;
+      setSpotlightStyle({
+        position: 'fixed',
+        top: rect.top - pad,
+        left: rect.left - pad,
+        width: rect.width + pad * 2,
+        height: rect.height + pad * 2,
+        borderRadius: '8px',
+      });
+
+      // Determine if element is in the sidebar (left side, narrow)
+      const isSidebarElement = rect.left < 250 && rect.width < 250;
+
+      if (isSidebarElement) {
         setTooltipStyle({
           position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
+          top: Math.max(16, Math.min(rect.top, window.innerHeight - 250)),
+          left: rect.right + pad + 12,
+          zIndex: 10002,
+        });
+      } else {
+        const tooltipTop = rect.bottom + pad + 12;
+        setTooltipStyle({
+          position: 'fixed',
+          top: tooltipTop > window.innerHeight - 200 ? rect.top - 200 : tooltipTop,
+          left: Math.max(16, Math.min(rect.left, window.innerWidth - 360)),
           zIndex: 10002,
         });
       }
     }
 
-    positionElements();
+    function handleResize() {
+      const el2 = document.querySelector(`[data-tutorial="${target}"]`);
+      if (el2) positionFromElement(el2);
+    }
 
-    // Recalculate on resize
-    window.addEventListener('resize', positionElements);
-    return () => window.removeEventListener('resize', positionElements);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
+    };
   }, [target, step]);
 
   return (
@@ -220,13 +231,13 @@ function TutorialOverlay({
 
       {/* Spotlight cutout */}
       <div
-        className="fixed z-[10001] ring-[9999px] ring-black/50"
+        className="fixed z-[10001] ring-[9999px] ring-black/50 transition-all duration-300"
         style={spotlightStyle}
       />
 
       {/* Tooltip card */}
       <div
-        className="z-[10002] w-[340px] rounded-lg border border-slate-200 bg-white p-5 shadow-xl"
+        className={`z-[10002] w-[340px] rounded-lg border border-slate-200 bg-white p-5 shadow-xl transition-opacity duration-200 ${ready ? 'opacity-100' : 'opacity-0'}`}
         style={tooltipStyle}
       >
         <div className="flex items-start justify-between">

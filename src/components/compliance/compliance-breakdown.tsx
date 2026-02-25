@@ -44,6 +44,23 @@ function formatLimit(amount: number | null, limitType: LimitType | null): string
   return formatCurrency(amount);
 }
 
+function formatExpDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getExpirationStatus(dateStr: string | null): 'expired' | 'expiring_soon' | 'ok' | null {
+  if (!dateStr) return null;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const exp = new Date(dateStr + 'T00:00:00');
+  if (exp < now) return 'expired';
+  const diffMs = exp.getTime() - now.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  if (diffDays <= 30) return 'expiring_soon';
+  return 'ok';
+}
+
 function StatusIcon({ status }: { status: 'met' | 'not_met' | 'missing' | 'not_required' }) {
   if (status === 'met') {
     return (
@@ -120,6 +137,17 @@ export function ComplianceBreakdown({
   ).length;
   const requiredTotal = requiredReqIds.size;
 
+  // Count expired coverages (from extracted data that match requirements)
+  const expiredCount = requirements.reduce((count, req) => {
+    const extracted = extractedCoverages.find(
+      (e) => e.coverage_type === req.coverage_type && e.limit_type === req.limit_type
+    );
+    if (extracted && getExpirationStatus(extracted.expiration_date) === 'expired') {
+      return count + 1;
+    }
+    return count;
+  }, 0);
+
   if (requirements.length === 0) {
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-5">
@@ -153,6 +181,11 @@ export function ComplianceBreakdown({
                 ? `All ${requiredTotal} required coverages met`
                 : `${requiredMet} of ${requiredTotal} required coverages met`}
             </Badge>
+            {expiredCount > 0 && (
+              <span className="text-[10px] font-medium text-red-600">
+                {expiredCount} coverage{expiredCount !== 1 ? 's' : ''} expired
+              </span>
+            )}
             {optionalMet > 0 && (
               <span className="text-[10px] text-muted-foreground">
                 +{optionalMet} optional coverage{optionalMet !== 1 ? 's' : ''} also met
@@ -193,6 +226,9 @@ export function ComplianceBreakdown({
                     e.limit_type === req.limit_type
                 );
 
+                // Expiration info
+                const expStatus = extracted ? getExpirationStatus(extracted.expiration_date) : null;
+
                 return (
                   <TableRow key={req.id}>
                     <TableCell>
@@ -220,6 +256,20 @@ export function ComplianceBreakdown({
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       <div className="flex flex-col gap-1">
+                        {/* Expiration date */}
+                        {extracted?.expiration_date && (
+                          <span
+                            className={`text-[11px] font-medium ${
+                              expStatus === 'expired'
+                                ? 'text-red-600'
+                                : expStatus === 'expiring_soon'
+                                  ? 'text-amber-600'
+                                  : 'text-emerald-600'
+                            }`}
+                          >
+                            Exp: {formatExpDate(extracted.expiration_date)}
+                          </span>
+                        )}
                         {req.requires_additional_insured && (
                           <SubCheck
                             label="Additional Insured"

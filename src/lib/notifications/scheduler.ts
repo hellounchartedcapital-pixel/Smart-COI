@@ -30,14 +30,14 @@ export async function checkAndScheduleNotifications(): Promise<number> {
   const [vendorsRes, tenantsRes] = await Promise.all([
     supabase
       .from('vendors')
-      .select('id, company_name, contact_email, property_id, organization_id, compliance_status, notifications_paused, properties(name), organizations(name)')
+      .select('id, company_name, contact_name, contact_email, property_id, organization_id, compliance_status, notifications_paused, properties(name), organizations(name)')
       .is('deleted_at', null)
       .is('archived_at', null)
       .or('notifications_paused.eq.false,notifications_paused.is.null')
       .neq('compliance_status', 'compliant'),
     supabase
       .from('tenants')
-      .select('id, company_name, contact_email, property_id, organization_id, compliance_status, notifications_paused, properties(name), organizations(name)')
+      .select('id, company_name, contact_name, contact_email, property_id, organization_id, compliance_status, notifications_paused, properties(name), organizations(name)')
       .is('deleted_at', null)
       .is('archived_at', null)
       .or('notifications_paused.eq.false,notifications_paused.is.null')
@@ -181,6 +181,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
 
           const fields: EmailMergeFields = {
             entity_name: entity.company_name,
+            contact_name: entity.contact_name ?? undefined,
             entity_type: entity._type,
             property_name: propName,
             organization_name: orgName,
@@ -273,6 +274,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
 
           const fields: EmailMergeFields = {
             entity_name: entity.company_name,
+            contact_name: entity.contact_name ?? undefined,
             entity_type: entity._type,
             property_name: propName,
             organization_name: orgName,
