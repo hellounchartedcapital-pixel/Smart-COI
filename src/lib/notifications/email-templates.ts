@@ -272,8 +272,8 @@ export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
       <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">2</div>
     </td>
     <td style="vertical-align:top;padding:12px 0 12px 12px;">
-      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Upload your first Certificate of Insurance</p>
-      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Upload a COI and watch SmartCOI extract coverage details and check compliance in seconds.</p>
+      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Upload your COIs</p>
+      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Upload a single COI or use Bulk Upload to process your entire portfolio at once. Our AI extracts coverage details and checks compliance automatically.</p>
     </td>
   </tr>
   <!-- Divider -->

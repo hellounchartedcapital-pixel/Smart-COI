@@ -163,9 +163,13 @@ export default function BulkUploadPage() {
 
   // Step 1: File selection
   const propertyIdParam = searchParams.get('propertyId');
+  const entityTypeParam = searchParams.get('entityType');
   const [properties, setProperties] = useState<PropertyOption[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState(propertyIdParam ?? '');
-  const [defaultEntityType, setDefaultEntityType] = useState<'vendor' | 'tenant'>('vendor');
+  const [defaultEntityType, setDefaultEntityType] = useState<'vendor' | 'tenant'>(
+    entityTypeParam === 'tenant' ? 'tenant' : 'vendor'
+  );
+  const [orgPlan, setOrgPlan] = useState<string>('trial');
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -216,13 +220,15 @@ export default function BulkUploadPage() {
   useEffect(() => {
     if (!orgId) return;
     (async () => {
-      const [propsRes, capacity, templatesRes] = await Promise.all([
+      const [propsRes, capacity, templatesRes, orgRes] = await Promise.all([
         supabase.from('properties').select('id, name').eq('organization_id', orgId).order('name'),
         getBulkUploadCapacity(),
         supabase.from('requirement_templates').select('id, name, category').eq('organization_id', orgId).order('name'),
+        supabase.from('organizations').select('plan').eq('id', orgId).single(),
       ]);
       if (propsRes.data) setProperties(propsRes.data);
       if (templatesRes.data) setTemplates(templatesRes.data);
+      if (orgRes.data?.plan) setOrgPlan(orgRes.data.plan);
       setExtractionsRemaining(capacity.extractionsRemaining);
       setExtractionsLimit(capacity.extractionsLimit);
       if (!capacity.canAddEntities) {
@@ -268,6 +274,20 @@ export default function BulkUploadPage() {
       setExistingEntities(entities);
     })();
   }, [orgId, supabase]);
+
+  // ---- Warn on navigation during processing ----
+  const isProcessing = step === 'processing' && processingStarted && !files.every(
+    (f) => f.status === 'done' || f.status === 'failed'
+  );
+
+  useEffect(() => {
+    if (!isProcessing) return;
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isProcessing]);
 
   // ---- File handlers ----
   const addFiles = useCallback(
@@ -900,6 +920,18 @@ export default function BulkUploadPage() {
                 {extractionsRemaining}
               </span>{' '}
               of {extractionsLimit} extractions remaining this month.
+              {orgPlan === 'trial' && (
+                <span className="ml-1">
+                  Free trial includes {extractionsLimit} AI extractions.{' '}
+                  <button
+                    type="button"
+                    className="font-medium underline"
+                    onClick={() => showUpgradeModal()}
+                  >
+                    Upgrade to process more.
+                  </button>
+                </span>
+              )}
               {files.filter((f) => f.status === 'pending').length > extractionsRemaining && (
                 <span className="ml-1 font-medium text-amber-700">
                   Only {extractionsRemaining} of your {files.filter((f) => f.status === 'pending').length} files

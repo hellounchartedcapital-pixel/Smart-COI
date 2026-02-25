@@ -68,6 +68,7 @@ export function VendorDetailClient({
   const { showUpgradeModal } = useUpgradeModal();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [hardDeleteOpen, setHardDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [togglingNotif, setTogglingNotif] = useState(false);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
@@ -110,13 +111,29 @@ export function VendorDetailClient({
     setDeleting(true);
     try {
       await softDeleteVendor(vendor.id, vendor.property_id);
-      toast.success('Vendor removed');
+      toast.success('Vendor archived');
       router.push(`/dashboard/properties/${vendor.property_id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove vendor');
+      toast.error(err instanceof Error ? err.message : 'Failed to archive vendor');
     } finally {
       setDeleting(false);
       setDeleteOpen(false);
+    }
+  }
+
+  async function handleHardDelete() {
+    if (!vendor.property_id) return;
+    setDeleting(true);
+    try {
+      const { permanentlyDeleteVendor } = await import('@/lib/actions/properties');
+      await permanentlyDeleteVendor(vendor.id, vendor.property_id);
+      toast.success('Vendor deleted');
+      router.push(`/dashboard/properties/${vendor.property_id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete vendor');
+    } finally {
+      setDeleting(false);
+      setHardDeleteOpen(false);
     }
   }
 
@@ -387,7 +404,7 @@ export function VendorDetailClient({
             </div>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
             {vendor.archived_at ? (
               <Button
                 variant="outline"
@@ -411,14 +428,24 @@ export function VendorDetailClient({
                 {deleting ? 'Restoring...' : 'Restore Vendor'}
               </Button>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
-                onClick={() => setDeleteOpen(true)}
-              >
-                Archive Vendor
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  Archive Vendor
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => setHardDeleteOpen(true)}
+                >
+                  Delete Vendor
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -440,6 +467,16 @@ export function VendorDetailClient({
         destructive={false}
         loading={deleting}
         onConfirm={handleDelete}
+      />
+      <ConfirmDialog
+        open={hardDeleteOpen}
+        onOpenChange={setHardDeleteOpen}
+        title="Delete Vendor"
+        description={`Permanently delete ${vendor.company_name}? This will remove all their certificates, compliance data, and history. This action cannot be undone.`}
+        confirmLabel="Delete"
+        destructive
+        loading={deleting}
+        onConfirm={handleHardDelete}
       />
     </div>
   );

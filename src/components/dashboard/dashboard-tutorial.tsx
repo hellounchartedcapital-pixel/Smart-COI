@@ -27,9 +27,9 @@ const STEPS: TutorialStep[] = [
   },
   {
     target: 'upload-coi',
-    title: 'Upload a COI',
+    title: 'Upload COIs',
     description:
-      "Upload a vendor or tenant's Certificate of Insurance. Our AI will extract the coverage data and check it against your requirements.",
+      "Upload a single COI or use Bulk Upload to process your entire vendor portfolio at once. Our AI extracts coverage data and checks it against your requirements.",
   },
   {
     target: 'nav-templates',
@@ -106,7 +106,6 @@ export function DashboardTutorial({ active, onClose }: DashboardTutorialProps) {
     setStep((s) => Math.max(0, s - 1));
   }
 
-  // Find the target element's position
   return (
     <TutorialOverlay
       step={step}
@@ -147,40 +146,69 @@ function TutorialOverlay({
   const [spotlightStyle, setSpotlightStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
-    const el = document.querySelector(`[data-tutorial="${target}"]`);
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      const pad = 8;
-      setSpotlightStyle({
-        position: 'fixed',
-        top: rect.top - pad,
-        left: rect.left - pad,
-        width: rect.width + pad * 2,
-        height: rect.height + pad * 2,
-        borderRadius: '8px',
-      });
+    function positionElements() {
+      const el = document.querySelector(`[data-tutorial="${target}"]`);
+      if (el) {
+        // Scroll element into view if needed
+        el.scrollIntoView({ behavior: 'instant', block: 'nearest' });
 
-      // Position tooltip below the element
-      const tooltipTop = rect.bottom + pad + 12;
-      const tooltipLeft = Math.max(16, Math.min(rect.left, window.innerWidth - 360));
-      setTooltipStyle({
-        position: 'fixed',
-        top: tooltipTop > window.innerHeight - 200 ? rect.top - 200 : tooltipTop,
-        left: tooltipLeft,
-        zIndex: 10002,
-      });
-    } else {
-      // Fallback: center on screen (e.g. for "finish" step)
-      setSpotlightStyle({ display: 'none' });
-      setTooltipStyle({
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 10002,
-      });
+        // Wait a frame for scroll to settle, then measure
+        requestAnimationFrame(() => {
+          const rect = el.getBoundingClientRect();
+          const pad = 8;
+          setSpotlightStyle({
+            position: 'fixed',
+            top: rect.top - pad,
+            left: rect.left - pad,
+            width: rect.width + pad * 2,
+            height: rect.height + pad * 2,
+            borderRadius: '8px',
+          });
+
+          // Determine if element is in the sidebar (left side of viewport)
+          const isSidebarElement = rect.left < 250 && rect.width < 250;
+
+          if (isSidebarElement) {
+            // Position tooltip to the right of sidebar elements
+            const tooltipLeft = rect.right + pad + 12;
+            const tooltipTop = Math.max(16, Math.min(rect.top, window.innerHeight - 250));
+            setTooltipStyle({
+              position: 'fixed',
+              top: tooltipTop,
+              left: tooltipLeft,
+              zIndex: 10002,
+            });
+          } else {
+            // Position tooltip below the element
+            const tooltipTop = rect.bottom + pad + 12;
+            const tooltipLeft = Math.max(16, Math.min(rect.left, window.innerWidth - 360));
+            setTooltipStyle({
+              position: 'fixed',
+              top: tooltipTop > window.innerHeight - 200 ? rect.top - 200 : tooltipTop,
+              left: tooltipLeft,
+              zIndex: 10002,
+            });
+          }
+        });
+      } else {
+        // Fallback: center on screen (e.g. for "finish" step)
+        setSpotlightStyle({ display: 'none' });
+        setTooltipStyle({
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 10002,
+        });
+      }
     }
-  }, [target]);
+
+    positionElements();
+
+    // Recalculate on resize
+    window.addEventListener('resize', positionElements);
+    return () => window.removeEventListener('resize', positionElements);
+  }, [target, step]);
 
   return (
     <>

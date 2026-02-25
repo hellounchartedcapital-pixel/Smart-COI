@@ -10,7 +10,7 @@ export interface PlanLimits {
 }
 
 const PLAN_LIMITS: Record<string, PlanLimits> = {
-  trial: { maxVendorsTenants: 50, maxExtractionsPerMonth: 50 },
+  trial: { maxVendorsTenants: 50, maxExtractionsPerMonth: 10 },
   starter: { maxVendorsTenants: 50, maxExtractionsPerMonth: 50 },
   professional: { maxVendorsTenants: 250, maxExtractionsPerMonth: 200 },
   canceled: { maxVendorsTenants: 0, maxExtractionsPerMonth: 0 },

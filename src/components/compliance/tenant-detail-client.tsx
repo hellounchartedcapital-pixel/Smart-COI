@@ -68,6 +68,7 @@ export function TenantDetailClient({
   const { showUpgradeModal } = useUpgradeModal();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [hardDeleteOpen, setHardDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [togglingNotif, setTogglingNotif] = useState(false);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
@@ -110,13 +111,29 @@ export function TenantDetailClient({
     setDeleting(true);
     try {
       await softDeleteTenant(tenant.id, tenant.property_id);
-      toast.success('Tenant removed');
+      toast.success('Tenant archived');
       router.push(`/dashboard/properties/${tenant.property_id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove tenant');
+      toast.error(err instanceof Error ? err.message : 'Failed to archive tenant');
     } finally {
       setDeleting(false);
       setDeleteOpen(false);
+    }
+  }
+
+  async function handleHardDelete() {
+    if (!tenant.property_id) return;
+    setDeleting(true);
+    try {
+      const { permanentlyDeleteTenant } = await import('@/lib/actions/properties');
+      await permanentlyDeleteTenant(tenant.id, tenant.property_id);
+      toast.success('Tenant deleted');
+      router.push(`/dashboard/properties/${tenant.property_id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete tenant');
+    } finally {
+      setDeleting(false);
+      setHardDeleteOpen(false);
     }
   }
 
@@ -396,7 +413,7 @@ export function TenantDetailClient({
             </div>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
             {tenant.archived_at ? (
               <Button
                 variant="outline"
@@ -420,14 +437,24 @@ export function TenantDetailClient({
                 {deleting ? 'Restoring...' : 'Restore Tenant'}
               </Button>
             ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
-                onClick={() => setDeleteOpen(true)}
-              >
-                Archive Tenant
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  Archive Tenant
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => setHardDeleteOpen(true)}
+                >
+                  Delete Tenant
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -449,6 +476,16 @@ export function TenantDetailClient({
         destructive={false}
         loading={deleting}
         onConfirm={handleDelete}
+      />
+      <ConfirmDialog
+        open={hardDeleteOpen}
+        onOpenChange={setHardDeleteOpen}
+        title="Delete Tenant"
+        description={`Permanently delete ${tenant.company_name}? This will remove all their certificates, compliance data, and history. This action cannot be undone.`}
+        confirmLabel="Delete"
+        destructive
+        loading={deleting}
+        onConfirm={handleHardDelete}
       />
     </div>
   );

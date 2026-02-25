@@ -199,7 +199,7 @@ export function DashboardClient({
       <ComplianceBar distribution={statusDistribution} />
 
       {/* ---- Main content: Action Queue + Activity ---- */}
-      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+      <div className="grid items-start gap-6 xl:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           {/* Priority Action Queue */}
           <ActionQueue items={actionItems} />
@@ -236,11 +236,11 @@ function StatCard({
 }) {
   const content = (
     <Card className={href ? 'transition-shadow hover:shadow-md' : ''}>
-      <CardContent className="flex min-h-[88px] items-center gap-4 p-5">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
+      <CardContent className="flex h-[96px] items-center gap-4 p-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
           {icon}
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="text-xs text-muted-foreground">{label}</p>
           <p className={`text-2xl font-bold ${valueColor}`}>{value}</p>
           {sub && (
@@ -268,7 +268,7 @@ function StatCard({
 function ComplianceRateCard({ rate }: { rate: number | null }) {
   return (
     <Card>
-      <CardContent className="flex min-h-[88px] items-center gap-4 p-5">
+      <CardContent className="flex h-[96px] items-center gap-4 p-5">
         <div className="relative flex h-12 w-12 items-center justify-center">
           <svg className="h-12 w-12 -rotate-90" viewBox="0 0 36 36">
             <circle
@@ -606,6 +606,11 @@ function PropertyCard({ property }: { property: PropertyOverview }) {
 // ============================================================================
 
 function ActivitySidebar({ entries }: { entries: ActivityEntry[] }) {
+  const [showAll, setShowAll] = useState(false);
+  const INITIAL_COUNT = 6;
+  const visibleEntries = showAll ? entries : entries.slice(0, INITIAL_COUNT);
+  const hasMore = entries.length > INITIAL_COUNT;
+
   return (
     <Card className="h-fit">
       <CardContent className="p-5">
@@ -614,34 +619,45 @@ function ActivitySidebar({ entries }: { entries: ActivityEntry[] }) {
         {entries.length === 0 ? (
           <p className="mt-3 text-xs text-muted-foreground">No activity yet.</p>
         ) : (
-          <div className="mt-3 space-y-0">
-            {entries.map((entry, i) => {
-              const Icon = ACTIVITY_ICONS[entry.action] ?? FileCheck;
-              return (
-                <div
-                  key={entry.id}
-                  className="flex gap-3 py-2.5"
-                >
-                  <div className="relative flex flex-col items-center">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100">
-                      <Icon className="h-3 w-3 text-slate-500" />
+          <>
+            <div className="mt-3 space-y-0">
+              {visibleEntries.map((entry, i) => {
+                const Icon = ACTIVITY_ICONS[entry.action] ?? FileCheck;
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex gap-3 py-2.5"
+                  >
+                    <div className="relative flex flex-col items-center">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100">
+                        <Icon className="h-3 w-3 text-slate-500" />
+                      </div>
+                      {i < visibleEntries.length - 1 && (
+                        <div className="mt-1 w-px flex-1 bg-slate-200" />
+                      )}
                     </div>
-                    {i < entries.length - 1 && (
-                      <div className="mt-1 w-px flex-1 bg-slate-200" />
-                    )}
+                    <div className="min-w-0 flex-1 pb-1">
+                      <p className="text-xs leading-snug text-foreground">
+                        {entry.description}
+                      </p>
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">
+                        {formatRelativeDate(entry.created_at)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1 pb-1">
-                    <p className="text-xs leading-snug text-foreground">
-                      {entry.description}
-                    </p>
-                    <p className="mt-0.5 text-[10px] text-muted-foreground">
-                      {formatRelativeDate(entry.created_at)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+            {hasMore && (
+              <button
+                type="button"
+                onClick={() => setShowAll(!showAll)}
+                className="mt-2 w-full text-center text-xs font-medium text-primary hover:text-primary/80"
+              >
+                {showAll ? 'Show Less' : `See More (${entries.length - INITIAL_COUNT} more)`}
+              </button>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

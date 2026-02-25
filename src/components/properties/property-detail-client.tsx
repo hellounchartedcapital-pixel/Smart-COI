@@ -46,6 +46,10 @@ import {
   softDeleteTenant,
   restoreVendor,
   restoreTenant,
+  bulkArchiveVendors,
+  bulkDeleteVendors,
+  bulkArchiveTenants,
+  bulkDeleteTenants,
 } from '@/lib/actions/properties';
 import { sendManualFollowUp } from '@/lib/actions/notifications';
 import { toast } from 'sonner';
@@ -111,6 +115,8 @@ export function PropertyDetailClient({
   const [deletePropertyOpen, setDeletePropertyOpen] = useState(false);
   const [deleteVendorId, setDeleteVendorId] = useState<string | null>(null);
   const [deleteTenantId, setDeleteTenantId] = useState<string | null>(null);
+  const [hardDeleteVendorId, setHardDeleteVendorId] = useState<string | null>(null);
+  const [hardDeleteTenantId, setHardDeleteTenantId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
   const [coiPrompt, setCoiPrompt] = useState<{ type: 'vendor' | 'tenant'; id: string; name: string } | null>(null);
@@ -128,6 +134,15 @@ export function PropertyDetailClient({
     field: 'name',
     dir: 'asc',
   });
+
+  // Bulk selection state
+  const [selectedVendorIds, setSelectedVendorIds] = useState<Set<string>>(new Set());
+  const [selectedTenantIds, setSelectedTenantIds] = useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = useState<{
+    type: 'archive' | 'delete';
+    entity: 'vendor' | 'tenant';
+  } | null>(null);
+  const [bulkActing, setBulkActing] = useState(false);
 
   // Address formatting
   const addressParts = [
@@ -218,12 +233,42 @@ export function PropertyDetailClient({
     setDeleting(true);
     try {
       await softDeleteTenant(deleteTenantId, property.id);
-      toast.success('Tenant removed');
+      toast.success('Tenant archived');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove tenant');
+      toast.error(err instanceof Error ? err.message : 'Failed to archive tenant');
     } finally {
       setDeleting(false);
       setDeleteTenantId(null);
+    }
+  }
+
+  async function handleHardDeleteVendor() {
+    if (!hardDeleteVendorId) return;
+    setDeleting(true);
+    try {
+      const { permanentlyDeleteVendor } = await import('@/lib/actions/properties');
+      await permanentlyDeleteVendor(hardDeleteVendorId, property.id);
+      toast.success('Vendor deleted');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete vendor');
+    } finally {
+      setDeleting(false);
+      setHardDeleteVendorId(null);
+    }
+  }
+
+  async function handleHardDeleteTenant() {
+    if (!hardDeleteTenantId) return;
+    setDeleting(true);
+    try {
+      const { permanentlyDeleteTenant } = await import('@/lib/actions/properties');
+      await permanentlyDeleteTenant(hardDeleteTenantId, property.id);
+      toast.success('Tenant deleted');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete tenant');
+    } finally {
+      setDeleting(false);
+      setHardDeleteTenantId(null);
     }
   }
 
@@ -279,6 +324,73 @@ export function PropertyDetailClient({
 
   function handleTenantCreated(id: string, name: string) {
     setCoiPrompt({ type: 'tenant', id, name });
+  }
+
+  // Bulk selection helpers
+  function toggleVendorSelection(id: string) {
+    setSelectedVendorIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllVendors() {
+    if (selectedVendorIds.size === filteredVendors.length) {
+      setSelectedVendorIds(new Set());
+    } else {
+      setSelectedVendorIds(new Set(filteredVendors.map((v) => v.id)));
+    }
+  }
+
+  function toggleTenantSelection(id: string) {
+    setSelectedTenantIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllTenants() {
+    if (selectedTenantIds.size === filteredTenants.length) {
+      setSelectedTenantIds(new Set());
+    } else {
+      setSelectedTenantIds(new Set(filteredTenants.map((t) => t.id)));
+    }
+  }
+
+  async function handleBulkAction() {
+    if (!bulkAction) return;
+    setBulkActing(true);
+    try {
+      const ids = bulkAction.entity === 'vendor'
+        ? Array.from(selectedVendorIds)
+        : Array.from(selectedTenantIds);
+
+      if (bulkAction.entity === 'vendor' && bulkAction.type === 'archive') {
+        await bulkArchiveVendors(ids, property.id);
+        toast.success(`${ids.length} vendor(s) archived`);
+      } else if (bulkAction.entity === 'vendor' && bulkAction.type === 'delete') {
+        await bulkDeleteVendors(ids, property.id);
+        toast.success(`${ids.length} vendor(s) deleted`);
+      } else if (bulkAction.entity === 'tenant' && bulkAction.type === 'archive') {
+        await bulkArchiveTenants(ids, property.id);
+        toast.success(`${ids.length} tenant(s) archived`);
+      } else if (bulkAction.entity === 'tenant' && bulkAction.type === 'delete') {
+        await bulkDeleteTenants(ids, property.id);
+        toast.success(`${ids.length} tenant(s) deleted`);
+      }
+
+      setSelectedVendorIds(new Set());
+      setSelectedTenantIds(new Set());
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Bulk action failed');
+    } finally {
+      setBulkActing(false);
+      setBulkAction(null);
+    }
   }
 
   function SortIndicator({ field, current }: { field: SortField; current: { field: SortField; dir: SortDir } }) {
@@ -487,6 +599,14 @@ export function PropertyDetailClient({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                        checked={filteredVendors.length > 0 && selectedVendorIds.size === filteredVendors.length}
+                        onChange={toggleAllVendors}
+                      />
+                    </TableHead>
                     <TableHead
                       className="cursor-pointer select-none"
                       onClick={() => toggleSort(vendorSort, 'name', setVendorSort)}
@@ -514,7 +634,15 @@ export function PropertyDetailClient({
                 </TableHeader>
                 <TableBody>
                   {filteredVendors.map((v) => (
-                    <TableRow key={v.id}>
+                    <TableRow key={v.id} className={selectedVendorIds.has(v.id) ? 'bg-emerald-50/50' : ''}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                          checked={selectedVendorIds.has(v.id)}
+                          onChange={() => toggleVendorSelection(v.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         {v.company_name}
                       </TableCell>
@@ -575,6 +703,12 @@ export function PropertyDetailClient({
                             >
                               Archive
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => setHardDeleteVendorId(v.id)}
+                            >
+                              Delete
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -593,9 +727,22 @@ export function PropertyDetailClient({
               value={tenantStatusFilter}
               onChange={setTenantStatusFilter}
             />
-            <Button size="sm" onClick={() => setAddTenantOpen(true)}>
-              + Add Tenant
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  router.push(
+                    `/dashboard/certificates/bulk-upload?propertyId=${property.id}&entityType=tenant`
+                  )
+                }
+              >
+                Bulk Upload
+              </Button>
+              <Button size="sm" onClick={() => setAddTenantOpen(true)}>
+                + Add Tenant
+              </Button>
+            </div>
           </div>
 
           {tenants.length === 0 ? (
@@ -603,13 +750,22 @@ export function PropertyDetailClient({
               <p className="text-sm text-muted-foreground">
                 No tenants for this property yet.
               </p>
-              <Button
-                size="sm"
-                className="mt-3"
-                onClick={() => setAddTenantOpen(true)}
-              >
-                + Add Tenant
-              </Button>
+              <div className="mt-3 flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    router.push(
+                      `/dashboard/certificates/bulk-upload?propertyId=${property.id}&entityType=tenant`
+                    )
+                  }
+                >
+                  Bulk Upload COIs
+                </Button>
+                <Button size="sm" onClick={() => setAddTenantOpen(true)}>
+                  + Add Tenant
+                </Button>
+              </div>
             </div>
           ) : filteredTenants.length === 0 ? (
             <div className="rounded-lg border border-slate-200 bg-white py-8 text-center">
@@ -622,6 +778,14 @@ export function PropertyDetailClient({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-10">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                        checked={filteredTenants.length > 0 && selectedTenantIds.size === filteredTenants.length}
+                        onChange={toggleAllTenants}
+                      />
+                    </TableHead>
                     <TableHead
                       className="cursor-pointer select-none"
                       onClick={() => toggleSort(tenantSort, 'name', setTenantSort)}
@@ -649,7 +813,15 @@ export function PropertyDetailClient({
                 </TableHeader>
                 <TableBody>
                   {filteredTenants.map((t) => (
-                    <TableRow key={t.id}>
+                    <TableRow key={t.id} className={selectedTenantIds.has(t.id) ? 'bg-emerald-50/50' : ''}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                          checked={selectedTenantIds.has(t.id)}
+                          onChange={() => toggleTenantSelection(t.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         {t.company_name}
                         {t.unit_suite && (
@@ -714,6 +886,12 @@ export function PropertyDetailClient({
                               onClick={() => setDeleteTenantId(t.id)}
                             >
                               Archive
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => setHardDeleteTenantId(t.id)}
+                            >
+                              Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -880,6 +1058,26 @@ export function PropertyDetailClient({
         loading={deleting}
         onConfirm={handleDeleteTenant}
       />
+      <ConfirmDialog
+        open={hardDeleteVendorId !== null}
+        onOpenChange={(open) => !open && setHardDeleteVendorId(null)}
+        title="Delete Vendor"
+        description="Permanently delete this vendor? This will remove all their certificates, compliance data, and history. This action cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        loading={deleting}
+        onConfirm={handleHardDeleteVendor}
+      />
+      <ConfirmDialog
+        open={hardDeleteTenantId !== null}
+        onOpenChange={(open) => !open && setHardDeleteTenantId(null)}
+        title="Delete Tenant"
+        description="Permanently delete this tenant? This will remove all their certificates, compliance data, and history. This action cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        loading={deleting}
+        onConfirm={handleHardDeleteTenant}
+      />
       <Dialog open={coiPrompt !== null} onOpenChange={(open) => !open && setCoiPrompt(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -906,6 +1104,77 @@ export function PropertyDetailClient({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk action confirmation dialog */}
+      <ConfirmDialog
+        open={bulkAction !== null}
+        onOpenChange={(open) => !open && setBulkAction(null)}
+        title={
+          bulkAction?.type === 'archive'
+            ? `Archive ${bulkAction.entity === 'vendor' ? selectedVendorIds.size : selectedTenantIds.size} ${bulkAction.entity}${(bulkAction.entity === 'vendor' ? selectedVendorIds.size : selectedTenantIds.size) !== 1 ? 's' : ''}?`
+            : `Delete ${bulkAction?.entity === 'vendor' ? selectedVendorIds.size : selectedTenantIds.size} ${bulkAction?.entity ?? ''}${((bulkAction?.entity === 'vendor' ? selectedVendorIds.size : selectedTenantIds.size)) !== 1 ? 's' : ''}?`
+        }
+        description={
+          bulkAction?.type === 'archive'
+            ? `They'll be hidden from active lists but can be restored from the Archived tab.`
+            : `Permanently delete the selected ${bulkAction?.entity ?? ''}s? This cannot be undone.`
+        }
+        confirmLabel={bulkAction?.type === 'archive' ? 'Archive' : 'Delete'}
+        destructive={bulkAction?.type === 'delete'}
+        loading={bulkActing}
+        onConfirm={handleBulkAction}
+      />
+
+      {/* Floating action bar for bulk selection */}
+      {(selectedVendorIds.size > 0 || selectedTenantIds.size > 0) && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-lg">
+            <span className="text-sm font-medium text-foreground">
+              {selectedVendorIds.size > 0
+                ? `${selectedVendorIds.size} vendor${selectedVendorIds.size !== 1 ? 's' : ''}`
+                : `${selectedTenantIds.size} tenant${selectedTenantIds.size !== 1 ? 's' : ''}`}{' '}
+              selected
+            </span>
+            <div className="h-5 w-px bg-slate-200" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setBulkAction({
+                  type: 'archive',
+                  entity: selectedVendorIds.size > 0 ? 'vendor' : 'tenant',
+                })
+              }
+            >
+              Archive Selected
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() =>
+                setBulkAction({
+                  type: 'delete',
+                  entity: selectedVendorIds.size > 0 ? 'vendor' : 'tenant',
+                })
+              }
+            >
+              Delete Selected
+            </Button>
+            <button
+              type="button"
+              className="ml-1 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                setSelectedVendorIds(new Set());
+                setSelectedTenantIds(new Set());
+              }}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
