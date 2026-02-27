@@ -35,25 +35,18 @@ export default async function NotificationsPage() {
 
   const entityNameMap: Record<string, string> = {};
 
-  if (vendorIds.length > 0) {
-    const { data: vendors } = await supabase
-      .from('vendors')
-      .select('id, company_name')
-      .in('id', vendorIds);
-    for (const v of vendors ?? []) {
-      entityNameMap[v.id] = v.company_name;
-    }
-  }
+  // Fetch vendor and tenant names in parallel
+  const [{ data: vendorNames }, { data: tenantNames }] = await Promise.all([
+    vendorIds.length > 0
+      ? supabase.from('vendors').select('id, company_name').in('id', vendorIds)
+      : Promise.resolve({ data: [] as { id: string; company_name: string }[] }),
+    tenantIds.length > 0
+      ? supabase.from('tenants').select('id, company_name').in('id', tenantIds)
+      : Promise.resolve({ data: [] as { id: string; company_name: string }[] }),
+  ]);
 
-  if (tenantIds.length > 0) {
-    const { data: tenants } = await supabase
-      .from('tenants')
-      .select('id, company_name')
-      .in('id', tenantIds);
-    for (const t of tenants ?? []) {
-      entityNameMap[t.id] = t.company_name;
-    }
-  }
+  for (const v of vendorNames ?? []) entityNameMap[v.id] = v.company_name;
+  for (const t of tenantNames ?? []) entityNameMap[t.id] = t.company_name;
 
   return (
     <NotificationsClient
