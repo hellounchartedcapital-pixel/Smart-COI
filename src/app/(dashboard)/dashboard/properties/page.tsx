@@ -105,68 +105,82 @@ export default async function PropertiesPage() {
   if (!profile?.organization_id) redirect('/login');
   const orgId = profile.organization_id;
 
-  // Fetch org default entities (for the add property modal)
-  const { data: defaultEntities } = await supabase
-    .from('organization_default_entities')
-    .select('*')
-    .eq('organization_id', orgId);
+  // Fetch properties, default entities, and all vendor/tenant statuses in parallel
+  const [{ data: defaultEntities }, { data: properties }] = await Promise.all([
+    supabase
+      .from('organization_default_entities')
+      .select('id, entity_name, entity_address, entity_type')
+      .eq('organization_id', orgId),
+    supabase
+      .from('properties')
+      .select('id, name, address, city, state, zip, property_type, created_at')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false }),
+  ]);
 
-  // Fetch properties
-  const { data: properties } = await supabase
-    .from('properties')
-    .select('id, name, address, city, state, zip, property_type, created_at')
-    .eq('organization_id', orgId)
-    .order('created_at', { ascending: false });
+  // Batch fetch all vendor/tenant compliance statuses in 2 queries (not per-property)
+  const propertyIds = (properties ?? []).map((p) => p.id);
 
-  // Fetch vendor and tenant compliance counts per property
-  const propertyList: PropertyWithCounts[] = [];
+  const [{ data: allVendors }, { data: allTenants }] = propertyIds.length > 0
+    ? await Promise.all([
+        supabase
+          .from('vendors')
+          .select('property_id, compliance_status')
+          .in('property_id', propertyIds)
+          .is('deleted_at', null)
+          .is('archived_at', null),
+        supabase
+          .from('tenants')
+          .select('property_id, compliance_status')
+          .in('property_id', propertyIds)
+          .is('deleted_at', null)
+          .is('archived_at', null),
+      ])
+    : [{ data: [] }, { data: [] }];
 
-  if (properties && properties.length > 0) {
-    for (const prop of properties) {
-      const { data: vendors } = await supabase
-        .from('vendors')
-        .select('compliance_status')
-        .eq('property_id', prop.id)
-        .is('deleted_at', null)
-        .is('archived_at', null);
-
-      const { data: tenants } = await supabase
-        .from('tenants')
-        .select('compliance_status')
-        .eq('property_id', prop.id)
-        .is('deleted_at', null)
-        .is('archived_at', null);
-
-      const vList = vendors ?? [];
-      const tList = tenants ?? [];
-      const all = [...vList, ...tList];
-
-      const countStatus = (status: string) =>
-        all.filter((e) => e.compliance_status === status).length;
-
-      propertyList.push({
-        ...prop,
-        vendor_count: vList.length,
-        tenant_count: tList.length,
-        vendor_compliant: vList.filter((v) => v.compliance_status === 'compliant').length,
-        vendor_expiring: vList.filter((v) => v.compliance_status === 'expiring_soon').length,
-        vendor_non_compliant: vList.filter(
-          (v) => v.compliance_status === 'non_compliant' || v.compliance_status === 'expired'
-        ).length,
-        tenant_compliant: tList.filter((t) => t.compliance_status === 'compliant').length,
-        tenant_expiring: tList.filter((t) => t.compliance_status === 'expiring_soon').length,
-        tenant_non_compliant: tList.filter(
-          (t) => t.compliance_status === 'non_compliant' || t.compliance_status === 'expired'
-        ).length,
-        status_compliant: countStatus('compliant'),
-        status_expiring: countStatus('expiring_soon'),
-        status_non_compliant: countStatus('non_compliant'),
-        status_expired: countStatus('expired'),
-        status_pending: countStatus('pending'),
-        status_under_review: countStatus('under_review'),
-      });
-    }
+  // Group by property_id in memory
+  const vendorsByProp = new Map<string, { compliance_status: string }[]>();
+  const tenantsByProp = new Map<string, { compliance_status: string }[]>();
+  for (const v of allVendors ?? []) {
+    const list = vendorsByProp.get(v.property_id) ?? [];
+    list.push(v);
+    vendorsByProp.set(v.property_id, list);
   }
+  for (const t of allTenants ?? []) {
+    const list = tenantsByProp.get(t.property_id) ?? [];
+    list.push(t);
+    tenantsByProp.set(t.property_id, list);
+  }
+
+  const propertyList: PropertyWithCounts[] = (properties ?? []).map((prop) => {
+    const vList = vendorsByProp.get(prop.id) ?? [];
+    const tList = tenantsByProp.get(prop.id) ?? [];
+    const all = [...vList, ...tList];
+    const countStatus = (status: string) =>
+      all.filter((e) => e.compliance_status === status).length;
+
+    return {
+      ...prop,
+      vendor_count: vList.length,
+      tenant_count: tList.length,
+      vendor_compliant: vList.filter((v) => v.compliance_status === 'compliant').length,
+      vendor_expiring: vList.filter((v) => v.compliance_status === 'expiring_soon').length,
+      vendor_non_compliant: vList.filter(
+        (v) => v.compliance_status === 'non_compliant' || v.compliance_status === 'expired'
+      ).length,
+      tenant_compliant: tList.filter((t) => t.compliance_status === 'compliant').length,
+      tenant_expiring: tList.filter((t) => t.compliance_status === 'expiring_soon').length,
+      tenant_non_compliant: tList.filter(
+        (t) => t.compliance_status === 'non_compliant' || t.compliance_status === 'expired'
+      ).length,
+      status_compliant: countStatus('compliant'),
+      status_expiring: countStatus('expiring_soon'),
+      status_non_compliant: countStatus('non_compliant'),
+      status_expired: countStatus('expired'),
+      status_pending: countStatus('pending'),
+      status_under_review: countStatus('under_review'),
+    };
+  });
 
   return (
     <div className="space-y-6">

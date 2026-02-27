@@ -20,20 +20,20 @@ export default async function SettingsPage() {
 
   const orgId = profile.organization_id;
 
-  // Fetch org info
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('name, settings')
-    .eq('id', orgId)
-    .single();
-
-  // Fetch default entities
-  const { data: defaultEntities } = await supabase
-    .from('organization_default_entities')
-    .select('*')
-    .eq('organization_id', orgId)
-    .order('entity_type')
-    .order('created_at');
+  // Fetch org info and default entities in parallel
+  const [{ data: org }, { data: defaultEntities }] = await Promise.all([
+    supabase
+      .from('organizations')
+      .select('name, settings')
+      .eq('id', orgId)
+      .single(),
+    supabase
+      .from('organization_default_entities')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('entity_type')
+      .order('created_at'),
+  ]);
 
   return (
     <SettingsClient

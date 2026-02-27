@@ -34,46 +34,48 @@ export default async function TemplateEditorPage({ params }: Props) {
 
   if (!template) notFound();
 
-  // Fetch coverage requirements
-  const { data: requirements } = await supabase
-    .from('template_coverage_requirements')
-    .select('*')
-    .eq('template_id', id)
-    .order('created_at');
-
-  // Fetch usage counts (vendors + tenants assigned to this template)
-  const { count: vendorCount } = await supabase
-    .from('vendors')
-    .select('id', { count: 'exact', head: true })
-    .eq('template_id', id)
-    .eq('organization_id', orgId)
-    .is('deleted_at', null)
-    .is('archived_at', null);
-
-  const { count: tenantCount } = await supabase
-    .from('tenants')
-    .select('id', { count: 'exact', head: true })
-    .eq('template_id', id)
-    .eq('organization_id', orgId)
-    .is('deleted_at', null)
-    .is('archived_at', null);
-
-  // Count distinct properties
-  const { data: vendorProps } = await supabase
-    .from('vendors')
-    .select('property_id')
-    .eq('template_id', id)
-    .eq('organization_id', orgId)
-    .is('deleted_at', null)
-    .is('archived_at', null);
-
-  const { data: tenantProps } = await supabase
-    .from('tenants')
-    .select('property_id')
-    .eq('template_id', id)
-    .eq('organization_id', orgId)
-    .is('deleted_at', null)
-    .is('archived_at', null);
+  // Fetch requirements, usage counts, and property IDs in parallel
+  const [
+    { data: requirements },
+    { count: vendorCount },
+    { count: tenantCount },
+    { data: vendorProps },
+    { data: tenantProps },
+  ] = await Promise.all([
+    supabase
+      .from('template_coverage_requirements')
+      .select('*')
+      .eq('template_id', id)
+      .order('created_at'),
+    supabase
+      .from('vendors')
+      .select('id', { count: 'exact', head: true })
+      .eq('template_id', id)
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .is('archived_at', null),
+    supabase
+      .from('tenants')
+      .select('id', { count: 'exact', head: true })
+      .eq('template_id', id)
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .is('archived_at', null),
+    supabase
+      .from('vendors')
+      .select('property_id')
+      .eq('template_id', id)
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .is('archived_at', null),
+    supabase
+      .from('tenants')
+      .select('property_id')
+      .eq('template_id', id)
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .is('archived_at', null),
+  ]);
 
   const propertyIds = new Set([
     ...(vendorProps ?? []).map((v) => v.property_id).filter(Boolean),

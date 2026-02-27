@@ -36,101 +36,109 @@ export default async function PropertyDetailPage({ params }: Props) {
 
   if (propError || !property) notFound();
 
-  // Fetch entities
-  const { data: entities } = await supabase
-    .from('property_entities')
-    .select('*')
-    .eq('property_id', id)
-    .order('entity_type')
-    .order('entity_name');
+  // Fetch entities, vendors, tenants, archived, and templates in parallel
+  const [
+    { data: entities },
+    { data: vendors },
+    { data: tenants },
+    { data: archivedVendors },
+    { data: archivedTenants },
+    { data: templates },
+  ] = await Promise.all([
+    supabase
+      .from('property_entities')
+      .select('*')
+      .eq('property_id', id)
+      .order('entity_type')
+      .order('entity_name'),
+    supabase
+      .from('vendors')
+      .select('*, template:requirement_templates(id, name)')
+      .eq('property_id', id)
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .is('archived_at', null)
+      .order('company_name'),
+    supabase
+      .from('tenants')
+      .select('*, template:requirement_templates(id, name)')
+      .eq('property_id', id)
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .is('archived_at', null)
+      .order('company_name'),
+    supabase
+      .from('vendors')
+      .select('*, template:requirement_templates(id, name)')
+      .eq('property_id', id)
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .not('archived_at', 'is', null)
+      .order('company_name'),
+    supabase
+      .from('tenants')
+      .select('*, template:requirement_templates(id, name)')
+      .eq('property_id', id)
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .not('archived_at', 'is', null)
+      .order('company_name'),
+    supabase
+      .from('requirement_templates')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('category')
+      .order('name'),
+  ]);
 
-  // Fetch vendors (not soft-deleted, not archived) with their templates
-  const { data: vendors } = await supabase
-    .from('vendors')
-    .select('*, template:requirement_templates(id, name)')
-    .eq('property_id', id)
-    .eq('organization_id', orgId)
-    .is('deleted_at', null)
-    .is('archived_at', null)
-    .order('company_name');
+  // Batch fetch latest COI dates for all vendors and tenants (2 queries, not per-entity)
+  const vendorIds = (vendors ?? []).map((v) => v.id);
+  const tenantIds = (tenants ?? []).map((t) => t.id);
 
-  // Fetch tenants (not soft-deleted, not archived) with their templates
-  const { data: tenants } = await supabase
-    .from('tenants')
-    .select('*, template:requirement_templates(id, name)')
-    .eq('property_id', id)
-    .eq('organization_id', orgId)
-    .is('deleted_at', null)
-    .is('archived_at', null)
-    .order('company_name');
+  const [{ data: vendorCerts }, { data: tenantCerts }] = await Promise.all([
+    vendorIds.length > 0
+      ? supabase
+          .from('certificates')
+          .select('vendor_id, uploaded_at')
+          .in('vendor_id', vendorIds)
+          .order('uploaded_at', { ascending: false })
+      : Promise.resolve({ data: [] as { vendor_id: string; uploaded_at: string }[] }),
+    tenantIds.length > 0
+      ? supabase
+          .from('certificates')
+          .select('tenant_id, uploaded_at')
+          .in('tenant_id', tenantIds)
+          .order('uploaded_at', { ascending: false })
+      : Promise.resolve({ data: [] as { tenant_id: string; uploaded_at: string }[] }),
+  ]);
 
-  // Fetch archived vendors
-  const { data: archivedVendors } = await supabase
-    .from('vendors')
-    .select('*, template:requirement_templates(id, name)')
-    .eq('property_id', id)
-    .eq('organization_id', orgId)
-    .is('deleted_at', null)
-    .not('archived_at', 'is', null)
-    .order('company_name');
-
-  // Fetch archived tenants
-  const { data: archivedTenants } = await supabase
-    .from('tenants')
-    .select('*, template:requirement_templates(id, name)')
-    .eq('property_id', id)
-    .eq('organization_id', orgId)
-    .is('deleted_at', null)
-    .not('archived_at', 'is', null)
-    .order('company_name');
-
-  // Fetch latest COI date per vendor
-  const vendorList = (vendors ?? []) as (Vendor & {
-    template?: RequirementTemplate | null;
-    latest_coi_date?: string | null;
-  })[];
-
-  for (const v of vendorList) {
-    const { data: latestCert } = await supabase
-      .from('certificates')
-      .select('uploaded_at')
-      .eq('vendor_id', v.id)
-      .order('uploaded_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    v.latest_coi_date = latestCert?.uploaded_at
-      ? formatDate(latestCert.uploaded_at.split('T')[0])
-      : null;
+  // Map entity_id -> latest upload date (first per entity since ordered desc)
+  const vendorLatestCert = new Map<string, string>();
+  for (const c of vendorCerts ?? []) {
+    if (c.vendor_id && !vendorLatestCert.has(c.vendor_id)) {
+      vendorLatestCert.set(c.vendor_id, c.uploaded_at);
+    }
+  }
+  const tenantLatestCert = new Map<string, string>();
+  for (const c of tenantCerts ?? []) {
+    if (c.tenant_id && !tenantLatestCert.has(c.tenant_id)) {
+      tenantLatestCert.set(c.tenant_id, c.uploaded_at);
+    }
   }
 
-  // Fetch latest COI date per tenant
-  const tenantList = (tenants ?? []) as (Tenant & {
-    template?: RequirementTemplate | null;
-    latest_coi_date?: string | null;
-  })[];
+  const vendorList = (vendors ?? []).map((v) => ({
+    ...v,
+    latest_coi_date: vendorLatestCert.has(v.id)
+      ? formatDate(vendorLatestCert.get(v.id)!.split('T')[0])
+      : null,
+  })) as (Vendor & { template?: RequirementTemplate | null; latest_coi_date?: string | null })[];
 
-  for (const t of tenantList) {
-    const { data: latestCert } = await supabase
-      .from('certificates')
-      .select('uploaded_at')
-      .eq('tenant_id', t.id)
-      .order('uploaded_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    t.latest_coi_date = latestCert?.uploaded_at
-      ? formatDate(latestCert.uploaded_at.split('T')[0])
-      : null;
-  }
-
-  // Fetch org's requirement templates for the add vendor/tenant dialogs
-  const { data: templates } = await supabase
-    .from('requirement_templates')
-    .select('*')
-    .eq('organization_id', orgId)
-    .order('category')
-    .order('name');
+  const tenantList = (tenants ?? []).map((t) => ({
+    ...t,
+    latest_coi_date: tenantLatestCert.has(t.id)
+      ? formatDate(tenantLatestCert.get(t.id)!.split('T')[0])
+      : null,
+  })) as (Tenant & { template?: RequirementTemplate | null; latest_coi_date?: string | null })[];
 
   return (
     <PropertyDetailClient

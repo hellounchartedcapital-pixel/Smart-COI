@@ -51,24 +51,26 @@ export default async function TemplatesPage() {
     return true;
   });
 
-  // Fetch vendor/tenant usage counts per template
+  // Fetch vendor/tenant usage counts per template (in parallel)
   const templateIds = allTemplates.map((t) => t.id);
+  const templateIdFilter = templateIds.length > 0 ? templateIds : ['__none__'];
 
-  const { data: vendors } = await supabase
-    .from('vendors')
-    .select('template_id')
-    .eq('organization_id', orgId)
-    .is('deleted_at', null)
-    .is('archived_at', null)
-    .in('template_id', templateIds.length > 0 ? templateIds : ['__none__']);
-
-  const { data: tenants } = await supabase
-    .from('tenants')
-    .select('template_id')
-    .eq('organization_id', orgId)
-    .is('deleted_at', null)
-    .is('archived_at', null)
-    .in('template_id', templateIds.length > 0 ? templateIds : ['__none__']);
+  const [{ data: vendors }, { data: tenants }] = await Promise.all([
+    supabase
+      .from('vendors')
+      .select('template_id')
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .is('archived_at', null)
+      .in('template_id', templateIdFilter),
+    supabase
+      .from('tenants')
+      .select('template_id')
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .is('archived_at', null)
+      .in('template_id', templateIdFilter),
+  ]);
 
   // Count per template
   const vendorCounts: Record<string, number> = {};
