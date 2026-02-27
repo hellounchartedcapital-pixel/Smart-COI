@@ -123,11 +123,13 @@ export async function checkAndScheduleNotifications(): Promise<number> {
     .in('status', ['scheduled', 'sent']);
 
   const notifSet = new Set(
-    (existingNotifs ?? []).map((n) => {
-      const eid = n.vendor_id ?? n.tenant_id;
-      const month = n.scheduled_date.substring(0, 7); // YYYY-MM
-      return `${eid}:${n.type}:${month}`;
-    })
+    (existingNotifs ?? [])
+      .filter((n) => n.scheduled_date != null)
+      .map((n) => {
+        const eid = n.vendor_id ?? n.tenant_id;
+        const month = n.scheduled_date.substring(0, 7); // YYYY-MM
+        return `${eid}:${n.type}:${month}`;
+      })
   );
 
   const now = new Date();

@@ -43,10 +43,6 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
   // Don't show for non-trial plans
   if (plan !== 'trial') return null;
 
-  // Debug: log the raw values so we can verify in the browser console
-  // eslint-disable-next-line no-console
-  console.log('[TrialBanner] plan:', plan, 'trialEndsAt:', trialEndsAt);
-
   const now = new Date();
   const expiresAt = trialEndsAt ? new Date(trialEndsAt) : null;
   // Treat null trial_ends_at as expired — legacy accounts without an end date

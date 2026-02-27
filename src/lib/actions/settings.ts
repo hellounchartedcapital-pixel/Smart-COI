@@ -133,7 +133,9 @@ export async function updateNotificationPreferences(
       auto_follow_up_enabled: prefs.auto_follow_up_enabled,
       follow_up_frequency_days: prefs.follow_up_frequency_days,
     },
-    expiration_warning_threshold_days: Math.min(...prefs.expiration_warning_days),
+    expiration_warning_threshold_days: prefs.expiration_warning_days.length > 0
+      ? Math.min(...prefs.expiration_warning_days)
+      : 30,
   };
 
   const { error } = await supabase

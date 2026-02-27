@@ -105,28 +105,6 @@ interface RosterRow {
 
 type BulkStep = 'files' | 'processing' | 'review' | 'summary';
 
-const VENDOR_TYPE_SUGGESTIONS = [
-  'Janitorial',
-  'HVAC',
-  'Electrical',
-  'Plumbing',
-  'Roofing',
-  'Landscaping',
-  'Security',
-  'Elevator',
-  'Fire Protection',
-  'General Contractor',
-];
-
-const TENANT_TYPE_SUGGESTIONS = [
-  'Retail',
-  'Restaurant',
-  'Office',
-  'Medical',
-  'Warehouse',
-  'Industrial',
-];
-
 // Max concurrent extractions — keep low to avoid Anthropic rate limits
 const MAX_CONCURRENT = 2;
 
@@ -381,7 +359,6 @@ export default function BulkUploadPage() {
     abortRef.current = false;
 
     const pendingFiles = files.filter((f) => f.status === 'pending' || f.status === 'failed');
-    const totalBatch = pendingFiles.length;
 
     // Helper: update processing message with ETA
     function updateProgress(completed: number) {

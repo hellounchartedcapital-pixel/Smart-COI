@@ -28,7 +28,10 @@ export function SessionGuard() {
         status.reason === 'absolute_expired'
           ? 'Your session expired for security. Please log in again.'
           : 'Your session expired due to inactivity. Please log in again.';
-      signOutWithSessionExpiry(message);
+      signOutWithSessionExpiry(message).catch(() => {
+        // Fallback: redirect even if sign-out fails
+        window.location.href = '/login?message=' + encodeURIComponent(message);
+      });
     }
   }, []);
 
