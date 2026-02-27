@@ -204,6 +204,14 @@ export async function POST(
         .insert(coverageRows);
       if (covError) {
         console.error('Failed to insert extracted_coverages:', covError);
+        await supabase
+          .from('certificates')
+          .update({ processing_status: 'failed' })
+          .eq('id', certificate_id);
+        return NextResponse.json(
+          { error: 'Failed to store extraction results. Please try again.' },
+          { status: 500 }
+        );
       }
     }
 
@@ -221,6 +229,14 @@ export async function POST(
         .insert(entityRows);
       if (entError) {
         console.error('Failed to insert extracted_entities:', entError);
+        await supabase
+          .from('certificates')
+          .update({ processing_status: 'failed' })
+          .eq('id', certificate_id);
+        return NextResponse.json(
+          { error: 'Failed to store extraction results. Please try again.' },
+          { status: 500 }
+        );
       }
     }
 
@@ -233,21 +249,22 @@ export async function POST(
       })
       .eq('id', certificate_id);
 
-    // Log processing activity
-    await supabase.from('activity_log').insert({
-      organization_id: cert.organization_id,
-      [entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
-      certificate_id,
-      action: 'coi_processed',
-      description: `COI processed via self-service portal — ${result.coverages.length} coverage(s) and ${result.entities.length} entity/entities extracted.`,
-    });
-
-    // Notify the PM
+    // Fetch entity info for activity log and PM notification
     const { data: entityInfo } = await supabase
       .from(entityType === 'vendor' ? 'vendors' : 'tenants')
       .select('company_name, organization_id, property_id')
       .eq('id', entityId)
       .single();
+    const entityName = entityInfo?.company_name ?? entityType;
+
+    // Log processing activity — include entity name since portal is unauthenticated
+    await supabase.from('activity_log').insert({
+      organization_id: cert.organization_id,
+      [entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
+      certificate_id,
+      action: 'coi_processed',
+      description: `COI processed via self-service portal by ${entityName} — ${result.coverages.length} coverage(s) and ${result.entities.length} entity/entities extracted.`,
+    });
 
     if (entityInfo) {
       const { data: orgUsers } = await supabase

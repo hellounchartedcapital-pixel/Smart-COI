@@ -339,16 +339,6 @@ export function calculateCompliance(
       gapDesc = `${fmtCov(req.coverage_type, req.limit_type)} requires Waiver of Subrogation but it is not listed`;
     }
 
-    // Check expiration
-    if (match.expiration_date) {
-      const expDate = new Date(match.expiration_date + 'T00:00:00');
-      if (expDate < now) {
-        hasExpired = true;
-      } else if (expDate < thresholdDate) {
-        hasExpiringSoon = true;
-      }
-    }
-
     if (limitMet) {
       coverageResults.push({
         coverage_requirement_id: req.id,

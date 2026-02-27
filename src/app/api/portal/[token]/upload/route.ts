@@ -212,14 +212,22 @@ export async function POST(
       .update({ compliance_status: 'under_review', updated_at: new Date().toISOString() })
       .eq('id', entityId);
 
-    // Log activity
+    // Log activity — include entity name in description for audit trail
+    // since portal uploads are unauthenticated (no performed_by)
     const entityField = entityType === 'vendor' ? 'vendor_id' : 'tenant_id';
+    const { data: entityNameData } = await supabase
+      .from(entityType === 'vendor' ? 'vendors' : 'tenants')
+      .select('company_name')
+      .eq('id', entityId)
+      .single();
+    const entityName = entityNameData?.company_name ?? entityType;
+
     await supabase.from('activity_log').insert({
       organization_id: organizationId,
       [entityField]: entityId,
       certificate_id: certificate.id,
       action: 'portal_upload_received',
-      description: `New COI uploaded via self-service portal`,
+      description: `New COI uploaded via self-service portal by ${entityName}`,
     });
 
     return NextResponse.json({

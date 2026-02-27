@@ -74,9 +74,16 @@ function ComplianceSummary({
     );
   }
 
+  const issues = [];
+  if (nonCompliant > 0) issues.push(`${nonCompliant} non-compliant`);
+  if (expiring > 0) issues.push(`${expiring} expiring`);
+
   return (
     <span className="text-xs text-slate-600">
       {compliant} of {total} {label} compliant
+      {issues.length > 0 && (
+        <span className="text-slate-400"> ({issues.join(', ')})</span>
+      )}
     </span>
   );
 }

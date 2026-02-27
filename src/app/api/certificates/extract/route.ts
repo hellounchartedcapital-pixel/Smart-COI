@@ -186,6 +186,11 @@ export async function POST(req: NextRequest) {
         .insert(coverageRows);
       if (covError) {
         console.error('Failed to insert extracted_coverages:', covError);
+        await serviceClient
+          .from('certificates')
+          .update({ processing_status: 'failed' })
+          .eq('id', certificateId);
+        return NextResponse.json({ error: 'Failed to store extraction results' }, { status: 500 });
       }
     }
 
@@ -203,6 +208,11 @@ export async function POST(req: NextRequest) {
         .insert(entityRows);
       if (entError) {
         console.error('Failed to insert extracted_entities:', entError);
+        await serviceClient
+          .from('certificates')
+          .update({ processing_status: 'failed' })
+          .eq('id', certificateId);
+        return NextResponse.json({ error: 'Failed to store extraction results' }, { status: 500 });
       }
     }
 
