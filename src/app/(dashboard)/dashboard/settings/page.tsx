@@ -42,6 +42,8 @@ export default async function SettingsPage() {
       pmName={profile.full_name ?? ''}
       pmEmail={profile.email}
       defaultEntities={(defaultEntities ?? []) as OrganizationDefaultEntity[]}
+      userEmail={user.email ?? profile.email}
+      lastSignIn={user.last_sign_in_at ?? null}
     />
   );
 }

@@ -1,21 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  setRememberMe,
+  getRememberMe,
+  setLoginTime,
+  updateLastActive,
+} from '@/lib/session';
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? '/dashboard';
+  const sessionMessage = searchParams.get('message');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMeState] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Hydrate remember-me preference from localStorage
+  useEffect(() => {
+    setRememberMeState(getRememberMe());
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -40,6 +53,11 @@ export function LoginForm() {
         return;
       }
 
+      // Store session preferences
+      setRememberMe(rememberMe);
+      setLoginTime();
+      updateLastActive();
+
       router.push(next);
       router.refresh();
     } catch {
@@ -58,6 +76,12 @@ export function LoginForm() {
           Sign in to your SmartCOI account.
         </p>
       </div>
+
+      {sessionMessage && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {sessionMessage}
+        </div>
+      )}
 
       <form onSubmit={handleLogin} className="space-y-4">
         <div className="space-y-2">
@@ -84,6 +108,19 @@ export function LoginForm() {
             required
             autoComplete="current-password"
           />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            id="rememberMe"
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMeState(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+          />
+          <Label htmlFor="rememberMe" className="text-sm font-normal text-muted-foreground cursor-pointer">
+            Remember me for 30 days
+          </Label>
         </div>
 
         {error && (

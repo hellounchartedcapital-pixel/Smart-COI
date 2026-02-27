@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,7 @@ import {
   type DefaultEntityInput,
   type NotificationPreferencesInput,
 } from '@/lib/actions/settings';
+import { getLoginTime, signOutAllDevices } from '@/lib/session';
 import type { OrganizationDefaultEntity, OrganizationSettings, EntityType } from '@/types';
 
 // ============================================================================
@@ -25,6 +26,8 @@ interface SettingsClientProps {
   pmName: string;
   pmEmail: string;
   defaultEntities: OrganizationDefaultEntity[];
+  userEmail: string;
+  lastSignIn: string | null;
 }
 
 // ============================================================================
@@ -37,6 +40,8 @@ export function SettingsClient({
   pmName: initialPmName,
   pmEmail: initialPmEmail,
   defaultEntities: initialEntities,
+  userEmail,
+  lastSignIn,
 }: SettingsClientProps) {
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -51,6 +56,7 @@ export function SettingsClient({
       <ContactSection initialName={initialPmName} initialEmail={initialPmEmail} />
       <DefaultEntitiesSection initialEntities={initialEntities} />
       <NotificationSection settings={orgSettings} />
+      <SessionSection userEmail={userEmail} lastSignIn={lastSignIn} />
     </div>
   );
 }
@@ -451,6 +457,99 @@ function NotificationSection({ settings }: { settings: OrganizationSettings }) {
           <Button size="sm" disabled={saving} onClick={handleSave}>
             {saving ? 'Saving...' : 'Save Preferences'}
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Session & Security Section
+// ============================================================================
+
+function SessionSection({
+  userEmail,
+  lastSignIn,
+}: {
+  userEmail: string;
+  lastSignIn: string | null;
+}) {
+  const [signingOut, setSigningOut] = useState(false);
+  const [clientLoginTime, setClientLoginTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    setClientLoginTime(getLoginTime());
+  }, []);
+
+  function formatDateTime(iso: string): string {
+    try {
+      return new Date(iso).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
+    } catch {
+      return iso;
+    }
+  }
+
+  // Use the client-stored login time if available, otherwise fall back to Supabase's last_sign_in_at
+  const displayLoginTime = clientLoginTime ?? lastSignIn;
+
+  async function handleSignOutAll() {
+    setSigningOut(true);
+    try {
+      await signOutAllDevices();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to sign out');
+      setSigningOut(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-5">
+      <h2 className="text-sm font-semibold text-foreground">Session &amp; Security</h2>
+      <p className="mt-0.5 text-xs text-muted-foreground">
+        Manage your active sessions and security settings.
+      </p>
+
+      <div className="mt-4 space-y-3">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Signed in as</span>
+          <span className="font-medium text-foreground">{userEmail}</span>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Last login</span>
+          <span className="font-medium text-foreground">
+            {displayLoginTime ? formatDateTime(displayLoginTime) : 'Unknown'}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Session policy</span>
+          <span className="text-xs text-muted-foreground">
+            Expires after 8 hours of inactivity (30 days with &quot;Remember me&quot;)
+          </span>
+        </div>
+
+        <div className="border-t border-slate-100 pt-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Sign out all devices</p>
+              <p className="text-xs text-muted-foreground">
+                Invalidate all active sessions, including this one.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              disabled={signingOut}
+              onClick={handleSignOutAll}
+            >
+              {signingOut ? 'Signing out...' : 'Sign out all'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
