@@ -4,6 +4,7 @@ import { isOrgOnboarded } from '@/lib/actions/auth';
 import { DashboardShell } from '@/components/dashboard/sidebar';
 import { TrialBanner } from '@/components/dashboard/trial-banner';
 import { UpgradeModalProvider } from '@/components/dashboard/upgrade-modal';
+import { SessionGuard } from '@/components/dashboard/session-guard';
 
 export default async function DashboardLayout({
   children,
@@ -55,6 +56,7 @@ export default async function DashboardLayout({
 
   return (
     <UpgradeModalProvider>
+      <SessionGuard />
       <div className="flex h-screen overflow-hidden bg-slate-50">
         <DashboardShell
           userName={profile?.full_name ?? null}
