@@ -37,7 +37,7 @@ const personas = [
   },
   {
     icon: <IconTrendingUp className="h-7 w-7" />,
-    title: 'Asset Managers & Owners',
+    title: 'Asset Managers',
     description:
       'Get portfolio-wide visibility into compliance risk. Know which properties and vendors are exposed — without digging through spreadsheets.',
   },
@@ -70,7 +70,7 @@ export function WhoItsFor() {
         <div className="mt-14 grid gap-8 sm:grid-cols-3">
           {personas.map((persona, i) => (
             <AnimateIn key={persona.title} delay={i * 120}>
-              <div className="group relative rounded-2xl border border-slate-200 bg-white p-8 transition-all hover:shadow-lg hover:border-[#73E2A7]/30">
+              <div className="group relative h-full rounded-2xl border border-slate-200 bg-white p-8 transition-all hover:shadow-lg hover:border-[#73E2A7]/30">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#73E2A7]/10 text-[#4CC78A] transition-colors group-hover:bg-[#73E2A7]/15">
                   {persona.icon}
                 </div>

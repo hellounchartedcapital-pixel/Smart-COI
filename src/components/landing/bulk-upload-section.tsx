@@ -18,8 +18,8 @@ const bullets = [
     description: 'Vendor names, coverage types, policy limits, expiration dates, and named insureds — extracted from every certificate.',
   },
   {
-    title: 'Fuzzy matching links certificates to vendors',
-    description: 'SmartCOI intelligently matches certificates to existing vendors or creates new ones when no match is found.',
+    title: 'AI automatically links certificates to the right vendors',
+    description: 'Even if names don\u2019t match exactly, SmartCOI intelligently matches certificates to existing vendors or creates new ones when no match is found.',
   },
   {
     title: 'Full compliance picture in one session',
