@@ -5,14 +5,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 const publicRoutes = [
   '/', '/login', '/signup', '/opengraph-image', '/twitter-image', '/favicon.ico',
   // Marketing / SEO pages
-  '/compare', '/terms', '/privacy', '/coi-tracking-software',
+  '/terms', '/privacy', '/coi-tracking-software',
   '/certificate-of-insurance-tracking', '/vendor-insurance-compliance',
   '/tenant-insurance-tracking', '/ai-coi-extraction', '/llms.txt', '/og-image.png',
 ];
 const publicPrefixes = [
   '/portal/', '/api/portal/', '/api/webhooks/', '/api/cron/', '/api/auth/',
   // Marketing / SEO prefixes
-  '/blog', '/features/',
+  '/blog', '/compare', '/features/',
 ];
 
 function isPublicRoute(pathname: string): boolean {
