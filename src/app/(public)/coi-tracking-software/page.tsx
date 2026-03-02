@@ -29,7 +29,7 @@ const jsonLd = {
     'AI-powered COI tracking software for commercial property managers. Automate certificate of insurance collection, compliance verification, and expiration monitoring.',
   offers: {
     '@type': 'Offer',
-    price: '99',
+    price: '79',
     priceCurrency: 'USD',
   },
 };
@@ -206,12 +206,11 @@ export default function COITrackingSoftwarePage() {
           </h2>
           <div className="mt-6 space-y-4 text-base leading-relaxed text-slate-600">
             <p>
-              SmartCOI starts at $79/month (billed annually) for the Starter plan, which includes
-              unlimited properties, up to 50 vendors and tenants, 50 AI-powered COI extractions per
-              month, and full access to compliance checking, notifications, and the vendor portal.
-              The Professional plan at $199/month supports up to 250 vendors and 200 extractions for
-              growing portfolios. Enterprise plans with unlimited capacity and custom integrations are
-              available for larger organizations.
+              SmartCOI starts at $79/month for the Starter plan (or $63/month billed annually),
+              which includes unlimited properties, up to 50 certificates, and full access to
+              AI-powered extraction, compliance checking, notifications, and the vendor portal.
+              The Growth plan at $149/month supports up to 150 certificates for growing portfolios.
+              The Professional plan at $249/month includes unlimited certificates and priority support.
             </p>
             <p>
               Every plan includes a 14-day free trial with full feature access. No credit card

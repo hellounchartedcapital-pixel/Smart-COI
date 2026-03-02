@@ -51,7 +51,7 @@ const jsonLd = {
         'AI-powered certificate of insurance compliance tracking for commercial property managers.',
       offers: {
         '@type': 'Offer',
-        price: '99',
+        price: '79',
         priceCurrency: 'USD',
       },
     },

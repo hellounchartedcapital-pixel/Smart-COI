@@ -58,9 +58,8 @@ export default function SmartCOIvsJonesPage() {
                   { feature: 'Pricing', smart: 'Transparent, published', jones: 'Custom quotes only' },
                   { feature: 'Free trial', smart: '14 days, no card required', jones: 'Demo only' },
                   { feature: 'Vendor portal', smart: 'Self-service upload links', jones: 'Available' },
-                  { feature: 'PMS integrations', smart: 'Enterprise plan (Yardi, MRI, AppFolio)', jones: 'Deep integrations (Yardi, MRI, Procore)' },
+                  { feature: 'PMS integrations', smart: 'Not currently available', jones: 'Deep integrations (Yardi, MRI, Procore)' },
                   { feature: 'Compliance checking', smart: 'Instant, automated', jones: 'Human + automated' },
-                  { feature: 'Enterprise support', smart: 'Dedicated account manager', jones: 'Full enterprise team' },
                   { feature: 'Target market', smart: 'Mid-market CRE firms', jones: 'Enterprise CRE & construction' },
                 ].map((row) => (
                   <tr key={row.feature}>
@@ -96,8 +95,8 @@ export default function SmartCOIvsJonesPage() {
             </p>
             <p>
               <strong className="text-slate-950">Transparent pricing.</strong> SmartCOI publishes
-              its pricing openly. Starter plan at $79/month, Professional at $199/month, Enterprise
-              by consultation. You know what you are paying before you ever talk to anyone. Jones
+              its pricing openly. Starter at $79/month, Growth at $149/month, Professional at
+              $249/month. You know what you are paying before you ever talk to anyone. Jones
               requires contacting sales for pricing, which adds friction to the evaluation process.
             </p>
             <p>
@@ -118,8 +117,8 @@ export default function SmartCOIvsJonesPage() {
               <strong className="text-slate-950">Deep PMS integrations.</strong> Jones has
               established integrations with major property management systems including Yardi, MRI,
               and Procore. For enterprise organizations where COI data needs to flow seamlessly into
-              existing systems, these integrations can be a deciding factor. SmartCOI offers
-              enterprise integrations but Jones has had longer to build and refine them.
+              existing systems, these integrations can be a deciding factor. SmartCOI does not
+              currently offer PMS integrations, so this is a clear Jones advantage.
             </p>
             <p>
               <strong className="text-slate-950">Larger team and enterprise support.</strong> Jones

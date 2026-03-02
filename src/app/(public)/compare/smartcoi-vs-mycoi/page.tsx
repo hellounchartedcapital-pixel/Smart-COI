@@ -55,13 +55,13 @@ export default function SmartCOIvsMyCOIPage() {
               <tbody className="divide-y divide-slate-100">
                 {[
                   { feature: 'Minimum requirements', smart: 'No minimums', mycoi: '200+ certificates required' },
-                  { feature: 'Pricing', smart: 'Published tiers ($79/$149/$299)', mycoi: 'Complex multi-factor, sales required' },
+                  { feature: 'Pricing', smart: 'Published tiers ($79/$149/$249)', mycoi: 'Complex multi-factor, sales required' },
                   { feature: 'Setup', smart: 'Self-serve, minutes', mycoi: 'Sales call + implementation period' },
                   { feature: 'Free trial', smart: '14 days, no card required', mycoi: 'Demo only' },
                   { feature: 'Data extraction', smart: 'AI-powered, seconds', mycoi: 'AI + human review team' },
                   { feature: 'Bulk upload', smart: '50 COIs at once, instant results', mycoi: 'Manual onboarding process' },
                   { feature: 'Industry focus', smart: 'Commercial real estate', mycoi: 'Multi-industry (CRE, construction, gov, utilities)' },
-                  { feature: 'PMS integrations', smart: 'Enterprise plan (Yardi, MRI, AppFolio)', mycoi: 'Procore, MRI, Sage, Viewpoint, CMiC' },
+                  { feature: 'PMS integrations', smart: 'Not currently available', mycoi: 'Procore, MRI, Sage, Viewpoint, CMiC' },
                   { feature: 'Vendor portal', smart: 'Self-service upload links', mycoi: 'Available' },
                   { feature: 'Target market', smart: 'Mid-market property managers', mycoi: 'Enterprise, 200+ certificates' },
                 ].map((row) => (
@@ -90,8 +90,8 @@ export default function SmartCOIvsMyCOIPage() {
             </p>
             <p>
               <strong className="text-slate-950">Transparent, simple pricing.</strong> SmartCOI publishes
-              clear per-certificate tiers: Starter at $79/month, Professional at $149/month, Enterprise
-              at $299/month. You know what you&apos;ll pay before you talk to anyone. myCOI uses
+              clear per-certificate tiers: Starter at $79/month, Growth at $149/month, Professional
+              at $249/month. You know what you&apos;ll pay before you talk to anyone. myCOI uses
               multi-factor pricing that depends on certificate volume, features, and other variables —
               you won&apos;t know the cost until you go through a sales process.
             </p>

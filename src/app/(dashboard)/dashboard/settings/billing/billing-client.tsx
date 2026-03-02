@@ -114,19 +114,25 @@ export function BillingClient({
 
   const starterPriceId =
     interval === 'monthly' ? PRICE_IDS.STARTER_MONTHLY : PRICE_IDS.STARTER_ANNUAL;
+  const growthPriceId =
+    interval === 'monthly' ? PRICE_IDS.GROWTH_MONTHLY : PRICE_IDS.GROWTH_ANNUAL;
   const proPriceId =
     interval === 'monthly'
       ? PRICE_IDS.PROFESSIONAL_MONTHLY
       : PRICE_IDS.PROFESSIONAL_ANNUAL;
 
   const isAnnual = interval === 'annual';
-  const starterPrice = isAnnual ? '$79' : '$99';
+  const starterPrice = isAnnual ? '$63' : '$79';
   const starterPer = '/mo';
-  const starterSavings = isAnnual ? 'Save $238/year' : null;
+  const starterSavings = isAnnual ? 'Save $192/year' : null;
   const starterBilledLabel = isAnnual ? 'billed annually' : null;
+  const growthPrice = isAnnual ? '$119' : '$149';
+  const growthPer = '/mo';
+  const growthSavings = isAnnual ? 'Save $360/year' : null;
+  const growthBilledLabel = isAnnual ? 'billed annually' : null;
   const proPrice = isAnnual ? '$199' : '$249';
   const proPer = '/mo';
-  const proSavings = isAnnual ? 'Save $598/year' : null;
+  const proSavings = isAnnual ? 'Save $600/year' : null;
   const proBilledLabel = isAnnual ? 'billed annually' : null;
 
   return (
@@ -230,7 +236,7 @@ export function BillingClient({
             )}
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div className="grid gap-6 sm:grid-cols-3">
             {/* Starter */}
             <PlanCard
               name="Starter"
@@ -239,18 +245,39 @@ export function BillingClient({
               billedLabel={starterBilledLabel}
               savings={starterSavings}
               features={[
+                'Up to 50 certificates',
                 'Unlimited properties',
-                'Up to 50 vendors & tenants',
-                '50 COI extractions / month',
-                'AI compliance checking',
-                'Custom requirement templates',
-                'Expiration notifications',
-                'Vendor upload portal',
-                'Compliance dashboard',
+                'AI-powered COI extraction',
+                'Compliance templates',
+                'Self-service vendor/tenant portal',
+                'Automated notifications',
+                'Real-time dashboard',
               ]}
               isCurrent={plan === 'starter'}
               loading={loading === starterPriceId}
               onSubscribe={() => handleSubscribe(starterPriceId)}
+            />
+
+            {/* Growth */}
+            <PlanCard
+              name="Growth"
+              price={growthPrice}
+              per={growthPer}
+              billedLabel={growthBilledLabel}
+              savings={growthSavings}
+              popular
+              features={[
+                'Up to 150 certificates',
+                'Unlimited properties',
+                'AI-powered COI extraction',
+                'Compliance templates',
+                'Self-service vendor/tenant portal',
+                'Automated notifications',
+                'Real-time dashboard',
+              ]}
+              isCurrent={plan === 'growth'}
+              loading={loading === growthPriceId}
+              onSubscribe={() => handleSubscribe(growthPriceId)}
             />
 
             {/* Professional */}
@@ -260,14 +287,15 @@ export function BillingClient({
               per={proPer}
               billedLabel={proBilledLabel}
               savings={proSavings}
-              popular
               features={[
-                'Everything in Starter, plus:',
-                'Up to 250 vendors & tenants',
-                '200 COI extractions / month',
-                'Priority email support',
-                'Compliance reports (coming soon)',
-                'Team members & roles (coming soon)',
+                'Unlimited certificates',
+                'Unlimited properties',
+                'AI-powered COI extraction',
+                'Compliance templates',
+                'Self-service vendor/tenant portal',
+                'Automated notifications',
+                'Real-time dashboard',
+                'Priority support',
               ]}
               isCurrent={plan === 'professional'}
               loading={loading === proPriceId}
@@ -276,13 +304,7 @@ export function BillingClient({
           </div>
 
           <p className="text-center text-xs text-muted-foreground">
-            Need enterprise? Unlimited everything, custom integrations, dedicated support.{' '}
-            <a
-              href="mailto:sales@smartcoi.io"
-              className="font-medium text-emerald-600 underline underline-offset-2 hover:text-emerald-700"
-            >
-              Contact sales@smartcoi.io
-            </a>
+            All plans include a 14-day free trial. No credit card required.
           </p>
         </>
       )}
