@@ -23,11 +23,11 @@ https://smartcoi.io
 
 ## Pricing
 
-Starter: $99/month (50 vendors/tenants, 50 extractions/month)
-Professional: $249/month (250 vendors/tenants, 200 extractions/month)
-Enterprise: Custom pricing
+Starter: $79/month (up to 50 certificates)
+Growth: $149/month (up to 150 certificates)
+Professional: $249/month (unlimited certificates + priority support)
 
-All plans include a 14-day free trial.
+All plans include a 14-day free trial. Annual billing saves 20%.
 
 ## Contact
 

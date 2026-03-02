@@ -13,7 +13,7 @@ export interface PlanStatus {
  * Determine whether an org has an active (usable) plan.
  *
  * Active if:
- *   - plan is starter, professional, or enterprise
+ *   - plan is starter, growth, or professional
  *   - plan is trial AND trial_ends_at is in the future
  *
  * Inactive if:
@@ -38,7 +38,7 @@ export function getActivePlanStatus(org: {
       : { isActive: false, reason: 'trial_expired' };
   }
 
-  // starter, professional, enterprise, or any paid plan
+  // starter, growth, professional, or any paid plan
   return { isActive: true, reason: 'active' };
 }
 

@@ -12,6 +12,7 @@ export interface PlanLimits {
 const PLAN_LIMITS: Record<string, PlanLimits> = {
   trial: { maxVendorsTenants: 50, maxExtractionsPerMonth: 10 },
   starter: { maxVendorsTenants: 50, maxExtractionsPerMonth: 50 },
+  growth: { maxVendorsTenants: 150, maxExtractionsPerMonth: 150 },
   professional: { maxVendorsTenants: 250, maxExtractionsPerMonth: 200 },
   canceled: { maxVendorsTenants: 0, maxExtractionsPerMonth: 0 },
 };
@@ -67,8 +68,10 @@ export async function checkVendorTenantLimit(
   if (total >= limits.maxVendorsTenants) {
     const upgrade =
       plan === 'starter' || plan === 'trial'
-        ? ' Upgrade to Professional for up to 250 vendors & tenants.'
-        : '';
+        ? ' Upgrade to Growth for up to 150 vendors & tenants.'
+        : plan === 'growth'
+          ? ' Upgrade to Professional for up to 250 vendors & tenants.'
+          : '';
     return {
       allowed: false,
       error: `You've reached the vendor/tenant limit for your plan (${limits.maxVendorsTenants}).${upgrade}`,
@@ -113,8 +116,10 @@ export async function checkExtractionLimit(
   if ((count ?? 0) >= limits.maxExtractionsPerMonth) {
     const upgrade =
       plan === 'starter' || plan === 'trial'
-        ? ' Upgrade to Professional for 200 extractions per month.'
-        : '';
+        ? ' Upgrade to Growth for 150 extractions per month.'
+        : plan === 'growth'
+          ? ' Upgrade to Professional for 200 extractions per month.'
+          : '';
     return {
       allowed: false,
       error: `You've reached the monthly extraction limit for your plan (${limits.maxExtractionsPerMonth}).${upgrade}`,

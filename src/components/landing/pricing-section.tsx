@@ -24,7 +24,8 @@ export function PricingSection() {
   const [interval, setInterval] = useState<BillingInterval>('annual');
   const isAnnual = interval === 'annual';
 
-  const starterPrice = isAnnual ? 79 : 99;
+  const starterPrice = isAnnual ? 63 : 79;
+  const growthPrice = isAnnual ? 119 : 149;
   const proPrice = isAnnual ? 199 : 249;
 
   return (
@@ -44,7 +45,7 @@ export function PricingSection() {
             </h2>
             <p className="mt-4 text-lg text-slate-500">
               Start small and scale as your portfolio grows. Every plan includes a 14-day
-              free trial.
+              free trial — no credit card required.
             </p>
           </div>
         </AnimateIn>
@@ -115,24 +116,22 @@ export function PricingSection() {
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <span className="text-sm text-slate-500">billed annually</span>
                   <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                    Save $238/year
+                    Save $192/year
                   </span>
                 </div>
               )}
               <p className="mt-2 text-sm text-slate-500">
-                For firms getting started with compliance automation
+                Up to 50 certificates
               </p>
 
               <ul className="mt-8 flex-1 space-y-4">
                 {[
                   'Unlimited properties',
-                  'Up to 50 vendors & tenants',
-                  '50 COI extractions per month',
-                  'AI-powered compliance checking',
-                  'Custom requirement templates',
-                  'Automated expiration notifications',
-                  'Self-service vendor upload portal',
-                  'Compliance dashboard',
+                  'AI-powered COI extraction',
+                  'Compliance templates',
+                  'Self-service vendor/tenant portal',
+                  'Automated notifications & follow-up',
+                  'Real-time dashboard & reporting',
                 ].map((item) => (
                   <li
                     key={item}
@@ -153,7 +152,7 @@ export function PricingSection() {
             </div>
           </AnimateIn>
 
-          {/* ── Professional — Most Popular ── */}
+          {/* ── Growth — Most Popular ── */}
           <AnimateIn delay={200}>
             <div className="relative flex h-full flex-col overflow-hidden rounded-2xl border-2 border-brand bg-white p-8 shadow-xl shadow-brand/10 lg:-mt-4 lg:mb-[-1rem]">
               <div className="absolute top-0 right-0 rounded-bl-xl bg-brand-dark px-4 py-1.5 text-xs font-bold text-white">
@@ -161,6 +160,61 @@ export function PricingSection() {
               </div>
 
               <p className="text-sm font-semibold uppercase tracking-wider text-brand-dark">
+                Growth
+              </p>
+              <div className="mt-3 flex items-baseline gap-1">
+                <span
+                  key={growthPrice}
+                  className="text-5xl font-black tracking-tight text-slate-950 transition-all duration-300"
+                >
+                  ${growthPrice}
+                </span>
+                <span className="text-lg text-slate-500">/mo</span>
+              </div>
+              {isAnnual && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-slate-500">billed annually</span>
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                    Save $360/year
+                  </span>
+                </div>
+              )}
+              <p className="mt-2 text-sm text-slate-500">
+                Up to 150 certificates
+              </p>
+
+              <ul className="mt-8 flex-1 space-y-4">
+                {[
+                  'Unlimited properties',
+                  'AI-powered COI extraction',
+                  'Compliance templates',
+                  'Self-service vendor/tenant portal',
+                  'Automated notifications & follow-up',
+                  'Real-time dashboard & reporting',
+                ].map((item) => (
+                  <li
+                    key={item}
+                    className="flex items-start gap-3 text-sm text-slate-600"
+                  >
+                    <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href="/signup"
+                className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-brand-dark text-sm font-semibold text-white shadow-lg shadow-brand-dark/20 transition-all hover:bg-[#3BB87A] hover:shadow-xl hover:shadow-brand-dark/30"
+              >
+                Start Free Trial
+              </Link>
+            </div>
+          </AnimateIn>
+
+          {/* ── Professional ── */}
+          <AnimateIn delay={300}>
+            <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-8 transition-shadow hover:shadow-lg">
+              <p className="text-sm font-semibold uppercase tracking-wider text-slate-400">
                 Professional
               </p>
               <div className="mt-3 flex items-baseline gap-1">
@@ -176,79 +230,23 @@ export function PricingSection() {
                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <span className="text-sm text-slate-500">billed annually</span>
                   <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                    Save $598/year
+                    Save $600/year
                   </span>
                 </div>
               )}
               <p className="mt-2 text-sm text-slate-500">
-                For growing portfolios that need more capacity
+                Unlimited certificates + priority support
               </p>
 
               <ul className="mt-8 flex-1 space-y-4">
-                <li className="flex items-start gap-3 text-sm text-slate-600">
-                  <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
-                  Everything in Starter, plus:
-                </li>
                 {[
-                  { label: 'Up to 250 vendors & tenants', comingSoon: false },
-                  { label: '200 COI extractions per month', comingSoon: false },
-                  { label: 'Priority email support', comingSoon: false },
-                  { label: 'Compliance reports & exports', comingSoon: true },
-                  { label: 'Team members & roles', comingSoon: true },
-                ].map((item) => (
-                  <li
-                    key={item.label}
-                    className="flex items-start gap-3 text-sm text-slate-600"
-                  >
-                    <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
-                    <span>
-                      {item.label}
-                      {item.comingSoon && (
-                        <span className="ml-1.5 inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-400">
-                          Coming Soon
-                        </span>
-                      )}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                href="/signup"
-                className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-brand-dark text-sm font-semibold text-white shadow-lg shadow-brand-dark/20 transition-all hover:bg-[#3BB87A] hover:shadow-xl hover:shadow-brand-dark/30"
-              >
-                Start Free Trial
-              </Link>
-            </div>
-          </AnimateIn>
-
-          {/* ── Enterprise ── */}
-          <AnimateIn delay={300}>
-            <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-8 transition-shadow hover:shadow-lg">
-              <p className="text-sm font-semibold uppercase tracking-wider text-slate-400">
-                Enterprise
-              </p>
-              <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-4xl font-black tracking-tight text-slate-950">
-                  Let&apos;s Talk
-                </span>
-              </div>
-              <p className="mt-2 text-sm text-slate-500">
-                For large portfolios with complex requirements
-              </p>
-
-              <ul className="mt-8 flex-1 space-y-4">
-                <li className="flex items-start gap-3 text-sm text-slate-600">
-                  <IconCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#4CC78A]" />
-                  Everything in Professional, plus:
-                </li>
-                {[
-                  'Unlimited vendors & tenants',
-                  'Unlimited COI extractions',
-                  'Dedicated onboarding & training',
-                  'Custom integrations (Yardi, MRI, AppFolio)',
-                  'SLA & uptime guarantees',
-                  'Dedicated account manager',
+                  'Unlimited properties',
+                  'AI-powered COI extraction',
+                  'Compliance templates',
+                  'Self-service vendor/tenant portal',
+                  'Automated notifications & follow-up',
+                  'Real-time dashboard & reporting',
+                  'Priority support',
                 ].map((item) => (
                   <li
                     key={item}
@@ -261,10 +259,10 @@ export function PricingSection() {
               </ul>
 
               <Link
-                href="mailto:sales@smartcoi.io"
+                href="/signup"
                 className="mt-8 flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
               >
-                Contact Sales
+                Start Free Trial
               </Link>
             </div>
           </AnimateIn>
@@ -286,13 +284,6 @@ export function PricingSection() {
               >
                 See how SmartCOI compares
               </Link>
-              {' '}or{' '}
-              <a
-                href="mailto:sales@smartcoi.io"
-                className="text-emerald-600 underline underline-offset-2 hover:text-emerald-700"
-              >
-                email us at sales@smartcoi.io
-              </a>
             </p>
           </AnimateIn>
         </div>
