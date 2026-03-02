@@ -4,11 +4,10 @@
 // ---------------------------------------------------------------------------
 
 export const PRICE_IDS = {
-  STARTER_MONTHLY: 'price_1T2eRbRh0kGUpK61cWh96vX9',
-  STARTER_ANNUAL: 'price_1T2eSgRh0kGUpK61aZXysIVl',
-  // TODO: Replace placeholders with real Stripe price IDs after creating Growth products
-  GROWTH_MONTHLY: 'price_growth_monthly_placeholder',
-  GROWTH_ANNUAL: 'price_growth_annual_placeholder',
+  STARTER_MONTHLY: 'price_1T6fqkRh0kGUpK61AOPtMIXZ',
+  STARTER_ANNUAL: 'price_1T6fr3Rh0kGUpK61vS2NEQTh',
+  GROWTH_MONTHLY: 'price_1T6fpGRh0kGUpK61Mk69npV8',
+  GROWTH_ANNUAL: 'price_1T6fphRh0kGUpK61xsDtyXPs',
   PROFESSIONAL_MONTHLY: 'price_1T2eTCRh0kGUpK61eMGPwWC0',
   PROFESSIONAL_ANNUAL: 'price_1T2eTbRh0kGUpK61wNBir2OT',
 } as const;
