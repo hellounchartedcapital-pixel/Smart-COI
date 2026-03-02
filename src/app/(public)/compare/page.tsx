@@ -33,6 +33,12 @@ const comparisons = [
     badge: 'Full-Service Alternative',
   },
   {
+    href: '/compare/smartcoi-vs-mycoi',
+    title: 'SmartCOI vs myCOI',
+    desc: 'Compare SmartCOI\'s transparent pricing and no-minimum approach with myCOI\'s enterprise platform and 200-certificate requirement.',
+    badge: 'Legacy Alternative',
+  },
+  {
     href: '/compare/smartcoi-vs-spreadsheets',
     title: 'Software vs Spreadsheets',
     desc: 'Why dedicated COI tracking software is worth the switch from manual spreadsheet tracking — with real time and cost analysis.',
