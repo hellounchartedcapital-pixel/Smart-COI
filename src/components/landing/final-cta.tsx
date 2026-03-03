@@ -25,19 +25,19 @@ export function FinalCTA() {
               Ready to Put Insurance Compliance on Autopilot?
             </h2>
             <p className="mt-6 text-lg text-slate-800/80">
-              Join property management teams who&apos;ve automated their COI workflows with SmartCOI.
+              See your compliance dashboard in minutes — no credit card required.
             </p>
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Link
                 href="/signup"
                 className="group inline-flex h-12 items-center rounded-xl bg-slate-950 px-8 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 transition-all hover:bg-slate-800 hover:-translate-y-0.5"
               >
-                Start Your Free Trial
+                Upload 50 COIs Free
                 <IconArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
             <p className="mt-5 text-sm text-slate-800/60">
-              14-day free trial &middot; No credit card required
+              14-day free trial &middot; Full access to all features
             </p>
           </div>
         </AnimateIn>

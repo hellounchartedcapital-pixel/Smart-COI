@@ -48,7 +48,7 @@ export default async function OnboardingLayout({
       </header>
 
       {/* Centered content */}
-      <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12">
+      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
         {children}
       </main>
     </div>

@@ -225,13 +225,13 @@ export function StepTemplates({ onNext, onSkip, saving }: StepTemplatesProps) {
         </div>
       </div>
 
-      {/* Bulk upload tip */}
+      {/* Tip */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
         <p className="text-sm font-medium text-emerald-800">
-          Ready to import your portfolio?
+          Almost done!
         </p>
         <p className="mt-1 text-xs text-emerald-700">
-          After setup, use Bulk Upload to process all your COIs at once. Our AI will extract coverage data and build your vendor roster automatically.
+          These templates define what coverage each vendor or tenant needs. You can always customize them later from Settings.
         </p>
       </div>
 
@@ -252,7 +252,7 @@ export function StepTemplates({ onNext, onSkip, saving }: StepTemplatesProps) {
           className="text-center text-sm text-muted-foreground hover:text-foreground"
           disabled={saving}
         >
-          Skip — I&apos;ll set these up later
+          Skip to Dashboard
         </button>
       </div>
     </div>

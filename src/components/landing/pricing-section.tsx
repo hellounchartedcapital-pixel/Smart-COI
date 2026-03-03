@@ -147,7 +147,7 @@ export function PricingSection() {
                 href="/signup"
                 className="mt-8 flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
               >
-                Start Free Trial
+                Start Free — Upload 50 COIs
               </Link>
             </div>
           </AnimateIn>
@@ -206,7 +206,7 @@ export function PricingSection() {
                 href="/signup"
                 className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-brand-dark text-sm font-semibold text-white shadow-lg shadow-brand-dark/20 transition-all hover:bg-[#3BB87A] hover:shadow-xl hover:shadow-brand-dark/30"
               >
-                Start Free Trial
+                Start Free — Upload 50 COIs
               </Link>
             </div>
           </AnimateIn>
@@ -262,7 +262,7 @@ export function PricingSection() {
                 href="/signup"
                 className="mt-8 flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
               >
-                Start Free Trial
+                Start Free — Upload 50 COIs
               </Link>
             </div>
           </AnimateIn>
