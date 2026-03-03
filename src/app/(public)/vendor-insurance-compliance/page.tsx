@@ -43,7 +43,7 @@ export default function VendorInsuranceCompliancePage() {
               href="/signup"
               className="inline-flex h-12 items-center rounded-xl bg-slate-950 px-8 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 transition-all hover:bg-slate-800"
             >
-              Start Your Free Trial
+              Upload 50 COIs Free
             </Link>
           </div>
         </section>
@@ -204,7 +204,7 @@ export default function VendorInsuranceCompliancePage() {
               href="/signup"
               className="mt-8 inline-flex h-12 items-center rounded-xl bg-[#73E2A7] px-8 text-sm font-bold text-slate-950 shadow-lg shadow-[#73E2A7]/20 transition-all hover:bg-[#4CC78A]"
             >
-              Start Your Free Trial
+              Upload 50 COIs Free
             </Link>
           </div>
         </section>

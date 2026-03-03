@@ -86,7 +86,7 @@ export default function VendorManagementPage() {
               href="/signup"
               className="inline-flex h-12 items-center rounded-xl bg-slate-950 px-8 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 transition-all hover:bg-slate-800"
             >
-              Start Free Trial
+              Start Free — Upload 50 COIs
             </Link>
           </div>
         </section>

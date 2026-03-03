@@ -95,7 +95,7 @@ const jsonLd = {
           name: 'Is there a free trial?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Yes. All SmartCOI plans include a 14-day free trial with full access to all features, no credit card required.',
+            text: 'Yes. Upload up to 50 COIs free and see your compliance dashboard in minutes — no credit card required. All plans include a 14-day free trial with full access to every feature.',
           },
         },
         {

@@ -6,9 +6,11 @@ import { createClient } from '@/lib/supabase/client';
 import { createOrgAfterSignup, completeOnboarding } from '@/lib/actions/auth';
 import { StepOrgSetup, type OrgSetupData } from '@/components/onboarding/step-org-setup';
 import { StepProperty, type PropertyData } from '@/components/onboarding/step-property';
+import { StepBulkUpload } from '@/components/onboarding/step-bulk-upload';
 import { StepTemplates, type SelectedTemplate } from '@/components/onboarding/step-templates';
 
-const TOTAL_STEPS = 3;
+const STEP_LABELS = ['Organization', 'Property', 'Upload COIs', 'Requirements'];
+const TOTAL_STEPS = STEP_LABELS.length;
 
 export default function OnboardingSetupPage() {
   const router = useRouter();
@@ -26,6 +28,8 @@ export default function OnboardingSetupPage() {
     additionalInsured: [],
   });
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
+  const [propertyId, setPropertyId] = useState<string | null>(null);
+  const [propertyName, setPropertyName] = useState('');
 
   // Store auth user ID for creating org/profile when missing
   const authUserIdRef = useRef<string | null>(null);
@@ -60,9 +64,7 @@ export default function OnboardingSetupPage() {
       if (profile?.organization_id) {
         setOrgId(profile.organization_id);
 
-        // Onboarding-complete redirect is handled by the server layout
-        // (src/app/(onboarding)/layout.tsx) to avoid server/client mismatch loops.
-        // Here we only pre-fill the company name if the org already exists.
+        // Pre-fill the company name if the org already exists
         const { data: org } = await supabase
           .from('organizations')
           .select('name')
@@ -79,10 +81,7 @@ export default function OnboardingSetupPage() {
   }, [supabase, router]);
 
   // Helper: ensure org and user profile exist, return orgId
-  // Uses a server action with service role to bypass RLS
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function ensureOrgAndProfile(companyName: string): Promise<string> {
-    // If we already have an orgId, just return it
     if (orgId) return orgId;
 
     if (!authUserIdRef.current) throw new Error('Not authenticated. Please refresh and try again.');
@@ -97,17 +96,36 @@ export default function OnboardingSetupPage() {
     return newOrgId;
   }
 
-  // Step 1: Save org name + default entities
+  // Skip to dashboard from any step
+  async function handleSkipToDashboard() {
+    setSaving(true);
+    setError(null);
+    try {
+      // Ensure org exists before completing
+      let currentOrgId = orgId;
+      if (!currentOrgId) {
+        currentOrgId = await ensureOrgAndProfile(orgData.companyName || 'My Organization');
+      }
+      await completeOnboarding(currentOrgId);
+      router.push('/dashboard');
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to finish setup');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Step 1: Save org name
   async function handleOrgSetupNext(data: OrgSetupData) {
     setSaving(true);
     setError(null);
     setOrgData(data);
 
     try {
-      // Ensure the org and user profile exist (creates them if missing)
       const currentOrgId = await ensureOrgAndProfile(data.companyName);
 
-      // Update organization name (in case it was pre-existing)
+      // Update organization name
       const { error: orgError } = await supabase
         .from('organizations')
         .update({ name: data.companyName })
@@ -115,44 +133,46 @@ export default function OnboardingSetupPage() {
 
       if (orgError) throw orgError;
 
-      // Clear existing default entities and re-insert
-      await supabase
-        .from('organization_default_entities')
-        .delete()
-        .eq('organization_id', currentOrgId);
+      // Save default entities if provided
+      if (data.certificateHolder || data.additionalInsured.length > 0) {
+        await supabase
+          .from('organization_default_entities')
+          .delete()
+          .eq('organization_id', currentOrgId);
 
-      const entitiesToInsert: {
-        organization_id: string;
-        entity_name: string;
-        entity_address: string;
-        entity_type: 'certificate_holder' | 'additional_insured';
-      }[] = [];
+        const entitiesToInsert: {
+          organization_id: string;
+          entity_name: string;
+          entity_address: string;
+          entity_type: 'certificate_holder' | 'additional_insured';
+        }[] = [];
 
-      if (data.certificateHolder && data.certificateHolder.entity_name) {
-        entitiesToInsert.push({
-          organization_id: currentOrgId,
-          entity_name: data.certificateHolder.entity_name,
-          entity_address: data.certificateHolder.entity_address,
-          entity_type: 'certificate_holder',
-        });
-      }
-
-      for (const ai of data.additionalInsured) {
-        if (ai.entity_name.trim()) {
+        if (data.certificateHolder && data.certificateHolder.entity_name) {
           entitiesToInsert.push({
             organization_id: currentOrgId,
-            entity_name: ai.entity_name,
-            entity_address: ai.entity_address,
-            entity_type: 'additional_insured',
+            entity_name: data.certificateHolder.entity_name,
+            entity_address: data.certificateHolder.entity_address,
+            entity_type: 'certificate_holder',
           });
         }
-      }
 
-      if (entitiesToInsert.length > 0) {
-        const { error: entError } = await supabase
-          .from('organization_default_entities')
-          .insert(entitiesToInsert);
-        if (entError) throw entError;
+        for (const ai of data.additionalInsured) {
+          if (ai.entity_name.trim()) {
+            entitiesToInsert.push({
+              organization_id: currentOrgId,
+              entity_name: ai.entity_name,
+              entity_address: ai.entity_address,
+              entity_type: 'additional_insured',
+            });
+          }
+        }
+
+        if (entitiesToInsert.length > 0) {
+          const { error: entError } = await supabase
+            .from('organization_default_entities')
+            .insert(entitiesToInsert);
+          if (entError) throw entError;
+        }
       }
 
       setCurrentStep(2);
@@ -163,7 +183,7 @@ export default function OnboardingSetupPage() {
     }
   }
 
-  // Step 2: Save property + property entities
+  // Step 2: Save property
   async function handlePropertyNext(data: PropertyData) {
     if (!orgId) {
       setError('Organization not set up. Please go back to Step 1.');
@@ -205,6 +225,8 @@ export default function OnboardingSetupPage() {
         if (entError) throw entError;
       }
 
+      setPropertyId(property.id);
+      setPropertyName(data.name);
       setCurrentStep(3);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save property');
@@ -214,10 +236,17 @@ export default function OnboardingSetupPage() {
   }
 
   function handlePropertySkip() {
+    setPropertyId(null);
+    setPropertyName('');
     setCurrentStep(3);
   }
 
-  // Step 3: Duplicate selected system templates into org templates, then finish
+  // Step 3: Bulk upload complete → move to requirements
+  function handleBulkUploadNext() {
+    setCurrentStep(4);
+  }
+
+  // Step 4: Save templates, complete onboarding, go to dashboard
   async function handleTemplatesNext(selected: SelectedTemplate[]) {
     if (!orgId) {
       setError('Organization not set up. Please go back to Step 1.');
@@ -228,7 +257,6 @@ export default function OnboardingSetupPage() {
 
     try {
       for (const { template, adjustedRequirements } of selected) {
-        // Create org-specific template
         const { data: newTemplate, error: tplError } = await supabase
           .from('requirement_templates')
           .insert({
@@ -244,7 +272,6 @@ export default function OnboardingSetupPage() {
 
         if (tplError) throw tplError;
 
-        // Insert adjusted coverage requirements
         if (adjustedRequirements.length > 0) {
           const reqRows = adjustedRequirements.map((r) => ({
             template_id: newTemplate.id,
@@ -296,24 +323,61 @@ export default function OnboardingSetupPage() {
 
   return (
     <div className="space-y-8">
-      {/* Step indicator + progress bar */}
+      {/* Step indicator with named stepper */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-medium text-foreground">
-            Step {currentStep} of {TOTAL_STEPS}
-          </span>
-          <span className="text-muted-foreground">
-            {currentStep === 1 && 'Organization'}
-            {currentStep === 2 && 'Property'}
-            {currentStep === 3 && 'Templates'}
-          </span>
+        {/* Step labels */}
+        <div className="flex items-center justify-between">
+          {STEP_LABELS.map((label, idx) => {
+            const stepNum = idx + 1;
+            const isActive = stepNum === currentStep;
+            const isComplete = stepNum < currentStep;
+            return (
+              <div key={label} className="flex items-center gap-2">
+                <div
+                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                    isComplete
+                      ? 'bg-brand text-white'
+                      : isActive
+                        ? 'bg-brand text-white'
+                        : 'bg-slate-200 text-slate-500'
+                  }`}
+                >
+                  {isComplete ? (
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    stepNum
+                  )}
+                </div>
+                <span
+                  className={`hidden text-sm font-medium sm:inline ${
+                    isActive ? 'text-foreground' : isComplete ? 'text-brand' : 'text-muted-foreground'
+                  }`}
+                >
+                  {label}
+                </span>
+                {/* Connector line */}
+                {idx < STEP_LABELS.length - 1 && (
+                  <div className="mx-1 hidden h-px w-8 bg-slate-200 sm:block lg:w-12" />
+                )}
+              </div>
+            );
+          })}
         </div>
+
+        {/* Progress bar */}
         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
           <div
             className="h-full rounded-full bg-brand transition-all duration-500 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
+
+        {/* Mobile step label */}
+        <p className="text-center text-sm text-muted-foreground sm:hidden">
+          Step {currentStep} of {TOTAL_STEPS}: {STEP_LABELS[currentStep - 1]}
+        </p>
       </div>
 
       {/* Error banner */}
@@ -325,7 +389,12 @@ export default function OnboardingSetupPage() {
 
       {/* Steps */}
       {currentStep === 1 && (
-        <StepOrgSetup data={orgData} onNext={handleOrgSetupNext} saving={saving} />
+        <StepOrgSetup
+          data={orgData}
+          onNext={handleOrgSetupNext}
+          onSkip={handleSkipToDashboard}
+          saving={saving}
+        />
       )}
       {currentStep === 2 && (
         <StepProperty
@@ -337,6 +406,15 @@ export default function OnboardingSetupPage() {
         />
       )}
       {currentStep === 3 && (
+        <StepBulkUpload
+          propertyId={propertyId}
+          propertyName={propertyName}
+          onNext={handleBulkUploadNext}
+          onSkip={handleSkipToDashboard}
+          saving={saving}
+        />
+      )}
+      {currentStep === 4 && (
         <StepTemplates
           onNext={handleTemplatesNext}
           onSkip={handleTemplatesSkip}

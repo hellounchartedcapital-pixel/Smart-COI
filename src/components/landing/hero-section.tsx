@@ -54,7 +54,7 @@ export function HeroSection() {
                 href="/signup"
                 className="group inline-flex h-12 items-center rounded-xl bg-brand px-8 text-sm font-semibold text-slate-950 shadow-lg shadow-brand/20 transition-all hover:bg-brand-dark hover:shadow-xl hover:shadow-brand/30 hover:-translate-y-0.5"
               >
-                Start Your Free Trial
+                Upload 50 COIs Free
                 <IconArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <ScrollLink
@@ -68,7 +68,7 @@ export function HeroSection() {
 
           <AnimateIn delay={300}>
             <p className="mt-5 text-xs text-slate-400">
-              14-day free trial &middot; No credit card required
+              See your compliance dashboard in minutes &middot; No credit card required
             </p>
           </AnimateIn>
         </div>
