@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     'Compare SmartCOI with other COI tracking solutions. Honest, side-by-side comparisons to help you choose the right tool for your property management needs.',
   alternates: {
-    canonical: '/compare',
+    canonical: 'https://smartcoi.io/compare',
   },
   openGraph: {
     title: 'Compare COI Tracking Software — SmartCOI vs Competitors',

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description:
     'SmartCOI privacy policy — learn how we collect, use, and protect your data when you use our COI compliance tracking platform.',
   alternates: {
-    canonical: '/privacy',
+    canonical: 'https://smartcoi.io/privacy',
   },
 };
 

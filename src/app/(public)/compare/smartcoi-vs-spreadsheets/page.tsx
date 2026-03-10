@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     'Compare manual spreadsheet COI tracking vs dedicated software. Real time and cost analysis shows why property managers are switching to automated tracking.',
   alternates: {
-    canonical: '/compare/smartcoi-vs-spreadsheets',
+    canonical: 'https://smartcoi.io/compare/smartcoi-vs-spreadsheets',
   },
   openGraph: {
     title: 'COI Tracking: Software vs Spreadsheets — Why It\'s Time to Switch',

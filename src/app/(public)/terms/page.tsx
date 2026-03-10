@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description:
     'SmartCOI terms of service — read about your rights and responsibilities when using our AI-powered COI compliance tracking platform.',
   alternates: {
-    canonical: '/terms',
+    canonical: 'https://smartcoi.io/terms',
   },
 };
 

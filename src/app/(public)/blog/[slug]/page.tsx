@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.title,
     description: post.description,
     alternates: {
-      canonical: `/blog/${post.slug}`,
+      canonical: `https://smartcoi.io/blog/${post.slug}`,
     },
     openGraph: {
       title: post.title,

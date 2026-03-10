@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description:
     'Insights on COI compliance, insurance tracking, and property management best practices from the SmartCOI team.',
   alternates: {
-    canonical: '/blog',
+    canonical: 'https://smartcoi.io/blog',
   },
 };
 

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     'Track tenant insurance compliance across your commercial properties. Automate COI collection, verify coverage against lease requirements, and monitor expirations.',
   alternates: {
-    canonical: '/tenant-insurance-tracking',
+    canonical: 'https://smartcoi.io/tenant-insurance-tracking',
   },
   openGraph: {
     title: 'Tenant Insurance Tracking for Property Managers | SmartCOI',

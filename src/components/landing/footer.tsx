@@ -4,9 +4,9 @@ export function Footer() {
   return (
     <footer className="border-t border-slate-800 bg-slate-950 py-12">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           {/* Brand */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:col-span-1">
             <div className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo-icon.svg" alt="" className="h-7 w-7" />
@@ -33,6 +33,25 @@ export function Footer() {
               <Link href="/coi-tracking-software" className="text-slate-400 transition-colors hover:text-white">
                 COI Tracking Software
               </Link>
+              <Link href="/ai-coi-extraction" className="text-slate-400 transition-colors hover:text-white">
+                AI COI Extraction
+              </Link>
+            </div>
+          </div>
+
+          {/* Use Cases */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Use Cases</p>
+            <div className="mt-3 flex flex-col gap-2 text-sm">
+              <Link href="/certificate-of-insurance-tracking" className="text-slate-400 transition-colors hover:text-white">
+                Certificate of Insurance Tracking
+              </Link>
+              <Link href="/vendor-insurance-compliance" className="text-slate-400 transition-colors hover:text-white">
+                Vendor Insurance Compliance
+              </Link>
+              <Link href="/tenant-insurance-tracking" className="text-slate-400 transition-colors hover:text-white">
+                Tenant Insurance Tracking
+              </Link>
             </div>
           </div>
 
@@ -46,11 +65,20 @@ export function Footer() {
               <Link href="/compare" className="text-slate-400 transition-colors hover:text-white">
                 Compare Solutions
               </Link>
+              <Link href="/compare/smartcoi-vs-spreadsheets" className="text-slate-400 transition-colors hover:text-white">
+                SmartCOI vs Spreadsheets
+              </Link>
+              <Link href="/compare/smartcoi-vs-jones" className="text-slate-400 transition-colors hover:text-white">
+                SmartCOI vs Jones
+              </Link>
+              <Link href="/compare/smartcoi-vs-bcs" className="text-slate-400 transition-colors hover:text-white">
+                SmartCOI vs BCS
+              </Link>
+              <Link href="/compare/smartcoi-vs-mycoi" className="text-slate-400 transition-colors hover:text-white">
+                SmartCOI vs myCOI
+              </Link>
               <Link href="/blog/coi-compliance-guide-property-managers" className="text-slate-400 transition-colors hover:text-white">
                 COI Compliance Guide
-              </Link>
-              <Link href="/blog/acord-25-certificate-explained" className="text-slate-400 transition-colors hover:text-white">
-                ACORD 25 Guide
               </Link>
             </div>
           </div>

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     'Upload a COI PDF and get structured data in seconds. SmartCOI\'s AI reads ACORD forms, extracts coverage data, and checks compliance automatically.',
   alternates: {
-    canonical: '/ai-coi-extraction',
+    canonical: 'https://smartcoi.io/ai-coi-extraction',
   },
   openGraph: {
     title: 'AI-Powered COI Data Extraction — Instant Compliance Checking | SmartCOI',

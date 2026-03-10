@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     'Automate certificate of insurance tracking with AI-powered extraction and compliance checking. Stop manually reviewing COIs and eliminate missed expirations.',
   alternates: {
-    canonical: '/certificate-of-insurance-tracking',
+    canonical: 'https://smartcoi.io/certificate-of-insurance-tracking',
   },
   openGraph: {
     title: 'Certificate of Insurance Tracking — Automated COI Management | SmartCOI',
