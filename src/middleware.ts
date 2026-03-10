@@ -11,11 +11,15 @@ const publicRoutes = [
   '/terms', '/privacy', '/coi-tracking-software',
   '/certificate-of-insurance-tracking', '/vendor-insurance-compliance',
   '/tenant-insurance-tracking', '/ai-coi-extraction', '/llms.txt', '/og-image.png',
+  // Infrastructure
+  '/api/health',
 ];
 const publicPrefixes = [
   '/portal/', '/api/portal/', '/api/webhooks/', '/api/cron/', '/api/auth/',
   // Marketing / SEO prefixes
   '/blog', '/compare', '/features/',
+  // Sentry tunnel
+  '/monitoring',
 ];
 
 function isPublicRoute(pathname: string): boolean {
