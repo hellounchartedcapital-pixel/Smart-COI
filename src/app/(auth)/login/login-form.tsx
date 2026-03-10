@@ -12,6 +12,7 @@ import {
   getRememberMe,
   setLoginTime,
   updateLastActive,
+  setSessionCookie,
 } from '@/lib/session';
 
 export function LoginForm() {
@@ -53,8 +54,9 @@ export function LoginForm() {
         return;
       }
 
-      // Store session preferences
+      // Store session preferences and set the server-readable session cookie
       setRememberMe(rememberMe);
+      setSessionCookie(rememberMe);
       setLoginTime();
       updateLastActive();
 
@@ -119,7 +121,7 @@ export function LoginForm() {
             className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
           />
           <Label htmlFor="rememberMe" className="text-sm font-normal text-muted-foreground cursor-pointer">
-            Remember me for 30 days
+            Remember me for 7 days
           </Label>
         </div>
 
