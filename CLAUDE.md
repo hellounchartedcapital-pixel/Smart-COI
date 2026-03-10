@@ -1,6 +1,12 @@
 # SmartCOI
 
-AI-powered Certificate of Insurance (COI) compliance tracking SaaS for commercial property managers. Automates COI collection, AI extraction, compliance verification, and vendor/tenant follow-up notifications.
+SmartCOI — B2B SaaS platform automating Certificate of Insurance (COI) compliance tracking for commercial property managers. Automates COI collection, AI extraction, compliance verification, and vendor/tenant follow-up notifications.
+
+## Product Name
+
+Always "SmartCOI" — capital S, capital C, capital O, capital I, one word.
+
+Never use "Smart COI", "smartCOI", "smartcoi", or "SMARTCOI" in user-facing text.
 
 ## Tech Stack
 
@@ -12,35 +18,96 @@ AI-powered Certificate of Insurance (COI) compliance tracking SaaS for commercia
 - **Hosting:** Vercel with Vercel Cron for scheduled jobs
 - **UI:** Tailwind CSS 3, shadcn/ui (Radix primitives), Lucide icons, Sonner toasts
 
+## Pricing (Source of Truth)
+
+Never deviate from these numbers. No enterprise tier. Fully self-serve.
+
+| Tier | Monthly | Annual (20% off) | Certificate limit |
+|---|---|---|---|
+| Starter | $79/mo | $63/mo | Up to 50 |
+| Growth | $149/mo | $119/mo | Up to 150 |
+| Professional | $249/mo | $199/mo | Unlimited + priority support |
+
+- All tiers include all features. 14-day free trial, no credit card required.
+- Primary CTA: "Upload 50 COIs Free"
+
 ## Current Status
 
 Product is feature-complete and in final testing before launch.
 
-### Key Features Built
+### Features That EXIST (reference these freely)
 
-- Auth + onboarding wizard (3-step setup)
+- Auth + onboarding wizard (3-step setup: create org → add property → bulk upload → assign requirements)
 - Dashboard with compliance stats, action items, activity feed
 - Properties / vendors / tenants CRUD with compliance tracking
-- AI COI extraction (PDF → structured data via Claude)
-- Compliance engine with configurable requirement templates
-- Notification system (expiration warnings, follow-ups)
-- Self-service vendor upload portal (token-based, no auth required)
-- Stripe billing with trial enforcement and plan limits
-- Bulk COI upload with automatic entity creation
+- Bulk COI upload with AI extraction
+- AI-powered data extraction (coverage types, limits, dates, named insureds)
+- Compliance templates (vendor & tenant) with configurable requirements
+- Self-service vendor/tenant portal (token-based, no auth required)
+- Automated notifications & follow-up emails (expiration warnings)
+- Stripe billing with three tiers and trial enforcement
 - Archive, delete, and bulk actions for vendors/tenants
 - SEO content pages and blog (MDX)
-- Session expiration with activity tracking and "Remember me"
+- Session expiration (24h standard / 7d with "Remember me") with cookie-based middleware gate
+- Real-time dashboard & reporting
 
-### Recent Work
+### Features That DO NOT EXIST (never reference)
 
-- Security audit completed (26 findings, all fixed)
-- Bulk upload feature built and being tested
-- Session expiration added (8h inactivity / 30d with remember-me)
+- Lease PDF extraction
+- Integrations with Procore, MRI, Yardi, AppFolio, or any third-party tools
+- Shared vendor network/database
+- Human/manual insurance review services
+- Enterprise tier or custom pricing
 
 ### Known Issues
 
 - Anthropic API 529 errors during bulk upload (pacing/retry logic in place)
 - Tutorial walkthrough positioning edge cases
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── page.tsx               # Landing page
+│   ├── (auth)/                # Login, signup pages
+│   ├── (dashboard)/           # Protected pages — own layout with DashboardShell, sidebar, auth guards
+│   ├── (onboarding)/          # Setup wizard
+│   ├── (public)/              # Marketing pages (blog, comparisons, SEO pages, legal)
+│   │   └── features/          # Feature pages
+│   ├── api/                   # Route handlers (auth callback, webhooks, cron)
+│   └── portal/[token]/        # Self-service vendor upload portal
+├── components/
+│   ├── landing/               # Landing page components
+│   ├── dashboard/             # Sidebar, session guard, trial banner, upgrade modal
+│   ├── settings/              # Settings page sections
+│   ├── onboarding/            # Onboarding wizard components
+│   └── ui/                    # shadcn/ui primitives
+├── content/
+│   └── blog/                  # MDX blog posts
+├── lib/
+│   ├── supabase/              # Supabase clients (client.ts, server.ts, service.ts)
+│   ├── actions/               # Server actions (auth, billing, certificates, notifications, properties, settings, templates)
+│   ├── ai/                    # AI extraction engine (extraction.ts)
+│   ├── notifications/         # Email templates and sender
+│   ├── compliance/            # Compliance checking logic
+│   ├── auth.ts                # Client-side signOut helper
+│   ├── session.ts             # Session timeout, activity tracking, cookie-based session marker
+│   ├── require-active-plan.ts # Plan enforcement (requireActivePlan, checkActivePlan)
+│   ├── plan-limits.ts         # Per-plan quotas (vendors/tenants, extractions)
+│   └── plan-status.ts         # Plan status resolution (trial, starter, pro, enterprise)
+├── hooks/                     # Custom React hooks
+├── services/                  # Service modules
+├── types/                     # TypeScript type definitions (index.ts)
+└── middleware.ts              # Auth middleware with session cookie gate
+
+supabase/
+├── functions/                 # Edge functions (extract-coi, extract-lease-requirements, send-contact)
+├── consolidated_post_v2_migrations.sql  # All migrations (run via SQL Editor)
+└── migrations/                # Individual migration files (42 total)
+```
+
+No shared components between marketing and dashboard.
 
 ## Database
 
@@ -54,46 +121,16 @@ All migrations are consolidated in `supabase/consolidated_post_v2_migrations.sql
 - **Service role client** (`src/lib/supabase/service.ts`) bypasses RLS for admin operations like portal uploads, profile creation, plan checks.
 - **Plan enforcement:** `checkActivePlan()` from `src/lib/require-active-plan.ts` returns `{ error }` for inactive plans. `checkVendorTenantLimit()` and `checkExtractionLimit()` from `src/lib/plan-limits.ts` enforce per-plan quotas.
 - **After mutations:** call `revalidatePath()` to refresh server components.
-- **Middleware** (`src/middleware.ts`) refreshes auth tokens and redirects unauthenticated users to `/login`.
-- **Session management** (`src/lib/session.ts`) tracks activity in localStorage, enforces inactivity timeouts client-side via `SessionGuard` component in the dashboard layout.
+- **Middleware** (`src/middleware.ts`) checks for `smartcoi-session` cookie before refreshing auth tokens. No cookie = expired session = redirect to `/login`. Redirects unauthenticated users to `/login`.
+- **Session management** (`src/lib/session.ts`) uses a browser cookie (`smartcoi-session`) as a server-readable session marker (24h or 7d max-age) plus localStorage for inactivity tracking. `SessionGuard` component in the dashboard layout checks both.
 
-## File Structure
+## Conventions
 
-```
-src/
-├── app/
-│   ├── (auth)/              # Login, signup pages
-│   ├── (dashboard)/         # All protected pages (dashboard, properties, settings, etc.)
-│   ├── (onboarding)/        # Setup wizard
-│   ├── (public)/            # Marketing pages (blog, features, terms, privacy)
-│   ├── api/                 # Route handlers (auth callback, webhooks, cron)
-│   └── portal/[token]/      # Self-service vendor upload portal
-├── components/
-│   ├── dashboard/           # Sidebar, session guard, trial banner, upgrade modal
-│   ├── settings/            # Settings page sections
-│   ├── onboarding/          # Onboarding wizard components
-│   └── ui/                  # shadcn/ui primitives
-├── lib/
-│   ├── supabase/            # Supabase clients (client.ts, server.ts, service.ts)
-│   ├── actions/             # Server actions (auth, billing, certificates, notifications, properties, settings, templates)
-│   ├── ai/                  # AI extraction engine (extraction.ts)
-│   ├── notifications/       # Email templates and sender
-│   ├── compliance/          # Compliance checking logic
-│   ├── auth.ts              # Client-side signOut helper
-│   ├── session.ts           # Session timeout and activity tracking
-│   ├── require-active-plan.ts  # Plan enforcement (requireActivePlan, checkActivePlan)
-│   ├── plan-limits.ts       # Per-plan quotas (vendors/tenants, extractions)
-│   └── plan-status.ts       # Plan status resolution (trial, starter, pro, enterprise)
-├── hooks/                   # Custom React hooks
-├── services/                # Service modules
-├── types/                   # TypeScript type definitions (index.ts)
-└── middleware.ts             # Auth middleware
-
-supabase/
-├── functions/               # Edge functions (extract-coi, extract-lease-requirements, send-contact)
-├── consolidated_post_v2_migrations.sql  # All migrations (run via SQL Editor)
-└── migrations/              # Individual migration files (42 total)
-```
+- Always flag manual steps (SQL migrations, env vars, Supabase dashboard settings, Stripe config) with ⚠️ ACTION REQUIRED at the end of every summary.
+- Blog posts are MDX files in `src/content/blog/` with frontmatter: `title`, `description`, `date`, `author` (use "SmartCOI Team").
+- All public pages must use absolute canonical URLs (`https://smartcoi.io/...`).
+- `trailingSlash: false` in Next.js config.
+- Sessions expire after 24 hours (7 days with "Remember me").
 
 ## Environment Variables
 
