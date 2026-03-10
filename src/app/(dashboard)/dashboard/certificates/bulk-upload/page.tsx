@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash, formatFileSize } from '@/lib/utils/file-validation';
 import { isPlanInactiveError, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
@@ -413,6 +414,7 @@ export default function BulkUploadPage() {
 
           if (certError || !cert) throw new Error(`Record failed: ${certError?.message}`);
           certId = cert.id;
+          posthog.capture('coi_uploaded', { source: 'bulk' });
           console.log(`[bulk] Uploaded ${entry.file.name} → certId=${certId}`);
 
           // Update with cert ID

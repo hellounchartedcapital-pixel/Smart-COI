@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
 import { createOrgAfterSignup, completeOnboarding } from '@/lib/actions/auth';
 import { StepOrgSetup, type OrgSetupData } from '@/components/onboarding/step-org-setup';
@@ -107,6 +108,7 @@ export default function OnboardingSetupPage() {
         currentOrgId = await ensureOrgAndProfile(orgData.companyName || 'My Organization');
       }
       await completeOnboarding(currentOrgId);
+      posthog.capture('onboarding_skipped', { step: currentStep });
       router.push('/dashboard');
       router.refresh();
     } catch (err) {
@@ -175,6 +177,7 @@ export default function OnboardingSetupPage() {
         }
       }
 
+      posthog.capture('onboarding_step_completed', { step: 'create_org' });
       setCurrentStep(2);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save organization');
@@ -227,6 +230,7 @@ export default function OnboardingSetupPage() {
 
       setPropertyId(property.id);
       setPropertyName(data.name);
+      posthog.capture('onboarding_step_completed', { step: 'add_property' });
       setCurrentStep(3);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save property');
@@ -243,6 +247,7 @@ export default function OnboardingSetupPage() {
 
   // Step 3: Bulk upload complete → move to requirements
   function handleBulkUploadNext() {
+    posthog.capture('onboarding_step_completed', { step: 'bulk_upload' });
     setCurrentStep(4);
   }
 
@@ -292,6 +297,7 @@ export default function OnboardingSetupPage() {
 
       // Complete onboarding and go to dashboard
       await completeOnboarding(orgId);
+      posthog.capture('onboarding_step_completed', { step: 'assign_requirements' });
       router.push('/dashboard');
       router.refresh();
     } catch (err) {

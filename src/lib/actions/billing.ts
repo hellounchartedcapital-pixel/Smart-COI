@@ -1,7 +1,8 @@
 'use server';
 
-import { stripe, PRICE_IDS } from '@/lib/stripe';
+import { stripe, PRICE_IDS, planForPriceId } from '@/lib/stripe';
 import { createClient } from '@/lib/supabase/server';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 // ---------------------------------------------------------------------------
 // createCheckoutSession — starts a new Stripe Checkout for subscriptions
@@ -80,6 +81,11 @@ export async function createCheckoutSession(priceId: string): Promise<{ url: str
   });
 
   if (!session.url) throw new Error('Stripe did not return a checkout URL');
+
+  captureServerEvent(user.email ?? user.id, 'plan_selected', {
+    plan: planForPriceId(priceId) ?? priceId,
+  });
+
   return { url: session.url };
 }
 
