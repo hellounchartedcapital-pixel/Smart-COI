@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     'AI-powered COI tracking software built for commercial property managers. Automate certificate collection, compliance checking, and expiration monitoring across your portfolio.',
   alternates: {
-    canonical: '/coi-tracking-software',
+    canonical: 'https://smartcoi.io/coi-tracking-software',
   },
   openGraph: {
     title: 'COI Tracking Software for Property Managers | SmartCOI',

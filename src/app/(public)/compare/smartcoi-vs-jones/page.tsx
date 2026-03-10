@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     'Compare SmartCOI and Jones for COI tracking. See how AI-powered instant extraction compares to Jones\'s managed service approach for property managers.',
   alternates: {
-    canonical: '/compare/smartcoi-vs-jones',
+    canonical: 'https://smartcoi.io/compare/smartcoi-vs-jones',
   },
   openGraph: {
     title: 'SmartCOI vs Jones — COI Tracking Software Comparison',

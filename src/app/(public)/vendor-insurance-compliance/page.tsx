@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     'Automate vendor insurance compliance for commercial properties. Track COIs, verify coverage limits, monitor expirations, and give vendors a self-service upload portal.',
   alternates: {
-    canonical: '/vendor-insurance-compliance',
+    canonical: 'https://smartcoi.io/vendor-insurance-compliance',
   },
   openGraph: {
     title: 'Vendor Insurance Compliance Software for Commercial Real Estate | SmartCOI',

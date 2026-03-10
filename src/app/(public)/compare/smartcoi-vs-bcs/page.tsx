@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     'Compare SmartCOI and BCS for COI tracking. AI-powered extraction vs OCR technology. Self-serve setup vs full-service human review.',
   alternates: {
-    canonical: '/compare/smartcoi-vs-bcs',
+    canonical: 'https://smartcoi.io/compare/smartcoi-vs-bcs',
   },
   openGraph: {
     title: 'SmartCOI vs BCS — COI Tracking Software Comparison',

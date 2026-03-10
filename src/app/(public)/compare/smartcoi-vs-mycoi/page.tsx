@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     'Compare SmartCOI and myCOI (illumend) for COI tracking. See how SmartCOI\'s self-serve setup and transparent pricing compare to myCOI\'s enterprise platform for property managers.',
   alternates: {
-    canonical: '/compare/smartcoi-vs-mycoi',
+    canonical: 'https://smartcoi.io/compare/smartcoi-vs-mycoi',
   },
   openGraph: {
     title: 'SmartCOI vs myCOI — COI Tracking Software Comparison',
