@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { stripe, planForPriceId } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/service';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 // Stripe sends the raw body — Next.js needs to NOT parse it as JSON.
 // We read it as text and verify the signature manually.
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
           })
           .eq('id', org.id);
 
+        captureServerEvent(org.id, 'subscription_started', { plan: plan ?? 'starter' });
         console.log(`[Stripe Webhook] checkout.session.completed — org ${org.id} → plan ${plan}`);
         break;
       }

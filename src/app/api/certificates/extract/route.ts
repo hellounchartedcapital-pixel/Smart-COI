@@ -5,6 +5,7 @@ import { extractCOIFromPDF } from '@/lib/ai/extraction';
 import { checkExtractionLimit } from '@/lib/plan-limits';
 import { getActivePlanStatus, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import { createServiceClient } from '@/lib/supabase/service';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 /**
  * Create a Supabase client using the request cookies (for auth).
@@ -234,6 +235,12 @@ export async function POST(req: NextRequest) {
       action: 'coi_processed',
       description: `COI processed successfully — ${result.coverages.length} coverage(s) and ${result.entities.length} entity/entities extracted.`,
       performed_by: user.id,
+    });
+
+    captureServerEvent(user.email ?? user.id, 'extraction_completed', {
+      certificate_id: certificateId,
+      coverages: result.coverages.length,
+      entities: result.entities.length,
     });
 
     console.log(`[extract] ✓ Done certId=${certificateId}: ${result.coverages.length} coverages, ${result.entities.length} entities, insured="${result.insuredName}"`);

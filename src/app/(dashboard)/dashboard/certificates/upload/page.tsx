@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash, formatFileSize } from '@/lib/utils/file-validation';
 import { isPlanInactiveError, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
@@ -297,6 +298,7 @@ export default function CertificateUploadPage() {
 
       if (certError || !cert) throw new Error(`Failed to create certificate record: ${certError?.message}`);
       setLastCertificateId(cert.id);
+      posthog.capture('coi_uploaded', { source: 'single' });
 
       // Log upload activity
       await supabase.from('activity_log').insert({

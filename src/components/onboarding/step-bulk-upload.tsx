@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash } from '@/lib/utils/file-validation';
 import { Button } from '@/components/ui/button';
@@ -163,6 +164,7 @@ export function StepBulkUpload({
 
           if (certError || !cert) throw new Error(`Record failed: ${certError?.message}`);
           certId = cert.id;
+          posthog.capture('coi_uploaded', { source: 'onboarding_bulk' });
 
           setFiles((prev) =>
             prev.map((f) =>

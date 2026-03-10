@@ -5,6 +5,8 @@ import { DashboardShell } from '@/components/dashboard/sidebar';
 import { TrialBanner } from '@/components/dashboard/trial-banner';
 import { UpgradeModalProvider } from '@/components/dashboard/upgrade-modal';
 import { SessionGuard } from '@/components/dashboard/session-guard';
+import { PostHogProvider } from '@/components/posthog-provider';
+import { CrispChat } from '@/components/crisp-chat';
 
 export default async function DashboardLayout({
   children,
@@ -54,19 +56,25 @@ export default async function DashboardLayout({
     redirect('/setup');
   }
 
+  const userEmail = profile?.email ?? user.email ?? '';
+  const userName = profile?.full_name ?? undefined;
+
   return (
-    <UpgradeModalProvider>
-      <SessionGuard />
-      <div className="flex h-screen overflow-hidden bg-slate-50">
-        <DashboardShell
-          userName={profile?.full_name ?? null}
-          userEmail={profile?.email ?? user.email ?? ''}
-          orgName={orgName}
-          topBanner={<TrialBanner plan={orgPlan} trialEndsAt={trialEndsAt} paymentFailed={paymentFailed} />}
-        >
-          {children}
-        </DashboardShell>
-      </div>
-    </UpgradeModalProvider>
+    <PostHogProvider userEmail={userEmail} userName={userName ?? undefined}>
+      <UpgradeModalProvider>
+        <SessionGuard />
+        <CrispChat userEmail={userEmail} userName={userName ?? undefined} />
+        <div className="flex h-screen overflow-hidden bg-slate-50">
+          <DashboardShell
+            userName={userName ?? null}
+            userEmail={userEmail}
+            orgName={orgName}
+            topBanner={<TrialBanner plan={orgPlan} trialEndsAt={trialEndsAt} paymentFailed={paymentFailed} />}
+          >
+            {children}
+          </DashboardShell>
+        </div>
+      </UpgradeModalProvider>
+    </PostHogProvider>
   );
 }

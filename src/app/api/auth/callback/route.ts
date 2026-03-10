@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { SESSION_COOKIE_NAME } from '@/lib/session';
+import { captureServerEvent } from '@/lib/posthog-server';
 
 /** Default session cookie max-age for new signups (24 hours). */
 const DEFAULT_SESSION_MAX_AGE = 24 * 60 * 60;
@@ -102,6 +103,7 @@ export async function GET(request: Request) {
 
       // Send welcome email only if we actually created the profile
       if (!profileError) {
+        captureServerEvent(email, 'signup_completed');
         sendWelcomeEmail(email, fullName).catch((err) =>
           console.error('Welcome email failed:', err)
         );
