@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
+import { SESSION_COOKIE_NAME } from '@/lib/session';
+
+/** Default session cookie max-age for new signups (24 hours). */
+const DEFAULT_SESSION_MAX_AGE = 24 * 60 * 60;
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -37,6 +41,18 @@ export async function GET(request: Request) {
     .eq('id', user.id)
     .single();
 
+  /** Create a redirect response with the session cookie attached. */
+  function redirectWithSession(destination: string) {
+    const res = NextResponse.redirect(destination);
+    res.cookies.set(SESSION_COOKIE_NAME, '1', {
+      path: '/',
+      maxAge: DEFAULT_SESSION_MAX_AGE,
+      sameSite: 'lax',
+      secure: new URL(destination).protocol === 'https:',
+    });
+    return res;
+  }
+
   if (!profile?.organization_id) {
     // Profile doesn't exist yet — create org + profile now
     // (handles the case where signup created the auth user but org/profile
@@ -52,7 +68,7 @@ export async function GET(request: Request) {
 
       if (recheck?.organization_id) {
         // Another callback already created the profile — skip to redirect
-        return NextResponse.redirect(`${origin}/setup`);
+        return redirectWithSession(`${origin}/setup`);
       }
 
       const rawName = String(user.user_metadata?.full_name ?? '');
@@ -95,7 +111,7 @@ export async function GET(request: Request) {
       // Still redirect to setup — it will retry org creation
     }
 
-    return NextResponse.redirect(`${origin}/setup`);
+    return redirectWithSession(`${origin}/setup`);
   }
 
   // Profile exists — check if onboarding is completed
@@ -107,7 +123,7 @@ export async function GET(request: Request) {
 
   const onboardingCompleted = org?.settings?.onboarding_completed === true;
 
-  return NextResponse.redirect(
+  return redirectWithSession(
     `${origin}${onboardingCompleted ? '/dashboard' : '/setup'}`
   );
 }

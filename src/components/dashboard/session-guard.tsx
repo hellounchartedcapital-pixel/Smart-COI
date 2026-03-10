@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import {
   updateLastActive,
@@ -21,9 +21,15 @@ import {
 export function SessionGuard() {
   const pathname = usePathname();
 
+  // Track whether we are in the process of signing out to prevent
+  // activity tracking from re-setting timestamps after clearSessionState().
+  const signingOut = useRef(false);
+
   const runSessionCheck = useCallback(() => {
+    if (signingOut.current) return;
     const status = checkSession();
     if (!status.valid) {
+      signingOut.current = true;
       const message =
         status.reason === 'absolute_expired'
           ? 'Your session expired for security. Please log in again.'
@@ -42,11 +48,12 @@ export function SessionGuard() {
 
   // Track user activity — throttled updates via updateLastActive()
   useEffect(() => {
-    // Record initial activity on mount
+    // Only start tracking after confirming the session is valid
+    if (signingOut.current) return;
     updateLastActive();
 
     function handleActivity() {
-      updateLastActive();
+      if (!signingOut.current) updateLastActive();
     }
 
     window.addEventListener('click', handleActivity, { passive: true });

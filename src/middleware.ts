@@ -1,6 +1,9 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+/** Cookie name must match the value exported from src/lib/session.ts. */
+const SESSION_COOKIE = 'smartcoi-session';
+
 // Routes that don't require authentication
 const publicRoutes = [
   '/', '/login', '/signup', '/opengraph-image', '/twitter-image', '/favicon.ico',
@@ -41,6 +44,30 @@ export async function middleware(request: NextRequest) {
   // Auth pages need the Supabase check so logged-in users can be redirected to dashboard.
   if (isPublic && !isAuthPage) {
     return NextResponse.next();
+  }
+
+  // ── Session cookie gate ──────────────────────────────────────────────
+  // The session cookie is set on login with a max-age matching the chosen
+  // timeout (24 h standard, 7 d remember-me). When the browser removes the
+  // expired cookie the middleware treats the user as unauthenticated — even
+  // if Supabase still holds a valid refresh token — so the login page is
+  // never bypassed by a stale token refresh.
+  const hasSessionCookie = request.cookies.has(SESSION_COOKIE);
+
+  if (!hasSessionCookie) {
+    // Auth page (login/signup) with no session → let them through
+    if (isAuthPage) {
+      return NextResponse.next();
+    }
+    // Protected route with no session → redirect to login
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.searchParams.set('next', pathname);
+    url.searchParams.set(
+      'message',
+      'Your session has expired. Please log in again.'
+    );
+    return NextResponse.redirect(url);
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

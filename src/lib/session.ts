@@ -9,14 +9,45 @@ const REMEMBER_ME_KEY = 'smartcoi-remember-me';
 const LOGIN_TIME_KEY = 'smartcoi-login-time';
 const THROTTLE_INTERVAL_MS = 60_000; // 1 minute
 
-/** Session timeout for "remember me" mode (30 days in ms). */
-const REMEMBER_ME_TIMEOUT_MS = 30 * 24 * 60 * 60 * 1000;
+/** Cookie name used as a server-readable session marker. */
+export const SESSION_COOKIE_NAME = 'smartcoi-session';
 
-/** Session timeout for standard mode (8 hours in ms). */
-const STANDARD_TIMEOUT_MS = 8 * 60 * 60 * 1000;
+/** Session timeout for standard mode (24 hours in ms). */
+const STANDARD_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 
-/** Absolute max session age — force logout regardless of activity (30 days). */
-const ABSOLUTE_MAX_SESSION_MS = 30 * 24 * 60 * 60 * 1000;
+/** Session timeout for "remember me" mode (7 days in ms). */
+const REMEMBER_ME_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Absolute max session age — force logout regardless of activity (7 days). */
+const ABSOLUTE_MAX_SESSION_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Standard session max-age in seconds (for cookie). */
+const STANDARD_COOKIE_MAX_AGE = 24 * 60 * 60; // 24 hours
+
+/** Remember-me session max-age in seconds (for cookie). */
+const REMEMBER_ME_COOKIE_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
+
+// ============================================================================
+// Session cookie — server-readable marker for middleware
+// ============================================================================
+
+/**
+ * Set the session cookie after login. The cookie auto-expires based on
+ * the remember-me preference, allowing middleware to detect expired sessions
+ * without relying on client-side localStorage.
+ */
+export function setSessionCookie(rememberMe: boolean): void {
+  const maxAge = rememberMe ? REMEMBER_ME_COOKIE_MAX_AGE : STANDARD_COOKIE_MAX_AGE;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${SESSION_COOKIE_NAME}=1; path=/; max-age=${maxAge}; SameSite=Lax${secure}`;
+}
+
+/**
+ * Clear the session cookie (on sign-out or session expiry).
+ */
+export function clearSessionCookie(): void {
+  document.cookie = `${SESSION_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
+}
 
 // ============================================================================
 // Activity tracking
@@ -50,9 +81,9 @@ export type SessionStatus =
 /**
  * Check whether the current session is still valid based on inactivity.
  *
- * - If "remember me" is enabled, the inactivity timeout is 30 days.
- * - Otherwise the inactivity timeout is 8 hours.
- * - If last_active_at is missing or > 30 days ago, the session is always expired.
+ * - If "remember me" is enabled, the inactivity timeout is 7 days.
+ * - Otherwise the inactivity timeout is 24 hours.
+ * - If last_active_at is missing or > 7 days ago, the session is always expired.
  */
 export function checkSession(): SessionStatus {
   const lastActiveStr = localStorage.getItem(LAST_ACTIVE_KEY);
@@ -69,7 +100,7 @@ export function checkSession(): SessionStatus {
 
   const elapsed = Date.now() - lastActive;
 
-  // Absolute 30-day expiration regardless of remember-me setting
+  // Absolute 7-day expiration regardless of remember-me setting
   if (elapsed > ABSOLUTE_MAX_SESSION_MS) {
     return { valid: false, reason: 'absolute_expired' };
   }
@@ -99,9 +130,9 @@ export function setRememberMe(value: boolean): void {
 
 export function getRememberMe(): boolean {
   try {
-    return localStorage.getItem(REMEMBER_ME_KEY) !== 'false';
+    return localStorage.getItem(REMEMBER_ME_KEY) === 'true';
   } catch {
-    return true; // default to remembered
+    return false;
   }
 }
 
@@ -130,7 +161,7 @@ export function getLoginTime(): string | null {
 // ============================================================================
 
 /**
- * Clear all session-related localStorage keys.
+ * Clear all session-related localStorage keys and the session cookie.
  */
 export function clearSessionState(): void {
   try {
@@ -140,6 +171,7 @@ export function clearSessionState(): void {
   } catch {
     // ignore
   }
+  clearSessionCookie();
 }
 
 /**
