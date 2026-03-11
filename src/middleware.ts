@@ -6,7 +6,7 @@ const SESSION_COOKIE = 'smartcoi-session';
 
 // Routes that don't require authentication
 const publicRoutes = [
-  '/', '/login', '/signup', '/opengraph-image', '/twitter-image', '/favicon.ico',
+  '/', '/login', '/signup', '/reset-password', '/opengraph-image', '/twitter-image', '/favicon.ico',
   // Marketing / SEO pages
   '/terms', '/privacy', '/coi-tracking-software',
   '/certificate-of-insurance-tracking', '/vendor-insurance-compliance',
@@ -32,7 +32,7 @@ function isPublicRoute(pathname: string): boolean {
 }
 
 // Routes that authenticated users should be redirected away from
-const authRoutes = ['/login', '/signup'];
+const authRoutes = ['/login', '/signup', '/reset-password'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -111,7 +111,8 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Authenticated user trying to visit login/signup → redirect to dashboard
-  if (user && isAuthPage) {
+  // (but allow /reset-password since user needs a session to update their password)
+  if (user && isAuthPage && pathname !== '/reset-password') {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     return NextResponse.redirect(url);

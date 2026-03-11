@@ -348,7 +348,11 @@ async function getDashboardData(orgId: string) {
 // Page
 // ============================================================================
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -363,6 +367,8 @@ export default async function DashboardPage() {
   if (!profile?.organization_id) redirect('/login');
 
   const data = await getDashboardData(profile.organization_id);
+  const params = await searchParams;
+  const showAssignBanner = params.assign_pending === '1';
 
-  return <DashboardClient {...data} />;
+  return <DashboardClient {...data} showAssignBanner={showAssignBanner} />;
 }

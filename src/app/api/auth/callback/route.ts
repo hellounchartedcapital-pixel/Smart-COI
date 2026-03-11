@@ -10,17 +10,43 @@ const DEFAULT_SESSION_MAX_AGE = 24 * 60 * 60;
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
+  const tokenHash = searchParams.get('token_hash');
+  const type = searchParams.get('type');
 
-  if (!code) {
+  if (!code && !tokenHash) {
     return NextResponse.redirect(`${origin}/login`);
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-  if (error) {
-    console.error('Auth callback: code exchange failed', error.message);
-    return NextResponse.redirect(`${origin}/login`);
+  // Handle both PKCE (code) and token-hash (email link) flows
+  if (code) {
+    const { error: codeError } = await supabase.auth.exchangeCodeForSession(code);
+    if (codeError) {
+      console.error('Auth callback: code exchange failed', codeError.message);
+      return NextResponse.redirect(`${origin}/login`);
+    }
+  } else if (tokenHash) {
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: (type as 'signup' | 'recovery' | 'email') || 'signup',
+    });
+    if (verifyError) {
+      console.error('Auth callback: OTP verify failed', verifyError.message);
+      return NextResponse.redirect(`${origin}/login`);
+    }
+  }
+
+  // Password recovery — redirect to reset password page
+  if (type === 'recovery') {
+    const res = NextResponse.redirect(`${origin}/reset-password`);
+    res.cookies.set(SESSION_COOKIE_NAME, '1', {
+      path: '/',
+      maxAge: DEFAULT_SESSION_MAX_AGE,
+      sameSite: 'lax',
+      secure: new URL(origin).protocol === 'https:',
+    });
+    return res;
   }
 
   // Session is now established — determine where to send the user

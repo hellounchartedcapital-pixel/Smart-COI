@@ -256,7 +256,7 @@ export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
   <tr><td align="center" style="padding-bottom:32px;">
     <table cellpadding="0" cellspacing="0"><tr>
       <td style="vertical-align:middle;padding-right:10px;">
-        <img src="https://smartcoi.io/logo-icon.svg" alt="SmartCOI" width="32" height="32" style="display:block;" />
+        <div style="display:inline-block;width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,#73E2A7,#5CC98E);text-align:center;line-height:32px;font-size:16px;color:#ffffff;">&#10003;</div>
       </td>
       <td style="vertical-align:middle;">
         <span style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#0f172a;">SmartCOI</span>
@@ -376,14 +376,7 @@ export function confirmationEmail(fields: ConfirmationEmailFields): EmailTemplat
 <table width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0">
   <!-- Logo -->
   <tr><td align="center" style="padding-bottom:32px;">
-    <table cellpadding="0" cellspacing="0"><tr>
-      <td style="vertical-align:middle;padding-right:10px;">
-        <img src="https://smartcoi.io/logo-icon.svg" alt="SmartCOI" width="32" height="32" style="display:block;" />
-      </td>
-      <td style="vertical-align:middle;">
-        <span style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#0f172a;">SmartCOI</span>
-      </td>
-    </tr></table>
+    <img src="https://smartcoi.io/logo-email.png" alt="SmartCOI" width="60" height="60" style="display:block;width:60px;height:60px;border:0;" />
   </td></tr>
 
   <!-- Card -->
@@ -394,11 +387,6 @@ export function confirmationEmail(fields: ConfirmationEmailFields): EmailTemplat
 
     <!-- Content -->
     <tr><td style="padding:40px 36px 32px;text-align:center;">
-      <!-- Checkmark icon -->
-      <div style="margin:0 auto 20px;width:56px;height:56px;border-radius:50%;background:#73E2A7;line-height:56px;text-align:center;">
-        <span style="font-size:28px;color:#0f172a;">&#10003;</span>
-      </div>
-
       <h1 style="margin:0 0 12px;font-family:'DM Sans',sans-serif;font-size:24px;font-weight:700;color:#0f172a;">Confirm your email</h1>
       <p style="margin:0 0 28px;font-size:15px;color:#475569;line-height:1.6;">
         Thanks for signing up for SmartCOI! Click the button below to confirm your email address and start automating your COI compliance.
