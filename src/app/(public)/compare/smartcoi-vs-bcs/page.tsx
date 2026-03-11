@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'SmartCOI vs BCS — COI Tracking Software Comparison',
+  title: 'SmartCOI vs BCS: Which COI Tracker Is Better?',
   description:
-    'Compare SmartCOI and BCS for COI tracking. AI-powered extraction vs OCR technology. Self-serve setup vs full-service human review.',
+    'BCS relies on OCR and manual review. SmartCOI uses AI for instant, accurate extraction at transparent pricing. Full feature comparison inside.',
   alternates: {
     canonical: 'https://smartcoi.io/compare/smartcoi-vs-bcs',
   },
   openGraph: {
-    title: 'SmartCOI vs BCS — COI Tracking Software Comparison',
+    title: 'SmartCOI vs BCS: Which COI Tracker Is Better?',
     description:
-      'Compare SmartCOI and BCS for COI tracking. AI-powered extraction vs OCR technology. Self-serve setup vs full-service human review.',
+      'BCS relies on OCR and manual review. SmartCOI uses AI for instant, accurate extraction at transparent pricing. Full feature comparison inside.',
     type: 'website',
     url: 'https://smartcoi.io/compare/smartcoi-vs-bcs',
   },

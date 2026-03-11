@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'Compare COI Tracking Software — SmartCOI vs Competitors',
+  title: 'Compare COI Tracking Software | SmartCOI',
   description:
-    'Compare SmartCOI with other COI tracking solutions. Honest, side-by-side comparisons to help you choose the right tool for your property management needs.',
+    'Not sure which COI tracker is right for you? Side-by-side comparisons of SmartCOI vs Jones, BCS, myCOI, and spreadsheets. See features, pricing, and trade-offs.',
   alternates: {
     canonical: 'https://smartcoi.io/compare',
   },
   openGraph: {
-    title: 'Compare COI Tracking Software — SmartCOI vs Competitors',
+    title: 'Compare COI Tracking Software | SmartCOI',
     description:
-      'Compare SmartCOI with other COI tracking solutions. Honest, side-by-side comparisons to help you choose the right tool for your property management needs.',
+      'Not sure which COI tracker is right for you? Side-by-side comparisons of SmartCOI vs Jones, BCS, myCOI, and spreadsheets. See features, pricing, and trade-offs.',
     type: 'website',
     url: 'https://smartcoi.io/compare',
   },

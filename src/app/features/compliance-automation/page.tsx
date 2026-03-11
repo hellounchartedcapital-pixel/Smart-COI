@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'Automated Insurance Compliance | SmartCOI',
+  title: 'Automate Insurance Compliance Checks | SmartCOI',
   description:
-    'Automate insurance compliance verification for vendors and tenants. AI checks coverage limits, additional insured, and expiration dates automatically.',
+    'Stop manually reviewing every COI. AI verifies coverage limits, additional insured, waivers, and expiration dates in seconds. Try free.',
   alternates: {
     canonical: 'https://smartcoi.io/features/compliance-automation',
   },
   openGraph: {
-    title: 'Automated Insurance Compliance for Property Managers | SmartCOI',
+    title: 'Automate Insurance Compliance Checks | SmartCOI',
     description:
-      'Automate insurance compliance verification for vendors and tenants. AI checks coverage limits, additional insured, and expiration dates automatically.',
+      'Stop manually reviewing every COI. AI verifies coverage limits, additional insured, waivers, and expiration dates in seconds. Try free.',
     type: 'website',
     url: 'https://smartcoi.io/features/compliance-automation',
   },

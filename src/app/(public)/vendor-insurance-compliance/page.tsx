@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'Vendor Insurance Compliance Software for Commercial Real Estate | SmartCOI',
+  title: 'Vendor Insurance Compliance Software | SmartCOI',
   description:
-    'Automate vendor insurance compliance for commercial properties. Track COIs, verify coverage limits, monitor expirations, and give vendors a self-service upload portal.',
+    'Tired of chasing vendors for COIs? Automate compliance tracking, coverage verification, and expiration alerts. Self-service vendor portal included. Try free.',
   alternates: {
     canonical: 'https://smartcoi.io/vendor-insurance-compliance',
   },
   openGraph: {
-    title: 'Vendor Insurance Compliance Software for Commercial Real Estate | SmartCOI',
+    title: 'Vendor Insurance Compliance Software | SmartCOI',
     description:
-      'Automate vendor insurance compliance for commercial properties. Track COIs, verify coverage limits, monitor expirations, and give vendors a self-service upload portal.',
+      'Tired of chasing vendors for COIs? Automate compliance tracking, coverage verification, and expiration alerts. Self-service vendor portal included. Try free.',
     type: 'website',
     url: 'https://smartcoi.io/vendor-insurance-compliance',
   },

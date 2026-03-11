@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'SmartCOI vs myCOI — COI Tracking Software Comparison',
+  title: 'SmartCOI vs myCOI: Which COI Tracker Is Better?',
   description:
-    'Compare SmartCOI and myCOI (illumend) for COI tracking. See how SmartCOI\'s self-serve setup and transparent pricing compare to myCOI\'s enterprise platform for property managers.',
+    'myCOI targets large enterprises with custom pricing. SmartCOI offers the same features at transparent rates starting at $79/mo. See the full breakdown.',
   alternates: {
     canonical: 'https://smartcoi.io/compare/smartcoi-vs-mycoi',
   },
   openGraph: {
-    title: 'SmartCOI vs myCOI — COI Tracking Software Comparison',
+    title: 'SmartCOI vs myCOI: Which COI Tracker Is Better?',
     description:
-      'Compare SmartCOI and myCOI (illumend) for COI tracking. See how SmartCOI\'s self-serve setup and transparent pricing compare to myCOI\'s enterprise platform for property managers.',
+      'myCOI targets large enterprises with custom pricing. SmartCOI offers the same features at transparent rates starting at $79/mo. See the full breakdown.',
     type: 'website',
     url: 'https://smartcoi.io/compare/smartcoi-vs-mycoi',
   },

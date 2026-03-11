@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'COI Tracking for Commercial Real Estate | SmartCOI',
+  title: 'COI Tracking for Commercial Properties | SmartCOI',
   description:
-    'Streamline certificate of insurance tracking for your commercial properties. Upload COIs, get instant AI-powered compliance checks, and track status across your portfolio.',
+    'Upload COIs and get instant AI compliance checks. Track certificate status across your entire portfolio from one dashboard. No credit card required.',
   alternates: {
     canonical: 'https://smartcoi.io/features/coi-tracking',
   },
   openGraph: {
-    title: 'COI Tracking Software for Commercial Real Estate | SmartCOI',
+    title: 'COI Tracking for Commercial Properties | SmartCOI',
     description:
-      'Streamline certificate of insurance tracking for your commercial properties. Upload COIs, get instant AI-powered compliance checks, and track status across your portfolio.',
+      'Upload COIs and get instant AI compliance checks. Track certificate status across your entire portfolio from one dashboard. No credit card required.',
     type: 'website',
     url: 'https://smartcoi.io/features/coi-tracking',
   },
