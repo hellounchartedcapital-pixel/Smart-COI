@@ -5,7 +5,7 @@ import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash } from '@/lib/utils/file-validation';
 import { Button } from '@/components/ui/button';
-import { Upload, FileText, X, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, X, CheckCircle2, Loader2, AlertTriangle, Building2, Users } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,6 +60,7 @@ export function StepBulkUpload({
 
   const [orgId, setOrgId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [coiType, setCoiType] = useState<'vendor' | 'tenant' | null>(null);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -221,6 +222,81 @@ export function StepBulkUpload({
               .eq('id', certId!)
               .single();
 
+            // Auto-assign certificate to a vendor or tenant linked to the property
+            const insuredName = updatedCert?.insured_name || entry.file.name.replace(/\.pdf$/i, '');
+            if (propertyId && coiType) {
+              try {
+                if (coiType === 'vendor') {
+                  // Check if vendor with same name already exists for this property
+                  const { data: existing } = await supabase
+                    .from('vendors')
+                    .select('id')
+                    .eq('organization_id', orgId!)
+                    .eq('property_id', propertyId)
+                    .ilike('company_name', insuredName)
+                    .is('deleted_at', null)
+                    .maybeSingle();
+
+                  let vendorId = existing?.id;
+                  if (!vendorId) {
+                    const { data: newVendor } = await supabase
+                      .from('vendors')
+                      .insert({
+                        organization_id: orgId!,
+                        property_id: propertyId,
+                        company_name: insuredName,
+                        compliance_status: 'under_review',
+                      })
+                      .select('id')
+                      .single();
+                    vendorId = newVendor?.id;
+                  }
+
+                  if (vendorId) {
+                    await supabase
+                      .from('certificates')
+                      .update({ vendor_id: vendorId })
+                      .eq('id', certId!);
+                  }
+                } else {
+                  // Tenant flow
+                  const { data: existing } = await supabase
+                    .from('tenants')
+                    .select('id')
+                    .eq('organization_id', orgId!)
+                    .eq('property_id', propertyId)
+                    .ilike('company_name', insuredName)
+                    .is('deleted_at', null)
+                    .maybeSingle();
+
+                  let tenantId = existing?.id;
+                  if (!tenantId) {
+                    const { data: newTenant } = await supabase
+                      .from('tenants')
+                      .insert({
+                        organization_id: orgId!,
+                        property_id: propertyId,
+                        company_name: insuredName,
+                        compliance_status: 'under_review',
+                      })
+                      .select('id')
+                      .single();
+                    tenantId = newTenant?.id;
+                  }
+
+                  if (tenantId) {
+                    await supabase
+                      .from('certificates')
+                      .update({ tenant_id: tenantId })
+                      .eq('id', certId!);
+                  }
+                }
+              } catch (assignErr) {
+                console.error('Auto-assign failed:', assignErr);
+                // Non-fatal: certificate is still extracted, just not assigned
+              }
+            }
+
             setFiles((prev) =>
               prev.map((f) =>
                 f.id === entry.id
@@ -291,7 +367,7 @@ export function StepBulkUpload({
     }
 
     await runQueue();
-  }, [orgId, userId, propertyId, files, supabase]);
+  }, [orgId, userId, propertyId, coiType, files, supabase]);
 
   // Stats
   const pendingCount = files.filter((f) => f.status === 'pending').length;
@@ -347,12 +423,49 @@ export function StepBulkUpload({
         </p>
       </div>
 
+      {/* COI type selection */}
+      {!coiType && (
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-foreground">
+            What type of COIs are you uploading?
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setCoiType('vendor')}
+              className="flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 bg-white p-5 transition-all hover:border-brand hover:bg-emerald-50"
+            >
+              <Building2 className="h-7 w-7 text-emerald-600" />
+              <span className="text-sm font-semibold text-foreground">Vendor COIs</span>
+              <span className="text-xs text-muted-foreground text-center">
+                Contractors, service providers, maintenance companies
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setCoiType('tenant')}
+              className="flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 bg-white p-5 transition-all hover:border-brand hover:bg-emerald-50"
+            >
+              <Users className="h-7 w-7 text-emerald-600" />
+              <span className="text-sm font-semibold text-foreground">Tenant COIs</span>
+              <span className="text-xs text-muted-foreground text-center">
+                Renters insurance, tenant liability certificates
+              </span>
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            You can upload the other type after completing this batch.
+          </p>
+        </div>
+      )}
+
       {/* Upload limit badge */}
+      {coiType && (
       <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
         <Upload className="h-5 w-5 text-emerald-600" />
-        <div>
+        <div className="flex-1">
           <p className="text-sm font-semibold text-emerald-800">
-            Upload up to {MAX_FREE_UPLOADS} COIs free
+            Upload up to {MAX_FREE_UPLOADS} {coiType} COIs free
           </p>
           <p className="text-xs text-emerald-700">
             {totalCount > 0
@@ -360,10 +473,20 @@ export function StepBulkUpload({
               : 'Drag & drop PDF certificates to get started'}
           </p>
         </div>
+        {!processing && !allDone && (
+          <button
+            type="button"
+            onClick={() => { setCoiType(null); setFiles([]); setAllDone(false); }}
+            className="text-xs font-medium text-emerald-700 hover:text-emerald-900 underline underline-offset-2"
+          >
+            Switch type
+          </button>
+        )}
       </div>
+      )}
 
-      {/* Drop zone (hidden when processing or done) */}
-      {!processing && !allDone && (
+      {/* Drop zone (hidden when processing, done, or no type selected) */}
+      {coiType && !processing && !allDone && (
         <div
           className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
             dragActive
@@ -484,7 +607,7 @@ export function StepBulkUpload({
             size="lg"
             className="w-full font-semibold"
             onClick={processFiles}
-            disabled={!propertyId || pendingCount === 0}
+            disabled={!propertyId || !coiType || pendingCount === 0}
           >
             Upload &amp; Extract {pendingCount} COI{pendingCount !== 1 ? 's' : ''}
           </Button>

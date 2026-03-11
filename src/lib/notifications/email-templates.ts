@@ -241,92 +241,103 @@ interface WelcomeEmailFields {
 export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
   const name = escapeHtml(fields.user_name || 'there');
 
-  const body = `
-<p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 16px;">Hi ${name},</p>
-
-<p style="font-size:14px;color:#334155;line-height:1.6;">
-  Welcome to <strong>SmartCOI</strong>! Your account is confirmed and ready to go.
-</p>
-
-<p style="font-size:14px;color:#334155;line-height:1.6;margin-top:16px;">
-  You\u2019re just a few steps away from automating your COI compliance. Here\u2019s what to do next:
-</p>
-
-<!-- Steps -->
-<table cellpadding="0" cellspacing="0" style="margin:20px 0;width:100%;">
-  <!-- Step 1 -->
-  <tr>
-    <td style="width:40px;vertical-align:top;padding:12px 0;">
-      <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">1</div>
-    </td>
-    <td style="vertical-align:top;padding:12px 0 12px 12px;">
-      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Add your properties and vendors/tenants</p>
-      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Create your properties, then add the vendors and tenants whose insurance you need to track.</p>
-    </td>
-  </tr>
-  <!-- Divider -->
-  <tr><td colspan="2" style="padding:0;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
-  <!-- Step 2 -->
-  <tr>
-    <td style="width:40px;vertical-align:top;padding:12px 0;">
-      <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">2</div>
-    </td>
-    <td style="vertical-align:top;padding:12px 0 12px 12px;">
-      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Upload your COIs</p>
-      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Upload a single COI or use Bulk Upload to process your entire portfolio at once. Our AI extracts coverage details and checks compliance automatically.</p>
-    </td>
-  </tr>
-  <!-- Divider -->
-  <tr><td colspan="2" style="padding:0;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
-  <!-- Step 3 -->
-  <tr>
-    <td style="width:40px;vertical-align:top;padding:12px 0;">
-      <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">3</div>
-    </td>
-    <td style="vertical-align:top;padding:12px 0 12px 12px;">
-      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Set up your compliance requirement templates</p>
-      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Define the insurance coverages and limits each vendor or tenant type needs to meet.</p>
-    </td>
-  </tr>
-  <!-- Divider -->
-  <tr><td colspan="2" style="padding:0;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
-  <!-- Step 4 -->
-  <tr>
-    <td style="width:40px;vertical-align:top;padding:12px 0;">
-      <div style="width:32px;height:32px;border-radius:50%;background:#059669;color:#ffffff;font-size:15px;font-weight:700;text-align:center;line-height:32px;">4</div>
-    </td>
-    <td style="vertical-align:top;padding:12px 0 12px 12px;">
-      <p style="margin:0 0 4px;font-size:14px;color:#334155;font-weight:600;">Share portal links for self-service uploads</p>
-      <p style="margin:0;font-size:13px;color:#475569;line-height:1.5;">Generate a portal link for each vendor or tenant so they can upload their own certificates directly.</p>
-    </td>
-  </tr>
-</table>
-
-<!-- CTA Button -->
-<table cellpadding="0" cellspacing="0" style="margin:24px auto;" align="center">
-<tr><td style="background:#059669;border-radius:6px;padding:12px 32px;" align="center">
-  <a href="${fields.setup_link}" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;display:inline-block;">Go to Dashboard</a>
-</td></tr>
-</table>
-
-<p style="font-size:13px;color:#475569;margin-top:24px;">
-  Questions? Reach out to us at <a href="mailto:support@smartcoi.io" style="color:#059669;">support@smartcoi.io</a> \u2014 we\u2019re happy to help you get set up.
-</p>`;
-
-  // Use a dedicated wrapper: SmartCOI-only header (no org name), plus copyright footer
   const html = `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 16px;">
 <tr><td align="center">
-<table width="100%" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-  <tr><td style="background:#059669;padding:20px 24px;">
-    <span style="color:#ffffff;font-size:18px;font-weight:700;">SmartCOI</span>
+<table width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0">
+  <!-- Logo -->
+  <tr><td align="center" style="padding-bottom:32px;">
+    <table cellpadding="0" cellspacing="0"><tr>
+      <td style="vertical-align:middle;padding-right:10px;">
+        <img src="https://smartcoi.io/logo-icon.svg" alt="SmartCOI" width="32" height="32" style="display:block;" />
+      </td>
+      <td style="vertical-align:middle;">
+        <span style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#0f172a;">SmartCOI</span>
+      </td>
+    </tr></table>
   </td></tr>
-  <tr><td style="padding:24px;">${body}</td></tr>
-  <tr><td style="padding:16px 24px;background:#f1f5f9;font-size:11px;color:#64748b;text-align:center;">
-    \u00A9 2026 SmartCOI \u00B7 <a href="mailto:support@smartcoi.io" style="color:#64748b;">support@smartcoi.io</a>
+
+  <!-- Card -->
+  <tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08),0 4px 12px rgba(0,0,0,0.04);">
+    <!-- Green accent bar -->
+    <tr><td style="height:4px;background:linear-gradient(90deg,#4CC78A,#73E2A7);font-size:0;line-height:0;">&nbsp;</td></tr>
+
+    <!-- Content -->
+    <tr><td style="padding:40px 36px 32px;">
+      <h1 style="margin:0 0 8px;font-family:'DM Sans',sans-serif;font-size:24px;font-weight:700;color:#0f172a;">Welcome to SmartCOI!</h1>
+      <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
+        Hi ${name}, your account is confirmed and ready to go. You\u2019re just a few steps away from automating your COI compliance.
+      </p>
+
+      <!-- Steps -->
+      <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:28px;">
+        <tr>
+          <td style="width:44px;vertical-align:top;padding:14px 0;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-align:center;line-height:36px;">1</div>
+          </td>
+          <td style="vertical-align:top;padding:14px 0 14px 14px;">
+            <p style="margin:0 0 2px;font-family:'DM Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;">Set up your organization</p>
+            <p style="margin:0;font-size:13px;color:#64748b;line-height:1.5;">Name your company and configure your certificate holder entities.</p>
+          </td>
+        </tr>
+        <tr><td colspan="2" style="padding:0 0 0 50px;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
+        <tr>
+          <td style="width:44px;vertical-align:top;padding:14px 0;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-align:center;line-height:36px;">2</div>
+          </td>
+          <td style="vertical-align:top;padding:14px 0 14px 14px;">
+            <p style="margin:0 0 2px;font-family:'DM Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;">Add your first property</p>
+            <p style="margin:0;font-size:13px;color:#64748b;line-height:1.5;">Create a property and start associating vendors and tenants.</p>
+          </td>
+        </tr>
+        <tr><td colspan="2" style="padding:0 0 0 50px;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
+        <tr>
+          <td style="width:44px;vertical-align:top;padding:14px 0;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-align:center;line-height:36px;">3</div>
+          </td>
+          <td style="vertical-align:top;padding:14px 0 14px 14px;">
+            <p style="margin:0 0 2px;font-family:'DM Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;">Upload up to 50 COIs free</p>
+            <p style="margin:0;font-size:13px;color:#64748b;line-height:1.5;">Our AI extracts vendor names, coverages, limits, and dates automatically.</p>
+          </td>
+        </tr>
+        <tr><td colspan="2" style="padding:0 0 0 50px;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
+        <tr>
+          <td style="width:44px;vertical-align:top;padding:14px 0;">
+            <div style="width:36px;height:36px;border-radius:50%;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-align:center;line-height:36px;">4</div>
+          </td>
+          <td style="vertical-align:top;padding:14px 0 14px 14px;">
+            <p style="margin:0 0 2px;font-family:'DM Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;">Set compliance requirements</p>
+            <p style="margin:0;font-size:13px;color:#64748b;line-height:1.5;">Define the coverages and limits each vendor or tenant type must carry.</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- CTA Button -->
+      <table cellpadding="0" cellspacing="0" width="100%">
+      <tr><td align="center">
+        <a href="${fields.setup_link}" style="display:inline-block;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:12px;box-shadow:0 2px 8px rgba(115,226,167,0.3);">Get Started</a>
+      </td></tr>
+      </table>
+    </td></tr>
+  </table>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="padding:28px 0;text-align:center;">
+    <p style="margin:0 0 4px;font-family:'DM Sans',sans-serif;font-size:12px;color:#94a3b8;">
+      \u00A9 ${new Date().getFullYear()} SmartCOI. All rights reserved.
+    </p>
+    <p style="margin:0;font-family:'DM Sans',sans-serif;font-size:12px;color:#94a3b8;">
+      Questions? <a href="mailto:support@smartcoi.io" style="color:#4CC78A;text-decoration:none;">support@smartcoi.io</a>
+    </p>
   </td></tr>
 </table>
 </td></tr>
@@ -336,6 +347,94 @@ export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
 
   return {
     subject: "Welcome to SmartCOI \u2014 Let's Get You Set Up",
+    html,
+  };
+}
+
+// ============================================================================
+// Email Confirmation Template
+// Branded template for Supabase email confirmation. To use this template,
+// copy the HTML from confirmationEmail({ confirmation_url: '{{ .ConfirmationURL }}' })
+// into Supabase Dashboard > Auth > Email Templates > Confirm signup.
+// ============================================================================
+
+interface ConfirmationEmailFields {
+  confirmation_url: string;
+}
+
+export function confirmationEmail(fields: ConfirmationEmailFields): EmailTemplate {
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 16px;">
+<tr><td align="center">
+<table width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0">
+  <!-- Logo -->
+  <tr><td align="center" style="padding-bottom:32px;">
+    <table cellpadding="0" cellspacing="0"><tr>
+      <td style="vertical-align:middle;padding-right:10px;">
+        <img src="https://smartcoi.io/logo-icon.svg" alt="SmartCOI" width="32" height="32" style="display:block;" />
+      </td>
+      <td style="vertical-align:middle;">
+        <span style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#0f172a;">SmartCOI</span>
+      </td>
+    </tr></table>
+  </td></tr>
+
+  <!-- Card -->
+  <tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08),0 4px 12px rgba(0,0,0,0.04);">
+    <!-- Green accent bar -->
+    <tr><td style="height:4px;background:linear-gradient(90deg,#4CC78A,#73E2A7);font-size:0;line-height:0;">&nbsp;</td></tr>
+
+    <!-- Content -->
+    <tr><td style="padding:40px 36px 32px;text-align:center;">
+      <!-- Checkmark icon -->
+      <div style="margin:0 auto 20px;width:56px;height:56px;border-radius:50%;background:#73E2A7;line-height:56px;text-align:center;">
+        <span style="font-size:28px;color:#0f172a;">&#10003;</span>
+      </div>
+
+      <h1 style="margin:0 0 12px;font-family:'DM Sans',sans-serif;font-size:24px;font-weight:700;color:#0f172a;">Confirm your email</h1>
+      <p style="margin:0 0 28px;font-size:15px;color:#475569;line-height:1.6;">
+        Thanks for signing up for SmartCOI! Click the button below to confirm your email address and start automating your COI compliance.
+      </p>
+
+      <!-- CTA Button -->
+      <table cellpadding="0" cellspacing="0" width="100%">
+      <tr><td align="center">
+        <a href="${fields.confirmation_url}" style="display:inline-block;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:12px;box-shadow:0 2px 8px rgba(115,226,167,0.3);">Confirm Email</a>
+      </td></tr>
+      </table>
+
+      <p style="margin:24px 0 0;font-size:13px;color:#94a3b8;line-height:1.6;">
+        If you didn\u2019t create an account, you can safely ignore this email.
+      </p>
+    </td></tr>
+  </table>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="padding:28px 0;text-align:center;">
+    <p style="margin:0 0 4px;font-family:'DM Sans',sans-serif;font-size:12px;color:#94a3b8;">
+      \u00A9 ${new Date().getFullYear()} SmartCOI. All rights reserved.
+    </p>
+    <p style="margin:0;font-family:'DM Sans',sans-serif;font-size:12px;color:#94a3b8;">
+      <a href="https://smartcoi.io" style="color:#4CC78A;text-decoration:none;">smartcoi.io</a>
+    </p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  return {
+    subject: 'Confirm your SmartCOI account',
     html,
   };
 }

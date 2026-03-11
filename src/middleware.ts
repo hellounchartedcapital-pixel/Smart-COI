@@ -17,7 +17,7 @@ const publicRoutes = [
 const publicPrefixes = [
   '/portal/', '/api/portal/', '/api/webhooks/', '/api/cron/', '/api/auth/',
   // Marketing / SEO prefixes
-  '/blog', '/compare', '/features/',
+  '/blog', '/compare', '/features/', '/for/', '/alternatives/', '/insurance-requirements',
   // Sentry tunnel
   '/monitoring',
 ];

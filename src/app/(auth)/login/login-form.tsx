@@ -60,7 +60,41 @@ export function LoginForm() {
       setLoginTime();
       updateLastActive();
 
-      router.push(next);
+      // If no explicit `next` was given, check onboarding status to route new
+      // users to /setup instead of /dashboard
+      let destination = next;
+      if (!searchParams.get('next')) {
+        try {
+          const { data: { user: authUser } } = await supabase.auth.getUser();
+          if (authUser) {
+            const { data: profile } = await supabase
+              .from('users')
+              .select('organization_id')
+              .eq('id', authUser.id)
+              .single();
+
+            if (profile?.organization_id) {
+              const { data: org } = await supabase
+                .from('organizations')
+                .select('settings')
+                .eq('id', profile.organization_id)
+                .single();
+
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              if (!(org?.settings as any)?.onboarding_completed) {
+                destination = '/setup';
+              }
+            } else {
+              // No org yet — definitely needs onboarding
+              destination = '/setup';
+            }
+          }
+        } catch {
+          // If check fails, fall through to default destination
+        }
+      }
+
+      router.push(destination);
       router.refresh();
     } catch {
       setError('An unexpected error occurred. Please try again.');
