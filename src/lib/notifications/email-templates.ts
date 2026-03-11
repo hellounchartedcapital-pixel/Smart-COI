@@ -256,7 +256,7 @@ export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
   <tr><td align="center" style="padding-bottom:32px;">
     <table cellpadding="0" cellspacing="0"><tr>
       <td style="vertical-align:middle;padding-right:10px;">
-        <img src="https://smartcoi.io/logo-icon.svg" alt="SmartCOI" width="32" height="32" style="display:block;" />
+        <div style="display:inline-block;width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,#73E2A7,#5CC98E);text-align:center;line-height:32px;font-size:16px;color:#ffffff;">&#10003;</div>
       </td>
       <td style="vertical-align:middle;">
         <span style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#0f172a;">SmartCOI</span>
@@ -378,7 +378,7 @@ export function confirmationEmail(fields: ConfirmationEmailFields): EmailTemplat
   <tr><td align="center" style="padding-bottom:32px;">
     <table cellpadding="0" cellspacing="0"><tr>
       <td style="vertical-align:middle;padding-right:10px;">
-        <img src="https://smartcoi.io/logo-icon.svg" alt="SmartCOI" width="32" height="32" style="display:block;" />
+        <div style="display:inline-block;width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,#73E2A7,#5CC98E);text-align:center;line-height:32px;font-size:16px;color:#ffffff;">&#10003;</div>
       </td>
       <td style="vertical-align:middle;">
         <span style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#0f172a;">SmartCOI</span>
