@@ -59,6 +59,7 @@ interface DashboardClientProps {
   propertyList: UploadDialogProperty[];
   vendorList: UploadDialogEntity[];
   tenantList: UploadDialogEntity[];
+  showAssignBanner?: boolean;
 }
 
 // ============================================================================
@@ -130,13 +131,44 @@ export function DashboardClient({
   propertyList,
   vendorList,
   tenantList,
+  showAssignBanner,
 }: DashboardClientProps) {
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const { showTutorial, startTutorial, closeTutorial } = useTutorial();
 
   return (
     <div className="space-y-6">
       <DashboardTutorial active={showTutorial} onClose={closeTutorial} />
+
+      {/* Assign requirements banner */}
+      {showAssignBanner && !bannerDismissed && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-amber-600" />
+            <p className="text-sm font-medium text-amber-800">
+              Assign requirements to see your compliance results
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/vendors"
+              className="inline-flex items-center gap-1 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700"
+            >
+              Assign now <ArrowRight className="h-3 w-3" />
+            </Link>
+            <button
+              onClick={() => setBannerDismissed(true)}
+              className="rounded p-1 text-amber-500 hover:text-amber-700"
+              aria-label="Dismiss"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ---- Page Header with primary action ---- */}
       <div className="flex items-center justify-between" data-tutorial="dashboard-overview">

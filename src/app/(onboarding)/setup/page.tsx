@@ -9,8 +9,9 @@ import { StepOrgSetup, type OrgSetupData } from '@/components/onboarding/step-or
 import { StepProperty, type PropertyData } from '@/components/onboarding/step-property';
 import { StepBulkUpload } from '@/components/onboarding/step-bulk-upload';
 import { StepTemplates, type SelectedTemplate } from '@/components/onboarding/step-templates';
+import { StepAssignRequirements } from '@/components/onboarding/step-assign-requirements';
 
-const STEP_LABELS = ['Organization', 'Property', 'Upload COIs', 'Requirements'];
+const STEP_LABELS = ['Organization', 'Property', 'Upload COIs', 'Requirements', 'Assign'];
 const TOTAL_STEPS = STEP_LABELS.length;
 
 export default function OnboardingSetupPage() {
@@ -31,6 +32,8 @@ export default function OnboardingSetupPage() {
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [propertyName, setPropertyName] = useState('');
+  const [coiType, setCoiType] = useState<'vendor' | 'tenant' | null>(null);
+  const [uploadedCount, setUploadedCount] = useState(0);
 
   // Store auth user ID for creating org/profile when missing
   const authUserIdRef = useRef<string | null>(null);
@@ -246,12 +249,14 @@ export default function OnboardingSetupPage() {
   }
 
   // Step 3: Bulk upload complete → move to requirements
-  function handleBulkUploadNext() {
+  function handleBulkUploadNext(count: number, type?: 'vendor' | 'tenant' | null) {
+    setUploadedCount(count);
+    if (type) setCoiType(type);
     posthog.capture('onboarding_step_completed', { step: 'bulk_upload' });
     setCurrentStep(4);
   }
 
-  // Step 4: Save templates, complete onboarding, go to dashboard
+  // Step 4: Save templates → move to step 5 (assign requirements)
   async function handleTemplatesNext(selected: SelectedTemplate[]) {
     if (!orgId) {
       setError('Organization not set up. Please go back to Step 1.');
@@ -295,11 +300,17 @@ export default function OnboardingSetupPage() {
         }
       }
 
-      // Complete onboarding and go to dashboard
-      await completeOnboarding(orgId);
-      posthog.capture('onboarding_step_completed', { step: 'assign_requirements' });
-      router.push('/dashboard');
-      router.refresh();
+      posthog.capture('onboarding_step_completed', { step: 'select_templates' });
+
+      // If there are uploaded COIs, go to step 5 to assign requirements
+      if (uploadedCount > 0) {
+        setCurrentStep(5);
+      } else {
+        // No COIs uploaded — complete onboarding
+        await completeOnboarding(orgId);
+        router.push('/dashboard');
+        router.refresh();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save templates');
     } finally {
@@ -315,8 +326,54 @@ export default function OnboardingSetupPage() {
     setSaving(true);
     setError(null);
     try {
+      // If there are uploaded COIs, go to step 5 to assign requirements
+      if (uploadedCount > 0) {
+        setCurrentStep(5);
+        setSaving(false);
+        return;
+      }
       await completeOnboarding(orgId);
       router.push('/dashboard');
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to finish onboarding');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Step 5: Assign requirements complete → complete onboarding and go to dashboard
+  async function handleAssignNext() {
+    if (!orgId) {
+      setError('Organization not set up.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await completeOnboarding(orgId);
+      posthog.capture('onboarding_step_completed', { step: 'assign_requirements' });
+      router.push('/dashboard');
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to finish onboarding');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleAssignSkip() {
+    if (!orgId) {
+      setError('Organization not set up.');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await completeOnboarding(orgId);
+      posthog.capture('onboarding_skipped', { step: 5 });
+      // Redirect with a query param so the dashboard can show the banner
+      router.push('/dashboard?assign_pending=1');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to finish onboarding');
@@ -424,6 +481,16 @@ export default function OnboardingSetupPage() {
         <StepTemplates
           onNext={handleTemplatesNext}
           onSkip={handleTemplatesSkip}
+          saving={saving}
+        />
+      )}
+      {currentStep === 5 && (
+        <StepAssignRequirements
+          propertyId={propertyId}
+          orgId={orgId}
+          coiType={coiType}
+          onNext={handleAssignNext}
+          onSkip={handleAssignSkip}
           saving={saving}
         />
       )}

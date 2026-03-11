@@ -36,33 +36,35 @@ export function StepProperty({ orgData, data, onNext, onSkip, saving }: StepProp
   const [name, setName] = useState(data?.name ?? '');
   const [address, setAddress] = useState(data?.address ?? '');
 
-  // Build default entities from org data for property creation
-  function buildDefaultEntities(): PropertyEntityEntry[] {
-    const entities: PropertyEntityEntry[] = [];
-    if (orgData.certificateHolder && orgData.certificateHolder.entity_name) {
-      entities.push({
-        id: crypto.randomUUID(),
-        entity_name: orgData.certificateHolder.entity_name,
-        entity_address: orgData.certificateHolder.entity_address,
-        entity_type: 'certificate_holder',
-      });
-    }
-    for (const ai of orgData.additionalInsured) {
-      if (ai.entity_name.trim()) {
-        entities.push({
-          id: crypto.randomUUID(),
-          entity_name: ai.entity_name,
-          entity_address: ai.entity_address,
-          entity_type: 'additional_insured',
-        });
-      }
-    }
-    return entities;
-  }
+  // Pre-fill entity names from existing data or org defaults
+  const existingCH = data?.entities?.find((e) => e.entity_type === 'certificate_holder');
+  const existingAI = data?.entities?.find((e) => e.entity_type === 'additional_insured');
+  const [certHolderName, setCertHolderName] = useState(
+    existingCH?.entity_name ?? orgData.certificateHolder?.entity_name ?? ''
+  );
+  const [additionalInsuredName, setAdditionalInsuredName] = useState(
+    existingAI?.entity_name ?? orgData.additionalInsured[0]?.entity_name ?? ''
+  );
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !certHolderName.trim()) return;
+
+    const entities: PropertyEntityEntry[] = [];
+    entities.push({
+      id: existingCH?.id ?? crypto.randomUUID(),
+      entity_name: certHolderName.trim(),
+      entity_address: '',
+      entity_type: 'certificate_holder',
+    });
+    if (additionalInsuredName.trim()) {
+      entities.push({
+        id: existingAI?.id ?? crypto.randomUUID(),
+        entity_name: additionalInsuredName.trim(),
+        entity_address: '',
+        entity_type: 'additional_insured',
+      });
+    }
 
     onNext({
       name: name.trim(),
@@ -71,7 +73,7 @@ export function StepProperty({ orgData, data, onNext, onSkip, saving }: StepProp
       state: '',
       zip: '',
       property_type: 'office',
-      entities: data?.entities ?? buildDefaultEntities(),
+      entities,
     });
   }
 
@@ -107,8 +109,34 @@ export function StepProperty({ orgData, data, onNext, onSkip, saving }: StepProp
             onChange={(e) => setAddress(e.target.value)}
             placeholder="100 Park Avenue, New York, NY 10178"
           />
+        </div>
+
+        {/* Certificate Holder */}
+        <div className="space-y-2">
+          <Label htmlFor="certHolder">Certificate holder name *</Label>
+          <Input
+            id="certHolder"
+            value={certHolderName}
+            onChange={(e) => setCertHolderName(e.target.value)}
+            placeholder="Acme Property Management LLC"
+            required
+          />
           <p className="text-xs text-muted-foreground">
-            You can add city, state, ZIP, property type, and entity details later.
+            The entity that must appear in the certificate holder field on COIs for this property.
+          </p>
+        </div>
+
+        {/* Additional Insured */}
+        <div className="space-y-2">
+          <Label htmlFor="additionalInsured">Additional insured name</Label>
+          <Input
+            id="additionalInsured"
+            value={additionalInsuredName}
+            onChange={(e) => setAdditionalInsuredName(e.target.value)}
+            placeholder="Park Avenue Owners LLC"
+          />
+          <p className="text-xs text-muted-foreground">
+            Optional. The entity that must be listed as additional insured on COIs.
           </p>
         </div>
       </div>

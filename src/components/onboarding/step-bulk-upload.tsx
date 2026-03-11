@@ -28,15 +28,15 @@ interface FileEntry {
 interface StepBulkUploadProps {
   propertyId: string | null;
   propertyName: string;
-  onNext: (uploadedCount: number) => void;
+  onNext: (uploadedCount: number, coiType?: 'vendor' | 'tenant' | null) => void;
   onSkip: () => void;
   saving: boolean;
 }
 
-// Config
-const MAX_CONCURRENT = 2;
-const STAGGER_DELAY_MS = 3_000;
-const CLIENT_RETRY_DELAYS = [5_000, 15_000];
+// Config — batch of 5 with 2s pause between batches, 3 retries with exponential backoff
+const BATCH_SIZE = 5;
+const BATCH_PAUSE_MS = 2_000;
+const CLIENT_RETRY_DELAYS = [2_000, 4_000, 8_000]; // 3 retries with exponential backoff
 const FETCH_TIMEOUT_MS = 120_000;
 const MAX_FREE_UPLOADS = 50;
 
@@ -331,42 +331,35 @@ export function StepBulkUpload({
         throw new Error(lastError);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Processing failed';
+        // Mark as "Needs Review" in DB if we have a certificate ID
+        if (entry.certificateId) {
+          supabase
+            .from('certificates')
+            .update({ processing_status: 'needs_review' })
+            .eq('id', entry.certificateId)
+            .then(() => { /* fire and forget */ });
+        }
         setFiles((prev) =>
           prev.map((f) =>
-            f.id === entry.id ? { ...f, status: 'failed', error: message, attempts: (f.attempts || 0) + 1 } : f
+            f.id === entry.id
+              ? { ...f, status: 'failed', error: `Needs Review: ${message}`, attempts: (f.attempts || 0) + 1 }
+              : f
           )
         );
       }
     }
 
-    // Staggered concurrency
+    // Batch processing: process BATCH_SIZE files concurrently, then pause before next batch
     const queue = [...pendingFiles];
-    const active: Promise<void>[] = [];
 
-    async function runQueue() {
-      while (queue.length > 0 && !abortRef.current) {
-        while (active.length >= MAX_CONCURRENT && !abortRef.current) {
-          await Promise.race(active);
-        }
-        if (abortRef.current) break;
-
-        const next = queue.shift();
-        if (!next) break;
-
-        if (active.length > 0) {
-          await new Promise((resolve) => setTimeout(resolve, STAGGER_DELAY_MS));
-        }
-
-        const promise = processOne(next).then(() => {
-          const idx = active.indexOf(promise);
-          if (idx >= 0) active.splice(idx, 1);
-        });
-        active.push(promise);
+    while (queue.length > 0 && !abortRef.current) {
+      const batch = queue.splice(0, BATCH_SIZE);
+      await Promise.all(batch.map((entry) => processOne(entry)));
+      // Pause between batches to prevent API overload
+      if (queue.length > 0 && !abortRef.current) {
+        await new Promise((resolve) => setTimeout(resolve, BATCH_PAUSE_MS));
       }
-      await Promise.all(active);
     }
-
-    await runQueue();
   }, [orgId, userId, propertyId, coiType, files, supabase]);
 
   // Stats
@@ -581,7 +574,12 @@ export function StepBulkUpload({
                     <p className="text-xs text-muted-foreground">Uploading...</p>
                   )}
                   {entry.status === 'failed' && (
-                    <p className="truncate text-xs text-red-500">{entry.error}</p>
+                    <p className="truncate text-xs text-red-500">
+                      <span className="inline-flex items-center rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 mr-1">
+                        Needs Review
+                      </span>
+                      {entry.error?.replace(/^Needs Review: /, '')}
+                    </p>
                   )}
                 </div>
 
@@ -624,7 +622,7 @@ export function StepBulkUpload({
           <Button
             size="lg"
             className="w-full font-semibold"
-            onClick={() => onNext(doneCount)}
+            onClick={() => onNext(doneCount, coiType)}
             disabled={saving}
           >
             {saving ? 'Finishing...' : `Continue with ${doneCount} COI${doneCount !== 1 ? 's' : ''}`}
