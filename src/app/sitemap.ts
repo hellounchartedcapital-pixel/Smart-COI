@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getAllPosts } from '@/lib/blog';
 import { propertyTypes, coverageTypes } from '@/lib/pseo';
+import { verticals } from '@/lib/verticals';
 
 const BASE_URL = 'https://smartcoi.io';
 
@@ -100,6 +101,64 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${BASE_URL}/compare/smartcoi-vs-mycoi`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/compare/smartcoi-vs-trustlayer`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/compare/smartcoi-vs-certificial`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/compare/smartcoi-vs-billy`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/compare/smartcoi-vs-smartcompliance`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/compare/smartcoi-vs-pins`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/compare/smartcoi-vs-certfocus`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+
+    // Vertical landing pages
+    ...verticals.map((v) => ({
+      url: `${BASE_URL}/for/${v.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
+
+    // Alternatives pages
+    {
+      url: `${BASE_URL}/alternatives/mycoi`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/alternatives/jones`,
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.7,

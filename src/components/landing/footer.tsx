@@ -4,7 +4,7 @@ export function Footer() {
   return (
     <footer className="border-t border-slate-800 bg-slate-950 py-12">
       <div className="mx-auto max-w-7xl px-6">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-6">
           {/* Brand */}
           <div className="flex flex-col gap-3 lg:col-span-1">
             <div className="flex items-center gap-2.5">
@@ -39,18 +39,27 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Use Cases */}
+          {/* Who It's For */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Use Cases</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Who It&apos;s For</p>
             <div className="mt-3 flex flex-col gap-2 text-sm">
-              <Link href="/certificate-of-insurance-tracking" className="text-slate-400 transition-colors hover:text-white">
-                Certificate of Insurance Tracking
+              <Link href="/for/multifamily" className="text-slate-400 transition-colors hover:text-white">
+                Multifamily Managers
               </Link>
-              <Link href="/vendor-insurance-compliance" className="text-slate-400 transition-colors hover:text-white">
-                Vendor Insurance Compliance
+              <Link href="/for/commercial-office" className="text-slate-400 transition-colors hover:text-white">
+                Office Building Managers
               </Link>
-              <Link href="/tenant-insurance-tracking" className="text-slate-400 transition-colors hover:text-white">
-                Tenant Insurance Tracking
+              <Link href="/for/retail-centers" className="text-slate-400 transition-colors hover:text-white">
+                Retail Center Managers
+              </Link>
+              <Link href="/for/industrial" className="text-slate-400 transition-colors hover:text-white">
+                Industrial & Warehouse
+              </Link>
+              <Link href="/for/hoa" className="text-slate-400 transition-colors hover:text-white">
+                HOA & Community Associations
+              </Link>
+              <Link href="/for/property-management-companies" className="text-slate-400 transition-colors hover:text-white">
+                Property Management Firms
               </Link>
             </div>
           </div>
@@ -65,23 +74,33 @@ export function Footer() {
               <Link href="/compare" className="text-slate-400 transition-colors hover:text-white">
                 Compare Solutions
               </Link>
-              <Link href="/compare/smartcoi-vs-spreadsheets" className="text-slate-400 transition-colors hover:text-white">
-                SmartCOI vs Spreadsheets
+              <Link href="/alternatives/mycoi" className="text-slate-400 transition-colors hover:text-white">
+                myCOI Alternatives
               </Link>
-              <Link href="/compare/smartcoi-vs-jones" className="text-slate-400 transition-colors hover:text-white">
-                SmartCOI vs Jones
-              </Link>
-              <Link href="/compare/smartcoi-vs-bcs" className="text-slate-400 transition-colors hover:text-white">
-                SmartCOI vs BCS
-              </Link>
-              <Link href="/compare/smartcoi-vs-mycoi" className="text-slate-400 transition-colors hover:text-white">
-                SmartCOI vs myCOI
+              <Link href="/alternatives/jones" className="text-slate-400 transition-colors hover:text-white">
+                Jones Alternatives
               </Link>
               <Link href="/blog/coi-compliance-guide-property-managers" className="text-slate-400 transition-colors hover:text-white">
                 COI Compliance Guide
               </Link>
               <Link href="/insurance-requirements" className="text-slate-400 transition-colors hover:text-white">
                 Insurance Requirements
+              </Link>
+            </div>
+          </div>
+
+          {/* Use Cases */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Use Cases</p>
+            <div className="mt-3 flex flex-col gap-2 text-sm">
+              <Link href="/certificate-of-insurance-tracking" className="text-slate-400 transition-colors hover:text-white">
+                Certificate of Insurance Tracking
+              </Link>
+              <Link href="/vendor-insurance-compliance" className="text-slate-400 transition-colors hover:text-white">
+                Vendor Insurance Compliance
+              </Link>
+              <Link href="/tenant-insurance-tracking" className="text-slate-400 transition-colors hover:text-white">
+                Tenant Insurance Tracking
               </Link>
             </div>
           </div>

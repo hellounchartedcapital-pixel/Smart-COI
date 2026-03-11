@@ -39,6 +39,42 @@ const comparisons = [
     badge: 'Legacy Alternative',
   },
   {
+    href: '/compare/smartcoi-vs-trustlayer',
+    title: 'SmartCOI vs TrustLayer',
+    desc: 'Compare SmartCOI\'s self-serve setup and transparent pricing with TrustLayer\'s enterprise-focused platform and demo-required sales process.',
+    badge: 'Enterprise Alternative',
+  },
+  {
+    href: '/compare/smartcoi-vs-certificial',
+    title: 'SmartCOI vs Certificial',
+    desc: 'Compare SmartCOI\'s simple AI extraction with Certificial\'s real-time carrier integrations and fraud detection approach.',
+    badge: 'Carrier Verification',
+  },
+  {
+    href: '/compare/smartcoi-vs-billy',
+    title: 'SmartCOI vs Billy',
+    desc: 'Billy is built for general contractors with deep Procore integration. SmartCOI is built for property managers — a completely different use case.',
+    badge: 'Construction Alternative',
+  },
+  {
+    href: '/compare/smartcoi-vs-smartcompliance',
+    title: 'SmartCOI vs SmartCompliance',
+    desc: 'Compare SmartCOI\'s purpose-built simplicity for property managers with SmartCompliance\'s broad enterprise compliance platform.',
+    badge: 'Enterprise Alternative',
+  },
+  {
+    href: '/compare/smartcoi-vs-pins',
+    title: 'SmartCOI vs PINS',
+    desc: 'PINS serves property management as one of six verticals. SmartCOI is built exclusively for property managers — not a generalist tool.',
+    badge: 'Multi-Industry Alternative',
+  },
+  {
+    href: '/compare/smartcoi-vs-certfocus',
+    title: 'SmartCOI vs CertFocus',
+    desc: 'Compare SmartCOI\'s AI-powered self-serve approach with CertFocus\'s full-service managed compliance model and enterprise pricing.',
+    badge: 'Managed Service Alternative',
+  },
+  {
     href: '/compare/smartcoi-vs-spreadsheets',
     title: 'Software vs Spreadsheets',
     desc: 'Why dedicated COI tracking software is worth the switch from manual spreadsheet tracking — with real time and cost analysis.',
