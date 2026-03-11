@@ -85,7 +85,7 @@ export default function OnboardingSetupPage() {
   }, [supabase, router]);
 
   // Helper: ensure org and user profile exist, return orgId
-  async function ensureOrgAndProfile(companyName: string): Promise<string> {
+  async function ensureOrgAndProfile(_companyName: string): Promise<string> {
     if (orgId) return orgId;
 
     if (!authUserIdRef.current) throw new Error('Not authenticated. Please refresh and try again.');

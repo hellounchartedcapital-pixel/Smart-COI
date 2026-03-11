@@ -72,7 +72,7 @@ export function StepAssignRequirements({
         .map((c) => c[entityFK as keyof typeof c] as string | null)
         .filter(Boolean) as string[];
 
-      let entityTemplateMap = new Map<string, string | null>();
+      const entityTemplateMap = new Map<string, string | null>();
       if (entityIds.length > 0) {
         const { data: entities } = await supabase
           .from(entityTable)
