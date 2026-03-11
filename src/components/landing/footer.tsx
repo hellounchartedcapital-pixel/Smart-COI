@@ -80,6 +80,9 @@ export function Footer() {
               <Link href="/blog/coi-compliance-guide-property-managers" className="text-slate-400 transition-colors hover:text-white">
                 COI Compliance Guide
               </Link>
+              <Link href="/insurance-requirements" className="text-slate-400 transition-colors hover:text-white">
+                Insurance Requirements
+              </Link>
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getAllPosts } from '@/lib/blog';
+import { propertyTypes, coverageTypes } from '@/lib/pseo';
 
 const BASE_URL = 'https://smartcoi.io';
 
@@ -112,6 +113,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     ...blogPosts,
+
+    // Insurance requirements hub
+    {
+      url: `${BASE_URL}/insurance-requirements`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    // Insurance requirements — per property type
+    ...propertyTypes.map((pt) => ({
+      url: `${BASE_URL}/insurance-requirements/${pt.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
+    // Insurance requirements — property × coverage niche pages
+    ...propertyTypes.flatMap((pt) =>
+      coverageTypes.map((ct) => ({
+        url: `${BASE_URL}/insurance-requirements/${pt.slug}/${ct.slug}`,
+        lastModified: new Date(),
+        changeFrequency: 'monthly' as const,
+        priority: 0.5,
+      }))
+    ),
 
     // Utility pages
     {
