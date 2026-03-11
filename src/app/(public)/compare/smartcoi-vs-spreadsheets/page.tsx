@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'COI Tracking: Software vs Spreadsheets — Why It\'s Time to Switch',
+  title: 'COI Tracking: Software vs Spreadsheets | SmartCOI',
   description:
-    'Compare manual spreadsheet COI tracking vs dedicated software. Real time and cost analysis shows why property managers are switching to automated tracking.',
+    'Spending hours on COI spreadsheets? See the real time and cost comparison — and why property managers are switching to automated tracking. Try free.',
   alternates: {
     canonical: 'https://smartcoi.io/compare/smartcoi-vs-spreadsheets',
   },
   openGraph: {
-    title: 'COI Tracking: Software vs Spreadsheets — Why It\'s Time to Switch',
+    title: 'COI Tracking: Software vs Spreadsheets | SmartCOI',
     description:
-      'Compare manual spreadsheet COI tracking vs dedicated software. Real time and cost analysis shows why property managers are switching to automated tracking.',
+      'Spending hours on COI spreadsheets? See the real time and cost comparison — and why property managers are switching to automated tracking. Try free.',
     type: 'website',
     url: 'https://smartcoi.io/compare/smartcoi-vs-spreadsheets',
   },

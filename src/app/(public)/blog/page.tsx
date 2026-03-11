@@ -5,9 +5,9 @@ import { Footer } from '@/components/landing/footer';
 import { getAllPosts } from '@/lib/blog';
 
 export const metadata: Metadata = {
-  title: 'Blog',
+  title: 'COI Compliance & Insurance Tracking Blog',
   description:
-    'Insights on COI compliance, insurance tracking, and property management best practices from the SmartCOI team.',
+    'Practical guides on COI compliance, vendor insurance tracking, and risk management for commercial property managers. Written by the SmartCOI team.',
   alternates: {
     canonical: 'https://smartcoi.io/blog',
   },

@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'Vendor COI Management | SmartCOI',
+  title: 'Vendor COI Management Made Simple | SmartCOI',
   description:
-    'Manage vendor COIs effortlessly. Track compliance, automate follow-ups, and give vendors a self-service portal to upload certificates.',
+    'Vendors upload their own COIs via a self-service portal. You get automatic compliance checks and follow-up reminders. No more email chains. Try free.',
   alternates: {
     canonical: 'https://smartcoi.io/features/vendor-management',
   },
   openGraph: {
-    title: 'Vendor Certificate of Insurance Management | SmartCOI',
+    title: 'Vendor COI Management Made Simple | SmartCOI',
     description:
-      'Manage vendor COIs effortlessly. Track compliance, automate follow-ups, and give vendors a self-service portal to upload certificates.',
+      'Vendors upload their own COIs via a self-service portal. You get automatic compliance checks and follow-up reminders. No more email chains. Try free.',
     type: 'website',
     url: 'https://smartcoi.io/features/vendor-management',
   },

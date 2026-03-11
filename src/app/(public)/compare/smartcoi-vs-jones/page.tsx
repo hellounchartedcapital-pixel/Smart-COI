@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'SmartCOI vs Jones — COI Tracking Software Comparison',
+  title: 'SmartCOI vs Jones: Which COI Tracker Is Better?',
   description:
-    'Compare SmartCOI and Jones for COI tracking. See how AI-powered instant extraction compares to Jones\'s managed service approach for property managers.',
+    'Jones uses human reviewers and charges per certificate. SmartCOI uses AI for instant extraction at a flat monthly rate. See the full comparison.',
   alternates: {
     canonical: 'https://smartcoi.io/compare/smartcoi-vs-jones',
   },
   openGraph: {
-    title: 'SmartCOI vs Jones — COI Tracking Software Comparison',
+    title: 'SmartCOI vs Jones: Which COI Tracker Is Better?',
     description:
-      'Compare SmartCOI and Jones for COI tracking. See how AI-powered instant extraction compares to Jones\'s managed service approach for property managers.',
+      'Jones uses human reviewers and charges per certificate. SmartCOI uses AI for instant extraction at a flat monthly rate. See the full comparison.',
     type: 'website',
     url: 'https://smartcoi.io/compare/smartcoi-vs-jones',
   },
