@@ -1,7 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { PropertyDetailClient } from '@/components/properties/property-detail-client';
-import { formatDate } from '@/lib/utils';
 import type { Vendor, Tenant, RequirementTemplate } from '@/types';
 
 interface Props {
@@ -91,7 +90,7 @@ export default async function PropertyDetailPage({ params }: Props) {
       .order('name'),
   ]);
 
-  // Batch fetch latest COI dates for all vendors and tenants (2 queries, not per-entity)
+  // Batch fetch latest COI expiration dates for all vendors and tenants
   const vendorIds = (vendors ?? []).map((v) => v.id);
   const tenantIds = (tenants ?? []).map((t) => t.id);
 
@@ -99,46 +98,52 @@ export default async function PropertyDetailPage({ params }: Props) {
     vendorIds.length > 0
       ? supabase
           .from('certificates')
-          .select('vendor_id, uploaded_at')
+          .select('vendor_id, extracted_coverages(expiration_date)')
           .in('vendor_id', vendorIds)
           .order('uploaded_at', { ascending: false })
-      : Promise.resolve({ data: [] as { vendor_id: string; uploaded_at: string }[] }),
+      : Promise.resolve({ data: [] as { vendor_id: string; extracted_coverages: { expiration_date: string | null }[] }[] }),
     tenantIds.length > 0
       ? supabase
           .from('certificates')
-          .select('tenant_id, uploaded_at')
+          .select('tenant_id, extracted_coverages(expiration_date)')
           .in('tenant_id', tenantIds)
           .order('uploaded_at', { ascending: false })
-      : Promise.resolve({ data: [] as { tenant_id: string; uploaded_at: string }[] }),
+      : Promise.resolve({ data: [] as { tenant_id: string; extracted_coverages: { expiration_date: string | null }[] }[] }),
   ]);
 
-  // Map entity_id -> latest upload date (first per entity since ordered desc)
-  const vendorLatestCert = new Map<string, string>();
+  // Map entity_id -> latest expiration date (latest cert, then max expiration across coverages)
+  const vendorLatestExpiration = new Map<string, string>();
   for (const c of vendorCerts ?? []) {
-    if (c.vendor_id && !vendorLatestCert.has(c.vendor_id)) {
-      vendorLatestCert.set(c.vendor_id, c.uploaded_at);
+    if (c.vendor_id && !vendorLatestExpiration.has(c.vendor_id)) {
+      const coverages = (c as { vendor_id: string; extracted_coverages: { expiration_date: string | null }[] }).extracted_coverages ?? [];
+      const dates = coverages.map((cov) => cov.expiration_date).filter(Boolean) as string[];
+      if (dates.length > 0) {
+        dates.sort();
+        vendorLatestExpiration.set(c.vendor_id, dates[dates.length - 1]);
+      }
     }
   }
-  const tenantLatestCert = new Map<string, string>();
+  const tenantLatestExpiration = new Map<string, string>();
   for (const c of tenantCerts ?? []) {
-    if (c.tenant_id && !tenantLatestCert.has(c.tenant_id)) {
-      tenantLatestCert.set(c.tenant_id, c.uploaded_at);
+    if (c.tenant_id && !tenantLatestExpiration.has(c.tenant_id)) {
+      const coverages = (c as { tenant_id: string; extracted_coverages: { expiration_date: string | null }[] }).extracted_coverages ?? [];
+      const dates = coverages.map((cov) => cov.expiration_date).filter(Boolean) as string[];
+      if (dates.length > 0) {
+        dates.sort();
+        tenantLatestExpiration.set(c.tenant_id, dates[dates.length - 1]);
+      }
     }
   }
 
   const vendorList = (vendors ?? []).map((v) => ({
     ...v,
-    latest_coi_date: vendorLatestCert.has(v.id)
-      ? formatDate(vendorLatestCert.get(v.id)!.split('T')[0])
-      : null,
-  })) as (Vendor & { template?: RequirementTemplate | null; latest_coi_date?: string | null })[];
+    coi_expiration_date: vendorLatestExpiration.get(v.id) ?? null,
+  })) as (Vendor & { template?: RequirementTemplate | null; coi_expiration_date?: string | null })[];
 
   const tenantList = (tenants ?? []).map((t) => ({
     ...t,
-    latest_coi_date: tenantLatestCert.has(t.id)
-      ? formatDate(tenantLatestCert.get(t.id)!.split('T')[0])
-      : null,
-  })) as (Tenant & { template?: RequirementTemplate | null; latest_coi_date?: string | null })[];
+    coi_expiration_date: tenantLatestExpiration.get(t.id) ?? null,
+  })) as (Tenant & { template?: RequirementTemplate | null; coi_expiration_date?: string | null })[];
 
   return (
     <PropertyDetailClient

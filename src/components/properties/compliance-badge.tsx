@@ -34,7 +34,7 @@ const STATUS_CONFIG: Record<
 export function ComplianceBadge({ status }: { status: ComplianceStatus }) {
   const config = STATUS_CONFIG[status];
   return (
-    <Badge variant="outline" className={`text-[11px] ${config.className}`}>
+    <Badge variant="outline" className={`whitespace-nowrap text-[11px] ${config.className}`}>
       {config.label}
     </Badge>
   );

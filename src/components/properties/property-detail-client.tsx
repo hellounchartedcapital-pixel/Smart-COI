@@ -2,6 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -89,8 +91,8 @@ const STATUS_ORDER: Record<ComplianceStatus, number> = {
 interface PropertyDetailClientProps {
   property: Property;
   entities: PropertyEntity[];
-  vendors: (Vendor & { template?: RequirementTemplate | null; latest_coi_date?: string | null })[];
-  tenants: (Tenant & { template?: RequirementTemplate | null; latest_coi_date?: string | null })[];
+  vendors: (Vendor & { template?: RequirementTemplate | null; coi_expiration_date?: string | null })[];
+  tenants: (Tenant & { template?: RequirementTemplate | null; coi_expiration_date?: string | null })[];
   archivedVendors: (Vendor & { template?: RequirementTemplate | null })[];
   archivedTenants: (Tenant & { template?: RequirementTemplate | null })[];
   templates: RequirementTemplate[];
@@ -613,10 +615,6 @@ export function PropertyDetailClient({
                     >
                       Name <SortIndicator field="name" current={vendorSort} />
                     </TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Contact
-                    </TableHead>
-                    <TableHead className="hidden lg:table-cell">Type</TableHead>
                     <TableHead className="hidden lg:table-cell">
                       Template
                     </TableHead>
@@ -627,7 +625,7 @@ export function PropertyDetailClient({
                       Status <SortIndicator field="status" current={vendorSort} />
                     </TableHead>
                     <TableHead className="hidden md:table-cell">
-                      Last COI
+                      COI Expiration
                     </TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
@@ -644,20 +642,12 @@ export function PropertyDetailClient({
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {v.company_name}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <div className="text-sm">{v.contact_name ?? '—'}</div>
-                        {v.contact_email && (
-                          <div className="max-w-[200px] truncate text-xs text-muted-foreground">
-                            {v.contact_email}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <span className="text-sm text-muted-foreground">
-                          {v.vendor_type ?? '—'}
-                        </span>
+                        <Link
+                          href={`/dashboard/vendors/${v.id}`}
+                          className="hover:underline"
+                        >
+                          {v.company_name}
+                        </Link>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <span className="text-sm text-muted-foreground">
@@ -668,11 +658,18 @@ export function PropertyDetailClient({
                         <ComplianceBadge status={v.compliance_status} />
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <span className="text-sm text-muted-foreground">
-                          {v.latest_coi_date ?? (
-                            <span className="text-slate-400">None</span>
-                          )}
-                        </span>
+                        {(() => {
+                          const d = v.coi_expiration_date;
+                          if (!d) return <span className="text-sm text-slate-400">—</span>;
+                          const exp = new Date(d + 'T00:00:00');
+                          const now = new Date();
+                          now.setHours(0, 0, 0, 0);
+                          const diffDays = Math.floor((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                          let colorClass = 'text-muted-foreground';
+                          if (diffDays < 0) colorClass = 'text-red-600';
+                          else if (diffDays <= 30) colorClass = 'text-amber-600';
+                          return <span className={`text-sm ${colorClass}`}>{formatDate(d)}</span>;
+                        })()}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -792,10 +789,6 @@ export function PropertyDetailClient({
                     >
                       Name <SortIndicator field="name" current={tenantSort} />
                     </TableHead>
-                    <TableHead className="hidden md:table-cell">
-                      Contact
-                    </TableHead>
-                    <TableHead className="hidden lg:table-cell">Type</TableHead>
                     <TableHead className="hidden lg:table-cell">
                       Template
                     </TableHead>
@@ -806,7 +799,7 @@ export function PropertyDetailClient({
                       Status <SortIndicator field="status" current={tenantSort} />
                     </TableHead>
                     <TableHead className="hidden md:table-cell">
-                      Last COI
+                      COI Expiration
                     </TableHead>
                     <TableHead className="w-10" />
                   </TableRow>
@@ -823,25 +816,17 @@ export function PropertyDetailClient({
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        {t.company_name}
-                        {t.unit_suite && (
-                          <span className="ml-1 text-xs text-muted-foreground">
-                            ({t.unit_suite})
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <div className="text-sm">{t.contact_name ?? '—'}</div>
-                        {t.contact_email && (
-                          <div className="max-w-[200px] truncate text-xs text-muted-foreground">
-                            {t.contact_email}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <span className="text-sm text-muted-foreground">
-                          {t.tenant_type ?? '—'}
-                        </span>
+                        <Link
+                          href={`/dashboard/tenants/${t.id}`}
+                          className="hover:underline"
+                        >
+                          {t.company_name}
+                          {t.unit_suite && (
+                            <span className="ml-1 text-xs text-muted-foreground">
+                              ({t.unit_suite})
+                            </span>
+                          )}
+                        </Link>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <span className="text-sm text-muted-foreground">
@@ -852,11 +837,18 @@ export function PropertyDetailClient({
                         <ComplianceBadge status={t.compliance_status} />
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <span className="text-sm text-muted-foreground">
-                          {t.latest_coi_date ?? (
-                            <span className="text-slate-400">None</span>
-                          )}
-                        </span>
+                        {(() => {
+                          const d = t.coi_expiration_date;
+                          if (!d) return <span className="text-sm text-slate-400">—</span>;
+                          const exp = new Date(d + 'T00:00:00');
+                          const now = new Date();
+                          now.setHours(0, 0, 0, 0);
+                          const diffDays = Math.floor((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                          let colorClass = 'text-muted-foreground';
+                          if (diffDays < 0) colorClass = 'text-red-600';
+                          else if (diffDays <= 30) colorClass = 'text-amber-600';
+                          return <span className={`text-sm ${colorClass}`}>{formatDate(d)}</span>;
+                        })()}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -922,7 +914,6 @@ export function PropertyDetailClient({
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
-                          <TableHead className="hidden md:table-cell">Contact</TableHead>
                           <TableHead className="hidden lg:table-cell">Template</TableHead>
                           <TableHead className="w-24" />
                         </TableRow>
@@ -931,9 +922,6 @@ export function PropertyDetailClient({
                         {archivedVendors.map((v) => (
                           <TableRow key={v.id} className="text-muted-foreground">
                             <TableCell className="font-medium">{v.company_name}</TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              {v.contact_email ?? '—'}
-                            </TableCell>
                             <TableCell className="hidden lg:table-cell">
                               {v.template?.name ?? '—'}
                             </TableCell>
@@ -965,7 +953,6 @@ export function PropertyDetailClient({
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
-                          <TableHead className="hidden md:table-cell">Contact</TableHead>
                           <TableHead className="hidden lg:table-cell">Template</TableHead>
                           <TableHead className="w-24" />
                         </TableRow>
@@ -974,9 +961,6 @@ export function PropertyDetailClient({
                         {archivedTenants.map((t) => (
                           <TableRow key={t.id} className="text-muted-foreground">
                             <TableCell className="font-medium">{t.company_name}</TableCell>
-                            <TableCell className="hidden md:table-cell">
-                              {t.contact_email ?? '—'}
-                            </TableCell>
                             <TableCell className="hidden lg:table-cell">
                               {t.template?.name ?? '—'}
                             </TableCell>
