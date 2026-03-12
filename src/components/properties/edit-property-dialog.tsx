@@ -35,6 +35,7 @@ export function EditPropertyDialog({
     state: property.state ?? '',
     zip: property.zip ?? '',
     property_type: property.property_type,
+    accept_cert_holder_in_additional_insured: property.accept_cert_holder_in_additional_insured ?? true,
     entities: entities.map((e) => ({
       id: e.id,
       entity_name: e.entity_name,
@@ -53,6 +54,7 @@ export function EditPropertyDialog({
         state: data.state || undefined,
         zip: data.zip || undefined,
         property_type: data.property_type,
+        accept_cert_holder_in_additional_insured: data.accept_cert_holder_in_additional_insured,
         entities: data.entities.map((e) => ({
           entity_name: e.entity_name,
           entity_address: e.entity_address || undefined,

@@ -44,6 +44,7 @@ export interface PropertyFormData {
   state: string;
   zip: string;
   property_type: PropertyType;
+  accept_cert_holder_in_additional_insured: boolean;
   entities: EntityEntry[];
 }
 
@@ -85,6 +86,9 @@ export function PropertyForm({
   const [propertyType, setPropertyType] = useState<PropertyType>(
     initial?.property_type ?? 'office'
   );
+  const [acceptCertHolderInAI, setAcceptCertHolderInAI] = useState(
+    initial?.accept_cert_holder_in_additional_insured ?? true
+  );
   const [entities, setEntities] = useState<EntityEntry[]>(buildInitialEntities());
 
   function addEntity() {
@@ -119,6 +123,7 @@ export function PropertyForm({
       state,
       zip: zip.trim(),
       property_type: propertyType,
+      accept_cert_holder_in_additional_insured: acceptCertHolderInAI,
       entities: entities.filter((e) => e.entity_name.trim()),
     });
   }
@@ -274,6 +279,33 @@ export function PropertyForm({
         <Button type="button" variant="outline" size="sm" onClick={addEntity}>
           + Add entity
         </Button>
+
+        {/* Flexible matching toggle */}
+        <div className="mt-2 flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={acceptCertHolderInAI}
+            onClick={() => setAcceptCertHolderInAI(!acceptCertHolderInAI)}
+            className={`relative mt-0.5 inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+              acceptCertHolderInAI ? 'bg-brand' : 'bg-slate-300'
+            }`}
+          >
+            <span
+              className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+                acceptCertHolderInAI ? 'translate-x-[16px]' : 'translate-x-[2px]'
+              }`}
+            />
+          </button>
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              Accept certificate holder name in additional insured field
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              When enabled, compliance check passes if the required certificate holder name appears in either the certificate holder or additional insured field on the COI.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Actions */}

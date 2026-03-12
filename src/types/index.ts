@@ -137,6 +137,7 @@ export interface Property {
   state: string | null;
   zip: string | null;
   property_type: PropertyType;
+  accept_cert_holder_in_additional_insured: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -303,6 +304,7 @@ export interface EntityComplianceResult {
   extracted_entity_id: string | null;
   status: EntityComplianceStatus;
   match_details: string | null;
+  fuzzy_match: boolean;
   created_at: string;
 }
 

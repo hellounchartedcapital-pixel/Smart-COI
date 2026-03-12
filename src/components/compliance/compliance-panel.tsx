@@ -363,107 +363,96 @@ export function CompliancePanel({
               </h3>
             </div>
             <div className="divide-y divide-slate-100">
-              {/* Certificate Holder */}
-              {(() => {
-                const certHolderReq = propertyEntities.find(
-                  (pe) => pe.entity_type === 'certificate_holder'
+              {/* Certificate Holder & Additional Insured — render all property entities */}
+              {propertyEntities.map((pe) => {
+                const result = entityResults.find(
+                  (er) => er.property_entity_id === pe.id
                 );
-                const certHolderResult = entityResults.find(
-                  (er) => er.property_entity_id === certHolderReq?.id
-                );
-                const isMet = certHolderResult?.status === 'found';
-                const extractedHolder = extractedEntities?.find(
-                  (e) => e.entity_type === 'certificate_holder'
-                );
+                const isMet = result?.status === 'found';
+                const isFuzzy = result?.fuzzy_match === true;
+                const label = pe.entity_type === 'certificate_holder'
+                  ? 'Certificate Holder'
+                  : 'Additional Insured';
+                const matchedEntity = result?.extracted_entity_id
+                  ? extractedEntities?.find((e) => e.id === result.extracted_entity_id)
+                  : null;
+                // Fallback: find by type
+                const displayEntity = matchedEntity
+                  ?? extractedEntities?.find((e) => e.entity_type === pe.entity_type);
 
                 return (
+                  <div key={pe.id} className="px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5">
+                        {isMet ? (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                        ) : (
+                          <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-foreground">{label}</p>
+                          {isMet && isFuzzy && (
+                            <span className="text-[10px] text-muted-foreground">
+                              Matched (fuzzy)
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 grid gap-0.5 text-xs">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-muted-foreground shrink-0">Required:</span>
+                            <span className="text-foreground">{pe.entity_name}</span>
+                          </div>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-muted-foreground shrink-0">Extracted:</span>
+                            <span className={isMet ? 'text-emerald-700' : 'text-red-600'}>
+                              {displayEntity?.entity_name ?? 'Not found on certificate'}
+                            </span>
+                          </div>
+                          {result?.match_details && (
+                            <p className="text-[10px] text-muted-foreground italic">
+                              {result.match_details}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Show placeholder if no property entities configured */}
+              {propertyEntities.length === 0 && (
+                <>
                   <div className="px-4 py-3">
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5">
-                        {certHolderReq ? (
-                          isMet ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-red-500 shrink-0" />
-                          )
-                        ) : (
-                          <div className="h-4 w-4 rounded-full bg-slate-200 shrink-0" />
-                        )}
+                        <div className="h-4 w-4 rounded-full bg-slate-200 shrink-0" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground">Certificate Holder</p>
-                        <div className="mt-1 grid gap-0.5 text-xs">
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-muted-foreground shrink-0">Required:</span>
-                            <span className="text-foreground">
-                              {certHolderReq?.entity_name ?? 'Not configured'}
-                            </span>
-                          </div>
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-muted-foreground shrink-0">Extracted:</span>
-                            <span className={isMet ? 'text-emerald-700' : certHolderReq ? 'text-red-600' : 'text-foreground'}>
-                              {extractedHolder?.entity_name ?? 'Not found on certificate'}
-                            </span>
-                          </div>
-                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">Not configured</p>
                       </div>
                     </div>
                   </div>
-                );
-              })()}
-
-              {/* Additional Insured */}
-              {(() => {
-                const addInsuredReq = propertyEntities.find(
-                  (pe) => pe.entity_type === 'additional_insured'
-                );
-                const addInsuredResult = entityResults.find(
-                  (er) => er.property_entity_id === addInsuredReq?.id
-                );
-                const isMet = addInsuredResult?.status === 'found';
-                const extractedInsured = extractedEntities?.find(
-                  (e) => e.entity_type === 'additional_insured'
-                );
-
-                return (
                   <div className="px-4 py-3">
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5">
-                        {addInsuredReq ? (
-                          isMet ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-red-500 shrink-0" />
-                          )
-                        ) : (
-                          <div className="h-4 w-4 rounded-full bg-slate-200 shrink-0" />
-                        )}
+                        <div className="h-4 w-4 rounded-full bg-slate-200 shrink-0" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground">Additional Insured</p>
-                        <div className="mt-1 grid gap-0.5 text-xs">
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-muted-foreground shrink-0">Required:</span>
-                            <span className="text-foreground">
-                              {addInsuredReq?.entity_name ?? 'Not configured'}
-                            </span>
-                          </div>
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-muted-foreground shrink-0">Extracted:</span>
-                            <span className={isMet ? 'text-emerald-700' : addInsuredReq ? 'text-red-600' : 'text-foreground'}>
-                              {extractedInsured?.entity_name ?? 'Not found on certificate'}
-                            </span>
-                          </div>
-                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">Not configured</p>
                       </div>
                     </div>
                   </div>
-                );
-              })()}
+                </>
+              )}
 
               {/* Expiration */}
               {(() => {
-                const latestExpiration = extractedCoverages
+                // Find earliest expiration date across all coverages
+                const earliestExpiration = extractedCoverages
                   .filter((c) => c.expiration_date)
                   .sort((a, b) => new Date(a.expiration_date!).getTime() - new Date(b.expiration_date!).getTime())[0];
                 const isExpired = hasExpiredCoverage;
@@ -472,7 +461,7 @@ export function CompliancePanel({
                   <div className="px-4 py-3">
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5">
-                        {latestExpiration ? (
+                        {earliestExpiration ? (
                           isExpired ? (
                             <XCircle className="h-4 w-4 text-red-500 shrink-0" />
                           ) : (
@@ -484,13 +473,30 @@ export function CompliancePanel({
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground">Expiration</p>
-                        <p className={`mt-1 text-xs ${isExpired ? 'text-red-600' : 'text-emerald-700'}`}>
-                          {latestExpiration
-                            ? isExpired
-                              ? `Expired on ${formatDate(latestExpiration.expiration_date!)}`
-                              : 'Valid'
-                            : 'No expiration date found'}
-                        </p>
+                        {earliestExpiration ? (
+                          <p className="mt-1 text-xs">
+                            {isExpired ? (
+                              <>
+                                <span className="text-red-600">
+                                  Expired {formatDate(earliestExpiration.expiration_date!)}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-foreground">
+                                  Expires {formatDate(earliestExpiration.expiration_date!)}
+                                </span>
+                                <span className="ml-1.5 text-emerald-700 font-medium">
+                                  — Current
+                                </span>
+                              </>
+                            )}
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            No expiration date found
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
