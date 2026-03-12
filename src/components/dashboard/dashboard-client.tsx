@@ -25,6 +25,9 @@ import {
   Bell,
   PlusCircle,
   ArrowRight,
+  AlertTriangle,
+  User,
+  X,
 } from 'lucide-react';
 import type {
   DashboardStats,
@@ -122,6 +125,8 @@ const ACTIVITY_ICONS: Partial<Record<ActivityAction, typeof Upload>> = {
 // Main component
 // ============================================================================
 
+type FilterCategory = 'all' | 'compliant' | 'needs_attention' | 'pending';
+
 export function DashboardClient({
   stats,
   statusDistribution,
@@ -135,11 +140,73 @@ export function DashboardClient({
 }: DashboardClientProps) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
+  const [filter, setFilter] = useState<FilterCategory>('all');
   const { showTutorial, startTutorial, closeTutorial } = useTutorial();
+
+  // Summary counts
+  const compliantCount = statusDistribution.compliant;
+  const needsAttentionCount =
+    statusDistribution.expiring_soon +
+    statusDistribution.non_compliant +
+    statusDistribution.expired;
+  const pendingCount =
+    statusDistribution.pending + statusDistribution.under_review;
+
+  // Filter action items by category
+  const filteredItems = actionItems.filter((item) => {
+    if (filter === 'all') return true;
+    if (filter === 'needs_attention')
+      return ['expiring_soon', 'non_compliant', 'expired'].includes(item.status);
+    if (filter === 'pending')
+      return ['pending', 'under_review'].includes(item.status);
+    if (filter === 'compliant') return item.status === 'compliant';
+    return true;
+  });
+
+  // Sort needs_attention to top by default
+  const sortedItems = [...filteredItems].sort((a, b) => {
+    const priority: Record<string, number> = {
+      expired: 0,
+      non_compliant: 1,
+      expiring_soon: 2,
+      under_review: 3,
+      pending: 4,
+      compliant: 5,
+    };
+    return (priority[a.status] ?? 9) - (priority[b.status] ?? 9);
+  });
 
   return (
     <div className="space-y-6">
       <DashboardTutorial active={showTutorial} onClose={closeTutorial} />
+
+      {/* Trial days remaining banner */}
+      {stats.trialDaysLeft != null && stats.trialDaysLeft >= 0 && !trialBannerDismissed && (
+        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-amber-600" />
+            <p className="text-sm text-amber-800">
+              <span className="font-medium">{stats.trialDaysLeft} day{stats.trialDaysLeft !== 1 ? 's' : ''}</span> left in your free trial
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/settings/billing"
+              className="text-xs font-medium text-amber-700 hover:text-amber-900 underline"
+            >
+              Upgrade
+            </Link>
+            <button
+              onClick={() => setTrialBannerDismissed(true)}
+              className="rounded p-0.5 text-amber-400 hover:text-amber-600"
+              aria-label="Dismiss"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Assign requirements banner */}
       {showAssignBanner && !bannerDismissed && (
@@ -162,15 +229,13 @@ export function DashboardClient({
               className="rounded p-1 text-amber-500 hover:text-amber-700"
               aria-label="Dismiss"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* ---- Page Header with primary action ---- */}
+      {/* ---- Page Header ---- */}
       <div className="flex items-center justify-between" data-tutorial="dashboard-overview">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">Overview</h1>
@@ -202,45 +267,85 @@ export function DashboardClient({
         tenants={tenantList}
       />
 
-      {/* ---- Stats Row ---- */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Properties"
-          value={String(stats.propertyCount)}
-          icon={<Building2 className="h-5 w-5 text-slate-400" />}
-          href="/dashboard/properties"
-        />
-        <StatCard
-          label="Tracked Entities"
-          value={String(stats.entityCount)}
-          icon={<Users className="h-5 w-5 text-slate-400" />}
-          sub="Vendors &amp; Tenants"
-        />
-        <ComplianceRateCard rate={stats.complianceRate} />
-        <StatCard
-          label="Expiring in 30 Days"
-          value={String(stats.expiringSoonCount)}
-          icon={<Clock className="h-5 w-5 text-slate-400" />}
-          valueColor={
-            stats.expiringSoonCount > 0 ? 'text-amber-600' : 'text-emerald-600'
-          }
-        />
+      {/* ---- Three Summary Cards (clickable filters) ---- */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <button
+          type="button"
+          onClick={() => setFilter(filter === 'compliant' ? 'all' : 'compliant')}
+          className={`rounded-xl border-2 p-5 text-left transition-all ${
+            filter === 'compliant'
+              ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200'
+              : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+            <span className="text-sm font-medium text-emerald-700">Compliant</span>
+          </div>
+          <p className="mt-2 text-3xl font-bold text-emerald-700">{compliantCount}</p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilter(filter === 'needs_attention' ? 'all' : 'needs_attention')}
+          className={`rounded-xl border-2 p-5 text-left transition-all ${
+            filter === 'needs_attention'
+              ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-200'
+              : 'border-slate-200 bg-white hover:border-amber-300 hover:bg-amber-50/50'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            <span className="text-sm font-medium text-amber-700">Needs Attention</span>
+          </div>
+          <p className="mt-2 text-3xl font-bold text-amber-700">{needsAttentionCount}</p>
+          <p className="mt-0.5 text-xs text-amber-600">
+            Expiring, non-compliant, or expired
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setFilter(filter === 'pending' ? 'all' : 'pending')}
+          className={`rounded-xl border-2 p-5 text-left transition-all ${
+            filter === 'pending'
+              ? 'border-slate-400 bg-slate-50 ring-2 ring-slate-200'
+              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-slate-400" />
+            <span className="text-sm font-medium text-slate-600">Pending</span>
+          </div>
+          <p className="mt-2 text-3xl font-bold text-slate-600">{pendingCount}</p>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Awaiting upload or review
+          </p>
+        </button>
       </div>
 
-      {/* ---- Compliance Overview Bar ---- */}
-      <ComplianceBar distribution={statusDistribution} />
+      {/* Active filter indicator */}
+      {filter !== 'all' && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">
+            Showing: <span className="font-medium capitalize">{filter.replace('_', ' ')}</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setFilter('all')}
+            className="text-xs text-primary hover:underline"
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
 
-      {/* ---- Main content: Action Queue + Activity ---- */}
+      {/* ---- Main entity list ---- */}
       <div className="grid items-start gap-6 xl:grid-cols-[1fr_340px]">
         <div className="space-y-6">
-          {/* Priority Action Queue */}
-          <ActionQueue items={actionItems} />
-
-          {/* Properties Overview */}
+          <ActionQueue items={sortedItems} />
           <PropertiesSection properties={propertyOverviews} />
         </div>
-
-        {/* Recent Activity sidebar */}
         <ActivitySidebar entries={activity} />
       </div>
     </div>
@@ -500,6 +605,17 @@ function ActionItemRow({ item }: { item: ActionItem }) {
     <div
       className={`flex items-center gap-3 rounded-lg border border-l-4 ${config.borderColor} bg-white p-3`}
     >
+      <Link
+        href={`/dashboard/${item.entityType}s/${item.id}`}
+        title={item.contactEmail ? `Contact: ${item.contactEmail}` : 'No contact — click to add'}
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+          item.contactEmail
+            ? 'bg-emerald-100 text-emerald-600'
+            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+        }`}
+      >
+        <User className="h-3.5 w-3.5" />
+      </Link>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-medium text-foreground">{item.name}</p>

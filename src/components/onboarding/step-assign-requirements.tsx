@@ -109,14 +109,29 @@ export function StepAssignRequirements({
     }
 
     // Fetch templates (org-specific ones created in step 4, plus system defaults)
+    // Deduplicate: when an org copy of a system template exists, show only the org copy
     const { data: tpls } = await supabase
       .from('requirement_templates')
-      .select('id, name, category, risk_level')
+      .select('id, name, category, risk_level, organization_id, is_system_default')
       .or(`organization_id.eq.${orgId},is_system_default.eq.true`)
       .order('name');
 
     if (tpls) {
-      setTemplates(tpls as TemplateOption[]);
+      // Find org-owned template names so we can hide system defaults that were duplicated
+      const orgTemplateNames = new Set(
+        tpls
+          .filter((t) => t.organization_id === orgId && !t.is_system_default)
+          .map((t) => t.name.toLowerCase().trim())
+      );
+
+      // Keep org copies over system defaults when both exist
+      const deduped = tpls.filter((t) => {
+        if (t.organization_id === orgId) return true; // always keep org templates
+        // System default: only keep if no org copy with same name exists
+        return !orgTemplateNames.has(t.name.toLowerCase().trim());
+      });
+
+      setTemplates(deduped as TemplateOption[]);
     }
 
     setLoading(false);

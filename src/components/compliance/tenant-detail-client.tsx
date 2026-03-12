@@ -11,6 +11,8 @@ import { EntityRequirements } from './entity-requirements';
 import { COIHistory } from './coi-history';
 import { NotificationHistory } from './notification-history';
 import { EditTenantDialog } from './edit-tenant-dialog';
+import { SplitPanelView } from './split-panel-view';
+import { CompliancePanel } from './compliance-panel';
 import { ConfirmDialog } from '@/components/properties/confirm-dialog';
 import {
   softDeleteTenant,
@@ -301,51 +303,32 @@ export function TenantDetailClient({
             );
           })()}
 
-          {/* Compliance Breakdown — hide until certificate is confirmed */}
+          {/* Split-panel: PDF viewer + Compliance panel */}
           {(() => {
             const latestCert = certificates
               .slice()
               .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
-            const pendingReview = latestCert?.processing_status === 'extracted' && !latestCert.reviewed_at;
-
-            if (pendingReview) {
-              return (
-                <div className="rounded-lg border border-slate-200 bg-white p-5">
-                  <h3 className="text-sm font-semibold text-foreground">Compliance Check</h3>
-                  <div className="mt-4 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-                    <Info className="h-5 w-5 flex-shrink-0 text-blue-600 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-blue-800">
-                        Certificate uploaded &mdash; pending review
-                      </p>
-                      <p className="mt-1 text-xs text-blue-700">
-                        Compliance results will be available after you review and confirm the certificate.
-                      </p>
-                      <Button size="sm" className="mt-3" asChild>
-                        <Link href={`/dashboard/certificates/${latestCert.id}/review`}>
-                          Review Certificate
-                        </Link>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
+            const certIdForPdf = latestCert?.file_path ? latestCert.id : null;
 
             return (
-              <>
-                <ComplianceBreakdown
-                  requirements={templateRequirements}
+              <SplitPanelView certificateId={certIdForPdf}>
+                <CompliancePanel
+                  entityType="tenant"
+                  entityId={tenant.id}
+                  entityName={tenant.company_name}
+                  contactEmail={tenant.contact_email}
+                  contactName={tenant.contact_name}
+                  certificates={certificates}
                   extractedCoverages={extractedCoverages}
                   complianceResults={complianceResults}
-                  hasCertificate={hasCertificate}
-                />
-                <EntityRequirements
-                  entities={propertyEntities}
                   entityResults={entityResults}
+                  propertyEntities={propertyEntities}
+                  templateRequirements={templateRequirements}
+                  notifications={notifications}
                   hasCertificate={hasCertificate}
+                  onEditContact={() => setEditOpen(true)}
                 />
-              </>
+              </SplitPanelView>
             );
           })()}
 

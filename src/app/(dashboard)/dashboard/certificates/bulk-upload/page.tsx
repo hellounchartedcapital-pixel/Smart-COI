@@ -112,8 +112,8 @@ const MAX_CONCURRENT = 2;
 // Delay between starting each extraction (ms)
 const STAGGER_DELAY_MS = 3_000;
 
-// Client-side retry backoff for failed extractions (ms)
-const CLIENT_RETRY_DELAYS = [5_000, 15_000];
+// Client-side retry backoff for failed extractions (ms) — 2s, 4s, 8s
+const CLIENT_RETRY_DELAYS = [2_000, 4_000, 8_000];
 
 // Per-request fetch timeout (ms) — prevents indefinite hangs
 const FETCH_TIMEOUT_MS = 120_000;
@@ -224,14 +224,14 @@ export default function BulkUploadPage() {
     (async () => {
       const vendorQuery = supabase
         .from('vendors')
-        .select('id, company_name, property_id')
+        .select('id, company_name, property_id, contact_name, contact_email, contact_phone')
         .eq('organization_id', orgId)
         .is('deleted_at', null)
         .is('archived_at', null);
 
       const tenantQuery = supabase
         .from('tenants')
-        .select('id, company_name, property_id')
+        .select('id, company_name, property_id, contact_name, contact_email, contact_phone')
         .eq('organization_id', orgId)
         .is('deleted_at', null)
         .is('archived_at', null);
@@ -244,12 +244,18 @@ export default function BulkUploadPage() {
           company_name: v.company_name,
           type: 'vendor' as const,
           property_id: v.property_id,
+          contact_name: v.contact_name,
+          contact_email: v.contact_email,
+          contact_phone: v.contact_phone,
         })),
         ...(tenantsRes.data ?? []).map((t) => ({
           id: t.id,
           company_name: t.company_name,
           type: 'tenant' as const,
           property_id: t.property_id,
+          contact_name: t.contact_name,
+          contact_email: t.contact_email,
+          contact_phone: t.contact_phone,
         })),
       ];
       setExistingEntities(entities);
@@ -646,9 +652,9 @@ export default function BulkUploadPage() {
         matchScore: match?.score ?? 0,
         isNew: !match,
         propertyId: selectedPropertyId,
-        contactName: '',
-        contactEmail: '',
-        contactPhone: '',
+        contactName: match?.entity.contact_name ?? '',
+        contactEmail: match?.entity.contact_email ?? '',
+        contactPhone: match?.entity.contact_phone ?? '',
         entitySubType: '',
         templateId: '',
         coverageCount: fileEntry.extractedData?.coverageCount ?? 0,
@@ -671,9 +677,9 @@ export default function BulkUploadPage() {
           matchScore: match?.score ?? 0,
           isNew: !match,
           propertyId: selectedPropertyId,
-          contactName: '',
-          contactEmail: '',
-          contactPhone: '',
+          contactName: match?.entity.contact_name ?? '',
+          contactEmail: match?.entity.contact_email ?? '',
+          contactPhone: match?.entity.contact_phone ?? '',
           entitySubType: '',
           templateId: '',
           coverageCount: fe.extractedData?.coverageCount ?? 0,
@@ -798,6 +804,23 @@ export default function BulkUploadPage() {
     );
     setProcessingStarted(false);
   }, []);
+
+  // ---- Retry a single failed extraction ----
+  const retrySingleFile = useCallback(
+    (fileId: string) => {
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === fileId && f.status === 'failed'
+            ? { ...f, status: 'pending', error: undefined }
+            : f
+        )
+      );
+      // Re-trigger processing for pending files
+      setProcessingStarted(false);
+      setTimeout(() => processFiles(), 100);
+    },
+    [processFiles]
+  );
 
   // ---- Computed state ----
   const pendingCount = files.filter((f) => f.status === 'pending').length;
@@ -1144,9 +1167,9 @@ export default function BulkUploadPage() {
             </div>
           )}
 
-          {/* File status list */}
+          {/* File status list — successful and in-progress */}
           <div className="max-h-80 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
-            {files.map((entry) => (
+            {files.filter((e) => e.status !== 'failed').map((entry) => (
               <div
                 key={entry.id}
                 className="flex items-center gap-3 rounded-md px-3 py-2 text-sm"
@@ -1163,23 +1186,17 @@ export default function BulkUploadPage() {
                 {entry.status === 'done' && (
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
                 )}
-                {entry.status === 'failed' && (
-                  <AlertTriangle className="h-4 w-4 text-red-500" />
-                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{entry.file.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {entry.status === 'uploading' && 'Uploading...'}
                     {entry.status === 'extracting' &&
                       (entry.error
-                        ? entry.error // shows "Retrying in Xs..." during backoff
+                        ? entry.error
                         : 'Extracting data...')}
                     {entry.status === 'done' &&
                       entry.extractedData &&
                       `${entry.extractedData.insuredName ?? 'Unknown'} — ${entry.extractedData.coverageCount} coverages`}
-                    {entry.status === 'failed' && (
-                      <span className="text-red-600">{entry.error}</span>
-                    )}
                   </p>
                 </div>
                 {entry.isDuplicate && (
@@ -1190,6 +1207,55 @@ export default function BulkUploadPage() {
               </div>
             ))}
           </div>
+
+          {/* Failed — Needs Retry section */}
+          {files.some((e) => e.status === 'failed') && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-red-700 flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4" />
+                  Failed — Needs Retry ({files.filter((e) => e.status === 'failed').length})
+                </h3>
+                {allProcessed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      retryAllFailed();
+                      setTimeout(() => processFiles(), 100);
+                    }}
+                  >
+                    <RotateCcw className="mr-1.5 h-3 w-3" />
+                    Retry All Failed
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-1 rounded-lg border border-red-200 bg-red-50/50 p-2">
+                {files.filter((e) => e.status === 'failed').map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center gap-3 rounded-md bg-white px-3 py-2 text-sm border border-red-100"
+                  >
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-red-500" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{entry.file.name}</p>
+                      <p className="text-xs text-red-600">{entry.error}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 text-xs h-7 border-red-200 text-red-700 hover:bg-red-50"
+                      onClick={() => retrySingleFile(entry.id)}
+                    >
+                      <RotateCcw className="mr-1 h-3 w-3" />
+                      Retry
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Completion summary & actions */}
           {allProcessed && (
@@ -1338,6 +1404,45 @@ export default function BulkUploadPage() {
               );
             })}
           </div>
+
+          {/* Failed extractions shown in review */}
+          {files.some((f) => f.status === 'failed') && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-red-700 flex items-center gap-1.5">
+                <AlertTriangle className="h-4 w-4" />
+                Extraction Failed — Retry ({files.filter((f) => f.status === 'failed').length})
+              </h3>
+              <div className="space-y-1 rounded-lg border border-red-200 bg-red-50/50 p-2">
+                {files.filter((f) => f.status === 'failed').map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center gap-3 rounded-md bg-white px-3 py-2 text-sm border border-red-100"
+                  >
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-red-500" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{entry.file.name}</p>
+                      <p className="text-xs text-red-600">{entry.error}</p>
+                    </div>
+                    <Badge variant="destructive" className="shrink-0 text-[10px]">
+                      Extraction Failed
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 text-xs h-7 border-red-200 text-red-700 hover:bg-red-50"
+                      onClick={() => {
+                        retrySingleFile(entry.id);
+                        setStep('processing');
+                      }}
+                    >
+                      <RotateCcw className="mr-1 h-3 w-3" />
+                      Retry
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Summary counts */}
           <div className="flex gap-4 text-sm text-muted-foreground">

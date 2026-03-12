@@ -302,6 +302,148 @@ export async function confirmCertificate(
 }
 
 // ============================================================================
+// Quick Confirm — uses existing extracted data without re-saving
+// ============================================================================
+
+export async function quickConfirmCertificate(certificateId: string) {
+  const planCheck = await checkActivePlan('Subscribe to upload certificates.');
+  if ('error' in planCheck) return { error: planCheck.error };
+  const { supabase, userId, orgId } = await getAuthContext();
+
+  // Verify certificate
+  const { data: cert, error: certErr } = await supabase
+    .from('certificates')
+    .select('*')
+    .eq('id', certificateId)
+    .eq('organization_id', orgId)
+    .single();
+  if (certErr || !cert) throw new Error('Certificate not found');
+
+  // Fetch existing extracted data
+  const { data: savedCoverages } = await supabase
+    .from('extracted_coverages')
+    .select('*')
+    .eq('certificate_id', certificateId);
+
+  const { data: savedEntities } = await supabase
+    .from('extracted_entities')
+    .select('*')
+    .eq('certificate_id', certificateId);
+
+  // Determine entity type and fetch template + property entities
+  const entityType = cert.vendor_id ? 'vendor' : 'tenant';
+  const entityId = cert.vendor_id ?? cert.tenant_id;
+  if (!entityId) throw new Error('Certificate has no vendor or tenant');
+
+  const tableName = entityType === 'vendor' ? 'vendors' : 'tenants';
+  const { data: entity } = await supabase
+    .from(tableName)
+    .select('template_id, property_id')
+    .eq('id', entityId)
+    .single();
+
+  let requirements: RequirementInput[] = [];
+  if (entity?.template_id) {
+    const { data: reqs } = await supabase
+      .from('template_coverage_requirements')
+      .select('*')
+      .eq('template_id', entity.template_id);
+    requirements = (reqs ?? []) as RequirementInput[];
+  }
+
+  let propEntities: PropertyEntityInput[] = [];
+  if (entity?.property_id) {
+    const { data: pes } = await supabase
+      .from('property_entities')
+      .select('*')
+      .eq('property_id', entity.property_id);
+    propEntities = (pes ?? []) as PropertyEntityInput[];
+  }
+
+  // Map saved data to calculation inputs
+  const covInputs: CoverageInput[] = (savedCoverages ?? []).map((c) => ({
+    id: c.id,
+    coverage_type: c.coverage_type,
+    carrier_name: c.carrier_name,
+    policy_number: c.policy_number,
+    limit_amount: c.limit_amount,
+    limit_type: c.limit_type,
+    effective_date: c.effective_date,
+    expiration_date: c.expiration_date,
+    additional_insured_listed: c.additional_insured_listed,
+    waiver_of_subrogation: c.waiver_of_subrogation,
+  }));
+
+  const entInputs: EntityInput[] = (savedEntities ?? []).map((e) => ({
+    id: e.id,
+    entity_name: e.entity_name,
+    entity_address: e.entity_address,
+    entity_type: e.entity_type,
+  }));
+
+  // Run compliance
+  const result = calculateCompliance(covInputs, entInputs, requirements, propEntities);
+
+  // Save compliance results
+  await supabase.from('compliance_results').delete().eq('certificate_id', certificateId);
+  if (result.coverageResults.length > 0) {
+    await supabase.from('compliance_results').insert(
+      result.coverageResults.map((r) => ({
+        certificate_id: certificateId,
+        coverage_requirement_id: r.coverage_requirement_id,
+        status: r.status,
+        gap_description: r.gap_description,
+      }))
+    );
+  }
+
+  await supabase.from('entity_compliance_results').delete().eq('certificate_id', certificateId);
+  if (result.entityResults.length > 0) {
+    await supabase.from('entity_compliance_results').insert(
+      result.entityResults.map((r) => ({
+        certificate_id: certificateId,
+        property_entity_id: r.property_entity_id,
+        status: r.status,
+        matched_entity_id: r.extracted_entity_id,
+        match_details: r.match_details,
+      }))
+    );
+  }
+
+  // Update certificate status
+  await supabase
+    .from('certificates')
+    .update({
+      processing_status: 'review_confirmed',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: userId,
+    })
+    .eq('id', certificateId);
+
+  // Update entity compliance_status
+  await supabase
+    .from(tableName)
+    .update({ compliance_status: result.overallStatus })
+    .eq('id', entityId);
+
+  // Log activity
+  await supabase.from('activity_log').insert([
+    {
+      organization_id: orgId,
+      action: 'coi_review_confirmed',
+      description: `Certificate confirmed for ${entityType} (quick review)`,
+      performed_by: userId,
+    },
+  ]);
+
+  // Revalidate
+  revalidatePath(`/dashboard/${entityType}s/${entityId}`);
+  revalidatePath('/dashboard');
+
+  return { overallStatus: result.overallStatus, entityType, entityId };
+}
+
+// ============================================================================
 // COI Document Signed URL
 // ============================================================================
 
