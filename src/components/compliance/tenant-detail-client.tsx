@@ -196,49 +196,28 @@ export function TenantDetailClient({
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         {/* Left column */}
         <div className="space-y-6">
-          {/* Contact info */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <h3 className="text-sm font-semibold text-foreground">Contact Information</h3>
-            <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Contact Name</dt>
-                <dd className="mt-0.5 text-sm text-foreground">{tenant.contact_name ?? '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Email</dt>
-                <dd className="mt-0.5 text-sm">
-                  {tenant.contact_email ? (
-                    <a href={`mailto:${tenant.contact_email}`} className="text-brand-dark hover:underline">
-                      {tenant.contact_email}
-                    </a>
-                  ) : '—'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Phone</dt>
-                <dd className="mt-0.5 text-sm text-foreground">{tenant.contact_phone ?? '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Tenant Type</dt>
-                <dd className="mt-0.5 text-sm text-foreground">{tenant.tenant_type ?? '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Unit / Suite</dt>
-                <dd className="mt-0.5 text-sm text-foreground">{tenant.unit_suite ?? '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Requirement Template</dt>
-                <dd className="mt-0.5 text-sm">
-                  {template ? (
-                    <Link href={`/dashboard/templates/${template.id}`} className="text-brand-dark hover:underline">
-                      {template.name}
-                    </Link>
-                  ) : (
-                    <span className="text-muted-foreground">None assigned</span>
-                  )}
-                </dd>
-              </div>
-            </dl>
+          {/* Quick info row */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm">
+            {tenant.tenant_type && (
+              <span className="text-muted-foreground">
+                Type: <span className="text-foreground font-medium">{tenant.tenant_type}</span>
+              </span>
+            )}
+            {tenant.unit_suite && (
+              <span className="text-muted-foreground">
+                Unit: <span className="text-foreground font-medium">{tenant.unit_suite}</span>
+              </span>
+            )}
+            <span className="text-muted-foreground">
+              Template:{' '}
+              {template ? (
+                <Link href={`/dashboard/templates/${template.id}`} className="text-brand-dark hover:underline font-medium">
+                  {template.name}
+                </Link>
+              ) : (
+                <span className="text-foreground">None assigned</span>
+              )}
+            </span>
           </div>
 
           {/* Expired alert banner — compact, consolidated */}

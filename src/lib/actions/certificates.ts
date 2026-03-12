@@ -208,12 +208,22 @@ export async function runAutoCompliance(
   }
 
   let propEntities: PropertyEntityInput[] = [];
+  let acceptCertHolderInAI = true; // default
   if (entity?.property_id) {
     const { data: pes } = await supabase
       .from('property_entities')
       .select('*')
       .eq('property_id', entity.property_id);
     propEntities = (pes ?? []) as PropertyEntityInput[];
+
+    const { data: prop } = await supabase
+      .from('properties')
+      .select('accept_cert_holder_in_additional_insured')
+      .eq('id', entity.property_id)
+      .single();
+    if (prop) {
+      acceptCertHolderInAI = prop.accept_cert_holder_in_additional_insured ?? true;
+    }
   }
 
   // Map to calculation inputs
@@ -238,7 +248,9 @@ export async function runAutoCompliance(
   }));
 
   // Run compliance
-  const result = calculateCompliance(covInputs, entInputs, requirements, propEntities);
+  const result = calculateCompliance(covInputs, entInputs, requirements, propEntities, {
+    acceptCertHolderInAdditionalInsured: acceptCertHolderInAI,
+  });
 
   // Save compliance results
   await supabase.from('compliance_results').delete().eq('certificate_id', certificateId);
@@ -262,6 +274,7 @@ export async function runAutoCompliance(
         status: r.status,
         matched_entity_id: r.extracted_entity_id,
         match_details: r.match_details,
+        fuzzy_match: r.fuzzy_match ?? false,
       }))
     );
   }

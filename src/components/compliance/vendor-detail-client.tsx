@@ -191,45 +191,23 @@ export function VendorDetailClient({
       <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
         {/* Left column: main content */}
         <div className="space-y-6">
-          {/* Contact info */}
-          <div className="rounded-lg border border-slate-200 bg-white p-5">
-            <h3 className="text-sm font-semibold text-foreground">Contact Information</h3>
-            <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Contact Name</dt>
-                <dd className="mt-0.5 text-sm text-foreground">{vendor.contact_name ?? '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Email</dt>
-                <dd className="mt-0.5 text-sm">
-                  {vendor.contact_email ? (
-                    <a href={`mailto:${vendor.contact_email}`} className="text-brand-dark hover:underline">
-                      {vendor.contact_email}
-                    </a>
-                  ) : '—'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Phone</dt>
-                <dd className="mt-0.5 text-sm text-foreground">{vendor.contact_phone ?? '—'}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-medium text-muted-foreground">Vendor Type</dt>
-                <dd className="mt-0.5 text-sm text-foreground">{vendor.vendor_type ?? '—'}</dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-xs font-medium text-muted-foreground">Requirement Template</dt>
-                <dd className="mt-0.5 text-sm">
-                  {template ? (
-                    <Link href={`/dashboard/templates/${template.id}`} className="text-brand-dark hover:underline">
-                      {template.name}
-                    </Link>
-                  ) : (
-                    <span className="text-muted-foreground">None assigned</span>
-                  )}
-                </dd>
-              </div>
-            </dl>
+          {/* Quick info row */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm">
+            {vendor.vendor_type && (
+              <span className="text-muted-foreground">
+                Type: <span className="text-foreground font-medium">{vendor.vendor_type}</span>
+              </span>
+            )}
+            <span className="text-muted-foreground">
+              Template:{' '}
+              {template ? (
+                <Link href={`/dashboard/templates/${template.id}`} className="text-brand-dark hover:underline font-medium">
+                  {template.name}
+                </Link>
+              ) : (
+                <span className="text-foreground">None assigned</span>
+              )}
+            </span>
           </div>
 
           {/* Expired alert banner — compact, consolidated */}

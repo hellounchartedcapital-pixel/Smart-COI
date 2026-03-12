@@ -64,6 +64,7 @@ export interface CreatePropertyInput {
   state?: string;
   zip?: string;
   property_type: PropertyType;
+  accept_cert_holder_in_additional_insured?: boolean;
   entities: {
     entity_name: string;
     entity_address?: string;
@@ -86,6 +87,7 @@ export async function createProperty(input: CreatePropertyInput) {
       state: input.state || null,
       zip: input.zip || null,
       property_type: input.property_type,
+      accept_cert_holder_in_additional_insured: input.accept_cert_holder_in_additional_insured ?? true,
     })
     .select('id')
     .single();
@@ -128,16 +130,21 @@ export async function updateProperty(
 ) {
   const { supabase, userId, orgId } = await getAuthContext();
 
+  const updateData: Record<string, unknown> = {
+    name: input.name,
+    address: input.address || null,
+    city: input.city || null,
+    state: input.state || null,
+    zip: input.zip || null,
+    property_type: input.property_type,
+  };
+  if (input.accept_cert_holder_in_additional_insured !== undefined) {
+    updateData.accept_cert_holder_in_additional_insured = input.accept_cert_holder_in_additional_insured;
+  }
+
   const { error: propError } = await supabase
     .from('properties')
-    .update({
-      name: input.name,
-      address: input.address || null,
-      city: input.city || null,
-      state: input.state || null,
-      zip: input.zip || null,
-      property_type: input.property_type,
-    })
+    .update(updateData)
     .eq('id', propertyId)
     .eq('organization_id', orgId);
 
@@ -893,14 +900,24 @@ export async function runComplianceForEntity(
 
   const requirements = (reqs ?? []) as RequirementInput[];
 
-  // Fetch property entities
+  // Fetch property entities and property setting
   let propertyEntities: PropertyEntityInput[] = [];
+  let acceptCertHolderInAI = true; // default
   if (entity.property_id) {
     const { data: pes } = await supabase
       .from('property_entities')
       .select('*')
       .eq('property_id', entity.property_id);
     propertyEntities = (pes ?? []) as PropertyEntityInput[];
+
+    const { data: prop } = await supabase
+      .from('properties')
+      .select('accept_cert_holder_in_additional_insured')
+      .eq('id', entity.property_id)
+      .single();
+    if (prop) {
+      acceptCertHolderInAI = prop.accept_cert_holder_in_additional_insured ?? true;
+    }
   }
 
   // Map to inputs
@@ -938,7 +955,10 @@ export async function runComplianceForEntity(
     entInputs,
     requirements,
     propertyEntities,
-    thresholdDays,
+    {
+      expirationThresholdDays: thresholdDays,
+      acceptCertHolderInAdditionalInsured: acceptCertHolderInAI,
+    },
   );
 
   // Clear old compliance results for this certificate
@@ -965,6 +985,7 @@ export async function runComplianceForEntity(
       extracted_entity_id: r.extracted_entity_id,
       status: r.status,
       match_details: r.match_details,
+      fuzzy_match: r.fuzzy_match ?? false,
     }));
     await supabase.from('entity_compliance_results').insert(rows);
   }

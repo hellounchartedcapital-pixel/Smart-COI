@@ -68,6 +68,7 @@ export interface EntityResultRow {
   extracted_entity_id: string | null;
   status: EntityComplianceStatus;
   match_details: string | null;
+  fuzzy_match?: boolean;
 }
 
 export interface ComplianceCalculationResult {
@@ -211,54 +212,76 @@ function normalizeEntityName(name: string): string {
  * together in one certificate holder block (e.g., "ABC Management, Alturas
  * Stanford LLC, 123 Main St, Boise ID"). Checks substring containment in
  * both directions after normalization, with a word-boundary fallback using
- * the significant words from the required entity name.
+ * the significant words from the required entity name, plus 80%+ word overlap.
  */
 function entityNameMatches(
   required: string,
   actual: string
-): { matched: boolean; exact: boolean } {
+): { matched: boolean; exact: boolean; fuzzy: boolean } {
   // 1. Exact case-insensitive match
   if (required.toLowerCase().trim() === actual.toLowerCase().trim()) {
-    return { matched: true, exact: true };
+    return { matched: true, exact: true, fuzzy: false };
   }
 
   const rNorm = normalizeEntityName(required);
   const aNorm = normalizeEntityName(actual);
 
-  // 2. Normalized exact match
+  // 2. Normalized exact match (only business suffix differences)
   if (rNorm === aNorm) {
-    return { matched: true, exact: false };
+    return { matched: true, exact: false, fuzzy: true };
   }
 
   // 3. Substring containment in both directions
   if (aNorm.includes(rNorm) || rNorm.includes(aNorm)) {
-    return { matched: true, exact: false };
+    return { matched: true, exact: false, fuzzy: true };
   }
 
   // 4. Word-based containment: check if all significant words from the
   //    required entity appear in the actual text (handles multi-entity blocks)
   const rWords = rNorm.split(' ').filter((w) => w.length > 1);
+  const aWords = aNorm.split(' ').filter((w) => w.length > 1);
   if (rWords.length >= 2) {
     const allWordsFound = rWords.every((w) => aNorm.includes(w));
     if (allWordsFound) {
-      return { matched: true, exact: false };
+      return { matched: true, exact: false, fuzzy: true };
     }
   }
 
-  return { matched: false, exact: false };
+  // 5. 80%+ word overlap — check both directions
+  if (rWords.length >= 2 && aWords.length >= 2) {
+    const rInA = rWords.filter((w) => aWords.includes(w)).length;
+    const aInR = aWords.filter((w) => rWords.includes(w)).length;
+    const overlapR = rInA / rWords.length;
+    const overlapA = aInR / aWords.length;
+    if (overlapR >= 0.8 || overlapA >= 0.8) {
+      return { matched: true, exact: false, fuzzy: true };
+    }
+  }
+
+  return { matched: false, exact: false, fuzzy: false };
 }
 
 // ============================================================================
 // Main calculation
 // ============================================================================
 
+export interface ComplianceOptions {
+  expirationThresholdDays?: number;
+  acceptCertHolderInAdditionalInsured?: boolean;
+}
+
 export function calculateCompliance(
   coverages: CoverageInput[],
   entities: EntityInput[],
   requirements: RequirementInput[],
   propertyEntities: PropertyEntityInput[],
-  expirationThresholdDays = 30
+  expirationThresholdDaysOrOptions: number | ComplianceOptions = 30
 ): ComplianceCalculationResult {
+  const options: ComplianceOptions = typeof expirationThresholdDaysOrOptions === 'number'
+    ? { expirationThresholdDays: expirationThresholdDaysOrOptions }
+    : expirationThresholdDaysOrOptions;
+  const expirationThresholdDays = options.expirationThresholdDays ?? 30;
+  const acceptCertHolderInAI = options.acceptCertHolderInAdditionalInsured ?? false;
   const coverageResults: CoverageResultRow[] = [];
   const entityResults: EntityResultRow[] = [];
 
@@ -358,19 +381,29 @@ export function calculateCompliance(
   }
 
   // ---- Entity requirements ----
-  // Search across ALL extracted entities regardless of type. In practice,
-  // entities may appear in any field on the COI (certificate holder box,
-  // additional insured schedule, or description of operations text). The
-  // important thing is that the entity IS named somewhere on the certificate.
+  // Search across extracted entities for each required property entity.
+  // When acceptCertHolderInAI is true, certificate_holder requirements
+  // also match against additional_insured entities (cross-type).
   for (const pe of propertyEntities) {
-    // First pass: prefer same-type matches (exact type match is strongest signal)
-    let bestMatch: { entity: EntityInput; exact: boolean; sameType: boolean } | null = null;
+    let bestMatch: { entity: EntityInput; exact: boolean; fuzzy: boolean; sameType: boolean } | null = null;
 
     for (const candidate of entities) {
+      const sameType = candidate.entity_type === pe.entity_type;
+
+      // Determine if this candidate should be considered for this requirement
+      const allowCrossType =
+        sameType ||
+        // Always search across all types (entities may appear in any field)
+        // But for certificate_holder reqs, also allow additional_insured matches when toggle is on
+        (acceptCertHolderInAI && pe.entity_type === 'certificate_holder' && candidate.entity_type === 'additional_insured') ||
+        // Always allow cross-type search (same behavior as before)
+        true;
+
+      if (!allowCrossType) continue;
+
       const result = entityNameMatches(pe.entity_name, candidate.entity_name);
       if (!result.matched) continue;
 
-      const sameType = candidate.entity_type === pe.entity_type;
       const isBetter =
         !bestMatch ||
         // Prefer same-type over cross-type
@@ -379,7 +412,7 @@ export function calculateCompliance(
         (sameType === bestMatch.sameType && result.exact && !bestMatch.exact);
 
       if (isBetter) {
-        bestMatch = { entity: candidate, exact: result.exact, sameType };
+        bestMatch = { entity: candidate, exact: result.exact, fuzzy: result.fuzzy, sameType };
         if (result.exact && sameType) break; // best possible — stop early
       }
     }
@@ -390,6 +423,7 @@ export function calculateCompliance(
         extracted_entity_id: null,
         status: 'missing',
         match_details: null,
+        fuzzy_match: false,
       });
       hasGap = true;
     } else {
@@ -399,7 +433,7 @@ export function calculateCompliance(
           ? 'Certificate Holder'
           : 'Additional Insured';
       const crossType = !bestMatch.sameType;
-      const fuzzy = !bestMatch.exact;
+      const fuzzy = bestMatch.fuzzy;
 
       let details: string | null = null;
       if (crossType && fuzzy) {
@@ -416,6 +450,7 @@ export function calculateCompliance(
         extracted_entity_id: bestMatch.entity.id ?? null,
         status: 'found',
         match_details: details,
+        fuzzy_match: fuzzy,
       });
     }
   }
