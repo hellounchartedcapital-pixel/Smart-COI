@@ -12,6 +12,7 @@ export interface DashboardStats {
   entityCount: number;
   complianceRate: number | null; // null = no confirmed certificates yet
   expiringSoonCount: number;
+  trialDaysLeft: number | null; // null = not on trial
 }
 
 export interface StatusDistribution {
@@ -36,6 +37,7 @@ export interface ActionItem {
   hasCertificate: boolean;
   hasUnreviewedCert: boolean;
   unreviewedCertId: string | null;
+  contactEmail: string | null;
 }
 
 export interface PropertyOverview {
@@ -65,7 +67,7 @@ async function getDashboardData(orgId: string) {
   const supabase = await createClient();
 
   // Parallel-fetch everything we need
-  const [propertiesRes, vendorsRes, tenantsRes, activityRes] = await Promise.all([
+  const [propertiesRes, vendorsRes, tenantsRes, activityRes, orgRes] = await Promise.all([
     supabase
       .from('properties')
       .select('id, name')
@@ -73,13 +75,13 @@ async function getDashboardData(orgId: string) {
       .order('name'),
     supabase
       .from('vendors')
-      .select('id, company_name, property_id, compliance_status, properties(name)')
+      .select('id, company_name, property_id, compliance_status, contact_email, properties(name)')
       .eq('organization_id', orgId)
       .is('deleted_at', null)
       .is('archived_at', null),
     supabase
       .from('tenants')
-      .select('id, company_name, property_id, compliance_status, properties(name)')
+      .select('id, company_name, property_id, compliance_status, contact_email, properties(name)')
       .eq('organization_id', orgId)
       .is('deleted_at', null)
       .is('archived_at', null),
@@ -89,6 +91,11 @@ async function getDashboardData(orgId: string) {
       .eq('organization_id', orgId)
       .order('created_at', { ascending: false })
       .limit(10),
+    supabase
+      .from('organizations')
+      .select('plan, trial_ends_at')
+      .eq('id', orgId)
+      .single(),
   ]);
 
   const properties = propertiesRes.data ?? [];
@@ -104,6 +111,7 @@ async function getDashboardData(orgId: string) {
     propertyName: string | null;
     status: ComplianceStatus;
     type: 'vendor' | 'tenant';
+    contactEmail: string | null;
   }
 
   const allEntities: Entity[] = [
@@ -115,6 +123,7 @@ async function getDashboardData(orgId: string) {
       propertyName: v.properties?.name ?? null,
       status: v.compliance_status as ComplianceStatus,
       type: 'vendor' as const,
+      contactEmail: v.contact_email ?? null,
     })),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...tenants.map((t: any) => ({
@@ -124,6 +133,7 @@ async function getDashboardData(orgId: string) {
       propertyName: t.properties?.name ?? null,
       status: t.compliance_status as ComplianceStatus,
       type: 'tenant' as const,
+      contactEmail: t.contact_email ?? null,
     })),
   ];
 
@@ -148,11 +158,20 @@ async function getDashboardData(orgId: string) {
       ? Math.round((statusCounts.compliant / withCertificate) * 100)
       : null;
 
+  // Compute trial days remaining
+  const org = orgRes.data;
+  let trialDaysLeft: number | null = null;
+  if (org?.plan === 'trial' && org.trial_ends_at) {
+    const msLeft = new Date(org.trial_ends_at).getTime() - Date.now();
+    trialDaysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
+  }
+
   const stats: DashboardStats = {
     propertyCount: properties.length,
     entityCount: allEntities.length,
     complianceRate,
     expiringSoonCount: statusCounts.expiring_soon,
+    trialDaysLeft,
   };
 
   // ---- Action items: entities that aren't compliant ----
@@ -289,6 +308,7 @@ async function getDashboardData(orgId: string) {
       hasCertificate: certInfo?.hasCert ?? false,
       hasUnreviewedCert: certInfo?.hasUnreviewed ?? false,
       unreviewedCertId: certInfo?.unreviewedCertId ?? null,
+      contactEmail: e.contactEmail,
     };
   });
 

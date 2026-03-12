@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
@@ -388,43 +388,45 @@ export default function OnboardingSetupPage() {
     <div className="space-y-8">
       {/* Step indicator with named stepper */}
       <div className="space-y-3">
-        {/* Step labels */}
+        {/* Step labels — connector lines are siblings, not children of step items */}
         <div className="flex items-center justify-between">
           {STEP_LABELS.map((label, idx) => {
             const stepNum = idx + 1;
             const isActive = stepNum === currentStep;
             const isComplete = stepNum < currentStep;
             return (
-              <div key={label} className="flex items-center gap-2">
-                <div
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                    isComplete
-                      ? 'bg-brand text-white'
-                      : isActive
+              <React.Fragment key={label}>
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                      isComplete
                         ? 'bg-brand text-white'
-                        : 'bg-slate-200 text-slate-500'
-                  }`}
-                >
-                  {isComplete ? (
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    stepNum
-                  )}
+                        : isActive
+                          ? 'bg-brand text-white'
+                          : 'bg-slate-200 text-slate-500'
+                    }`}
+                  >
+                    {isComplete ? (
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      stepNum
+                    )}
+                  </div>
+                  <span
+                    className={`hidden text-sm font-medium sm:inline ${
+                      isActive ? 'text-foreground' : isComplete ? 'text-brand' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {label}
+                  </span>
                 </div>
-                <span
-                  className={`hidden text-sm font-medium sm:inline ${
-                    isActive ? 'text-foreground' : isComplete ? 'text-brand' : 'text-muted-foreground'
-                  }`}
-                >
-                  {label}
-                </span>
-                {/* Connector line */}
+                {/* Connector line as a sibling — flex-1 ensures even spacing */}
                 {idx < STEP_LABELS.length - 1 && (
-                  <div className="mx-1 hidden h-px w-8 bg-slate-200 sm:block lg:w-12" />
+                  <div className="hidden h-px flex-1 bg-slate-200 sm:block mx-2" />
                 )}
-              </div>
+              </React.Fragment>
             );
           })}
         </div>

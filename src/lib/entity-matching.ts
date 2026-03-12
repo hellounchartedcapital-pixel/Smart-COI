@@ -96,6 +96,9 @@ export interface ExistingEntity {
   company_name: string;
   type: 'vendor' | 'tenant';
   property_id: string | null;
+  contact_name?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
 }
 
 export interface BestMatchResult {
