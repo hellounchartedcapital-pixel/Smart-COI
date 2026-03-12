@@ -13,8 +13,6 @@ import { formatRelativeDate } from '@/lib/utils';
 import { UploadCOIDialog } from '@/components/dashboard/upload-coi-dialog';
 import { DashboardTutorial, useTutorial } from '@/components/dashboard/dashboard-tutorial';
 import {
-  Building2,
-  Users,
   ShieldCheck,
   Clock,
   Upload,
@@ -140,7 +138,6 @@ export function DashboardClient({
 }: DashboardClientProps) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
   const [filter, setFilter] = useState<FilterCategory>('all');
   const { showTutorial, startTutorial, closeTutorial } = useTutorial();
 
@@ -180,33 +177,6 @@ export function DashboardClient({
   return (
     <div className="space-y-6">
       <DashboardTutorial active={showTutorial} onClose={closeTutorial} />
-
-      {/* Trial days remaining banner */}
-      {stats.trialDaysLeft != null && stats.trialDaysLeft >= 0 && !trialBannerDismissed && (
-        <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-amber-600" />
-            <p className="text-sm text-amber-800">
-              <span className="font-medium">{stats.trialDaysLeft} day{stats.trialDaysLeft !== 1 ? 's' : ''}</span> left in your free trial
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard/settings/billing"
-              className="text-xs font-medium text-amber-700 hover:text-amber-900 underline"
-            >
-              Upgrade
-            </Link>
-            <button
-              onClick={() => setTrialBannerDismissed(true)}
-              className="rounded p-0.5 text-amber-400 hover:text-amber-600"
-              aria-label="Dismiss"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Assign requirements banner */}
       {showAssignBanner && !bannerDismissed && (
@@ -595,7 +565,7 @@ function ActionItemRow({ item }: { item: ActionItem }) {
       description = 'No COI on file';
       break;
     case 'under_review':
-      description = 'COI awaiting review';
+      description = 'COI processing';
       break;
     default:
       description = item.status;
@@ -632,40 +602,33 @@ function ActionItemRow({ item }: { item: ActionItem }) {
         </p>
       </div>
       <div className="flex shrink-0 gap-1.5">
-        {item.unreviewedCertId ? (
+        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
+          <Link href={`/dashboard/${item.entityType}s/${item.id}`}>
+            <Eye className="mr-1 h-3 w-3" />
+            View
+          </Link>
+        </Button>
+        {!item.hasCertificate && (
           <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
-            <Link href={`/dashboard/certificates/${item.unreviewedCertId}/review`}>
-              <Eye className="mr-1 h-3 w-3" />
-              Review
+            <Link
+              href={`/dashboard/certificates/upload?${item.entityType}Id=${item.id}`}
+            >
+              <Upload className="mr-1 h-3 w-3" />
+              Upload
             </Link>
           </Button>
-        ) : (
-          <>
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
-              <Link
-                href={`/dashboard/certificates/upload?${item.entityType}Id=${item.id}`}
-              >
-                <Upload className="mr-1 h-3 w-3" />
-                Upload
-              </Link>
-            </Button>
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
-              <Link href={`/dashboard/${item.entityType}s/${item.id}`}>
-                <Eye className="mr-1 h-3 w-3" />
-                View
-              </Link>
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2 text-xs"
-              disabled={sending}
-              onClick={handleFollowUp}
-            >
-              <Mail className="mr-1 h-3 w-3" />
-              {sending ? 'Sending...' : 'Follow-up'}
-            </Button>
-          </>
+        )}
+        {item.contactEmail && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7 px-2 text-xs"
+            disabled={sending}
+            onClick={handleFollowUp}
+          >
+            <Mail className="mr-1 h-3 w-3" />
+            {sending ? '...' : 'Follow-up'}
+          </Button>
         )}
       </div>
     </div>

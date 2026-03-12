@@ -146,7 +146,7 @@ export async function sendManualFollowUp(
     .from('certificates')
     .select('id')
     .eq(entityType === 'vendor' ? 'vendor_id' : 'tenant_id', entityId)
-    .eq('processing_status', 'review_confirmed')
+    .in('processing_status', ['extracted', 'review_confirmed'])
     .order('uploaded_at', { ascending: false })
     .limit(1)
     .single();

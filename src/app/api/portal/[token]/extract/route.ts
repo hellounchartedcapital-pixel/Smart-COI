@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { extractCOIFromPDF } from '@/lib/ai/extraction';
 import { checkExtractionLimit } from '@/lib/plan-limits';
 import { getActivePlanStatus } from '@/lib/plan-status';
+import { runAutoCompliance } from '@/lib/actions/certificates';
 
 const MAX_EXTRACTIONS_PER_HOUR = 5;
 
@@ -286,6 +287,13 @@ export async function POST(
           portal_link: `/dashboard/certificates/${certificate_id}/review`,
         });
       }
+    }
+
+    // Run compliance automatically after extraction
+    try {
+      await runAutoCompliance(certificate_id, cert.organization_id);
+    } catch (compErr) {
+      console.error(`[portal/extract] Auto-compliance failed for cert=${certificate_id}:`, compErr);
     }
 
     return NextResponse.json({

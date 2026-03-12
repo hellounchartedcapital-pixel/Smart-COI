@@ -2,31 +2,28 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   CheckCircle2,
-  AlertTriangle,
   XCircle,
   ChevronDown,
   ChevronRight,
   Pencil,
   X,
-  Clock,
   UserPlus,
   Mail,
+  Phone,
+  User,
 } from 'lucide-react';
-import { quickConfirmCertificate } from '@/lib/actions/certificates';
-import { toast } from 'sonner';
 import { formatDate } from '@/lib/utils';
 import type {
   Certificate,
   ComplianceResult,
+  ComplianceStatus,
   EntityComplianceResult,
   ExtractedCoverage,
+  ExtractedEntity,
   PropertyEntity,
   TemplateCoverageRequirement,
   Notification,
@@ -39,16 +36,21 @@ const COVERAGE_LABELS: Record<string, string> = {
   general_liability: 'General Liability',
   automobile_liability: 'Automobile Liability',
   workers_compensation: 'Workers\' Compensation',
+  employers_liability: 'Employers\' Liability',
+  umbrella_excess_liability: 'Umbrella / Excess Liability',
+  professional_liability_eo: 'Professional Liability (E&O)',
+  property_inland_marine: 'Property / Inland Marine',
+  cyber_liability: 'Cyber Liability',
+  pollution_liability: 'Pollution Liability',
+  liquor_liability: 'Liquor Liability',
   umbrella_excess: 'Umbrella / Excess',
   professional_liability: 'Professional Liability',
   property_insurance: 'Property Insurance',
-  cyber_liability: 'Cyber Liability',
-  pollution_liability: 'Pollution Liability',
   builders_risk: 'Builders Risk',
   other: 'Other',
 };
 
-function formatCurrency(amount: number | null): string {
+function formatCurrency(amount: number | null | undefined): string {
   if (!amount) return '—';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -56,6 +58,11 @@ function formatCurrency(amount: number | null): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+function formatLimitType(type: string | null | undefined): string {
+  if (!type) return '';
+  return type.replace(/_/g, ' ');
 }
 
 // ---------------------------------------------------------------------------
@@ -67,8 +74,11 @@ interface CompliancePanelProps {
   entityName: string;
   contactEmail: string | null;
   contactName: string | null;
+  contactPhone?: string | null;
+  complianceStatus: ComplianceStatus;
   certificates: (Certificate & { compliance_results?: ComplianceResult[] })[];
   extractedCoverages: ExtractedCoverage[];
+  extractedEntities?: ExtractedEntity[];
   complianceResults: ComplianceResult[];
   entityResults: EntityComplianceResult[];
   propertyEntities: PropertyEntity[];
@@ -76,6 +86,44 @@ interface CompliancePanelProps {
   notifications: Notification[];
   hasCertificate: boolean;
   onEditContact?: () => void;
+}
+
+// ---------------------------------------------------------------------------
+// Overall status badge
+// ---------------------------------------------------------------------------
+function OverallStatusBadge({ status }: { status: ComplianceStatus }) {
+  const config: Record<string, { label: string; className: string }> = {
+    compliant: {
+      label: 'Compliant',
+      className: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    },
+    non_compliant: {
+      label: 'Non-Compliant',
+      className: 'bg-red-100 text-red-800 border-red-300',
+    },
+    expired: {
+      label: 'Expired',
+      className: 'bg-red-100 text-red-800 border-red-300',
+    },
+    expiring_soon: {
+      label: 'Expiring Soon',
+      className: 'bg-amber-100 text-amber-800 border-amber-300',
+    },
+    pending: {
+      label: 'Pending',
+      className: 'bg-slate-100 text-slate-700 border-slate-300',
+    },
+    under_review: {
+      label: 'Processing',
+      className: 'bg-blue-100 text-blue-800 border-blue-300',
+    },
+  };
+  const c = config[status] ?? config.pending;
+  return (
+    <div className={`inline-flex items-center rounded-lg border px-4 py-2 text-sm font-semibold ${c.className}`}>
+      {c.label}
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -87,8 +135,11 @@ export function CompliancePanel({
   entityName,
   contactEmail,
   contactName,
+  contactPhone,
+  complianceStatus,
   certificates,
   extractedCoverages,
+  extractedEntities,
   complianceResults,
   entityResults,
   propertyEntities,
@@ -97,34 +148,15 @@ export function CompliancePanel({
   hasCertificate,
   onEditContact,
 }: CompliancePanelProps) {
-  const router = useRouter();
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
-  const [confirming, setConfirming] = useState(false);
 
   // Latest certificate
   const latestCert = certificates
     .slice()
     .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
-  const pendingReview =
-    latestCert?.processing_status === 'extracted' && !latestCert.reviewed_at;
-  const isConfirmed = latestCert?.processing_status === 'review_confirmed';
-
-  // Group compliance results by status
-  const compliantResults = complianceResults.filter((r) => r.status === 'met');
-  const nonCompliantResults = complianceResults.filter(
-    (r) => r.status === 'not_met' || r.status === 'missing'
-  );
-
-  // Expiring soon coverages
-  const now = new Date();
-  const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  const expiringSoonCoverages = extractedCoverages.filter((c) => {
-    if (!c.expiration_date) return false;
-    const expDate = new Date(c.expiration_date);
-    return expDate > now && expDate <= thirtyDaysFromNow;
-  });
 
   // Follow-up status
+  const now = new Date();
   const lastNotification = notifications
     .filter((n) => n.status === 'sent')
     .sort(
@@ -134,26 +166,24 @@ export function CompliancePanel({
     )[0];
   const nextScheduled = notifications.find((n) => n.status === 'scheduled');
 
-  async function handleMarkAsReviewed() {
-    if (!latestCert) return;
-    setConfirming(true);
-    try {
-      await quickConfirmCertificate(latestCert.id);
-      toast.success('Certificate marked as reviewed');
-      router.refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to confirm certificate');
-    } finally {
-      setConfirming(false);
-    }
-  }
+  // Check for expired coverages
+  const hasExpiredCoverage = extractedCoverages.some((c) => {
+    if (!c.expiration_date) return false;
+    return new Date(c.expiration_date) < now;
+  });
+
+  // Determine which coverages are required but not extracted (additional coverages)
+  const requiredCoverageTypes = new Set(templateRequirements.map((r) => r.coverage_type));
+  const additionalCoverages = extractedCoverages.filter(
+    (c) => !requiredCoverageTypes.has(c.coverage_type)
+  );
 
   return (
     <div className="flex h-full flex-col overflow-y-auto">
-      {/* Header */}
+      {/* Header with status badge and edit button */}
       <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-        <h2 className="text-lg font-semibold text-foreground">Compliance</h2>
-        {hasCertificate && isConfirmed && (
+        <OverallStatusBadge status={complianceStatus} />
+        {hasCertificate && (
           <Button
             variant="outline"
             size="sm"
@@ -165,7 +195,7 @@ export function CompliancePanel({
         )}
       </div>
 
-      <div className="flex-1 space-y-4 p-5 overflow-y-auto">
+      <div className="flex-1 space-y-5 p-5 overflow-y-auto">
         {/* No certificate state */}
         {!hasCertificate && (
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center">
@@ -180,42 +210,46 @@ export function CompliancePanel({
           </div>
         )}
 
-        {/* Pending review — show Mark as Reviewed button */}
-        {pendingReview && (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-blue-600" />
-                <p className="text-sm font-medium text-blue-800">
-                  Awaiting review
-                </p>
+        {/* Contact information section */}
+        {hasCertificate && (
+          <div className="space-y-2">
+            {(contactName || contactEmail || contactPhone) ? (
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 space-y-1.5">
+                {contactName && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <User className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="text-foreground">{contactName}</span>
+                  </div>
+                )}
+                {contactEmail && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-3.5 w-3.5 text-slate-400" />
+                    <a href={`mailto:${contactEmail}`} className="text-brand-dark hover:underline">
+                      {contactEmail}
+                    </a>
+                  </div>
+                )}
+                {contactPhone && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="text-foreground">{contactPhone}</span>
+                  </div>
+                )}
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleMarkAsReviewed}
-                disabled={confirming}
-                className="text-xs"
+            ) : (
+              <button
+                type="button"
+                onClick={onEditContact}
+                className="flex w-full items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-left transition-colors hover:bg-slate-100"
               >
-                {confirming ? 'Confirming...' : 'Mark as Reviewed'}
-              </Button>
-            </div>
+                <UserPlus className="h-4 w-4 text-slate-400" />
+                <span className="text-sm text-muted-foreground">
+                  No contact on file — add to enable automatic reminders
+                </span>
+                <span className="ml-auto text-brand text-sm font-medium">&rarr;</span>
+              </button>
+            )}
           </div>
-        )}
-
-        {/* Contact prompt if missing */}
-        {!contactEmail && hasCertificate && (
-          <button
-            type="button"
-            onClick={onEditContact}
-            className="flex w-full items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-left transition-colors hover:bg-slate-100"
-          >
-            <UserPlus className="h-4 w-4 text-slate-400" />
-            <span className="text-sm text-muted-foreground">
-              No contact on file — add to enable automatic reminders
-            </span>
-            <span className="ml-auto text-brand text-sm font-medium">&rarr;</span>
-          </button>
         )}
 
         {/* Follow-up status */}
@@ -258,102 +292,221 @@ export function CompliancePanel({
           </div>
         )}
 
-        {/* Compliance results */}
-        {hasCertificate && complianceResults.length > 0 && (
-          <div className="space-y-2">
-            {/* Non-compliant items — expanded by default */}
-            {nonCompliantResults.length > 0 && (
-              <ComplianceGroup
-                icon={<XCircle className="h-4 w-4 text-red-500" />}
-                label="Non-Compliant"
-                count={nonCompliantResults.length}
-                variant="red"
-                defaultOpen
-                items={nonCompliantResults}
-                extractedCoverages={extractedCoverages}
-                templateRequirements={templateRequirements}
-              />
-            )}
+        {/* Section 1: Coverage Requirements checklist */}
+        {hasCertificate && templateRequirements.length > 0 && (
+          <div className="rounded-lg border border-slate-200 bg-white">
+            <div className="border-b border-slate-100 px-4 py-3">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Coverage Requirements
+              </h3>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {templateRequirements.map((req) => {
+                const result = complianceResults.find(
+                  (r) => r.coverage_requirement_id === req.id
+                );
+                const coverage = extractedCoverages.find(
+                  (c) => c.coverage_type === req.coverage_type
+                );
+                const isMet = result?.status === 'met';
+                const statusIcon = isMet ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                );
 
-            {/* Expiring soon items */}
-            {expiringSoonCoverages.length > 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm font-medium text-amber-800">
-                    Expiring Soon ({expiringSoonCoverages.length})
-                  </span>
-                </div>
-                <div className="mt-2 space-y-1">
-                  {expiringSoonCoverages.map((c) => (
-                    <div
-                      key={c.id}
-                      className="flex items-center justify-between text-xs text-amber-700"
-                    >
-                      <span>
-                        {COVERAGE_LABELS[c.coverage_type] ?? c.coverage_type}
-                      </span>
-                      <span>Expires {formatDate(c.expiration_date!)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Compliant items — collapsed by default */}
-            {compliantResults.length > 0 && (
-              <ComplianceGroup
-                icon={<CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                label="Compliant"
-                count={compliantResults.length}
-                variant="green"
-                defaultOpen={false}
-                items={compliantResults}
-                extractedCoverages={extractedCoverages}
-                templateRequirements={templateRequirements}
-              />
-            )}
-
-            {/* Entity compliance */}
-            {entityResults.length > 0 && (
-              <div className="rounded-lg border border-slate-200 bg-white p-4">
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                  Named Insured Requirements
-                </h4>
-                <div className="space-y-1.5">
-                  {entityResults.map((er) => {
-                    const pe = propertyEntities.find((p) => p.id === er.property_entity_id);
-                    const statusIcon =
-                      er.status === 'found' ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : er.status === 'partial_match' ? (
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                      ) : (
-                        <XCircle className="h-3.5 w-3.5 text-red-500" />
-                      );
-                    return (
-                      <div key={er.id} className="flex items-center gap-2 text-sm">
-                        {statusIcon}
-                        <span className="text-foreground">
-                          {pe?.entity_name ?? 'Unknown'}
-                        </span>
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] capitalize"
-                        >
-                          {pe?.entity_type?.replace('_', ' ') ?? ''}
-                        </Badge>
+                return (
+                  <div key={req.id} className="px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5">{statusIcon}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {COVERAGE_LABELS[req.coverage_type] ?? req.coverage_type}
+                        </p>
+                        <div className="mt-1 grid gap-0.5 text-xs">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-muted-foreground shrink-0">Required:</span>
+                            <span className="text-foreground">
+                              {formatCurrency(req.minimum_limit)}
+                              {req.limit_type && ` ${formatLimitType(req.limit_type)}`}
+                            </span>
+                          </div>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-muted-foreground shrink-0">Extracted:</span>
+                            <span className={isMet ? 'text-emerald-700' : 'text-red-600'}>
+                              {coverage
+                                ? `${formatCurrency(coverage.limit_amount)}${coverage.limit_type ? ` ${formatLimitType(coverage.limit_type)}` : ''}`
+                                : 'Not found on certificate'}
+                            </span>
+                          </div>
+                        </div>
+                        {result?.gap_description && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {result.gap_description}
+                          </p>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
-        {/* No compliance results but has certificate */}
-        {hasCertificate && complianceResults.length === 0 && !pendingReview && (
+        {/* Section 2: Certificate Details */}
+        {hasCertificate && (
+          <div className="rounded-lg border border-slate-200 bg-white">
+            <div className="border-b border-slate-100 px-4 py-3">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Certificate Details
+              </h3>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {/* Certificate Holder */}
+              {(() => {
+                const certHolderReq = propertyEntities.find(
+                  (pe) => pe.entity_type === 'certificate_holder'
+                );
+                const certHolderResult = entityResults.find(
+                  (er) => er.property_entity_id === certHolderReq?.id
+                );
+                const isMet = certHolderResult?.status === 'found';
+                const extractedHolder = extractedEntities?.find(
+                  (e) => e.entity_type === 'certificate_holder'
+                );
+
+                return (
+                  <div className="px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5">
+                        {certHolderReq ? (
+                          isMet ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                          )
+                        ) : (
+                          <div className="h-4 w-4 rounded-full bg-slate-200 shrink-0" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">Certificate Holder</p>
+                        <div className="mt-1 grid gap-0.5 text-xs">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-muted-foreground shrink-0">Required:</span>
+                            <span className="text-foreground">
+                              {certHolderReq?.entity_name ?? 'Not configured'}
+                            </span>
+                          </div>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-muted-foreground shrink-0">Extracted:</span>
+                            <span className={isMet ? 'text-emerald-700' : certHolderReq ? 'text-red-600' : 'text-foreground'}>
+                              {extractedHolder?.entity_name ?? 'Not found on certificate'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Additional Insured */}
+              {(() => {
+                const addInsuredReq = propertyEntities.find(
+                  (pe) => pe.entity_type === 'additional_insured'
+                );
+                const addInsuredResult = entityResults.find(
+                  (er) => er.property_entity_id === addInsuredReq?.id
+                );
+                const isMet = addInsuredResult?.status === 'found';
+                const extractedInsured = extractedEntities?.find(
+                  (e) => e.entity_type === 'additional_insured'
+                );
+
+                return (
+                  <div className="px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5">
+                        {addInsuredReq ? (
+                          isMet ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                          )
+                        ) : (
+                          <div className="h-4 w-4 rounded-full bg-slate-200 shrink-0" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">Additional Insured</p>
+                        <div className="mt-1 grid gap-0.5 text-xs">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-muted-foreground shrink-0">Required:</span>
+                            <span className="text-foreground">
+                              {addInsuredReq?.entity_name ?? 'Not configured'}
+                            </span>
+                          </div>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-muted-foreground shrink-0">Extracted:</span>
+                            <span className={isMet ? 'text-emerald-700' : addInsuredReq ? 'text-red-600' : 'text-foreground'}>
+                              {extractedInsured?.entity_name ?? 'Not found on certificate'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Expiration */}
+              {(() => {
+                const latestExpiration = extractedCoverages
+                  .filter((c) => c.expiration_date)
+                  .sort((a, b) => new Date(a.expiration_date!).getTime() - new Date(b.expiration_date!).getTime())[0];
+                const isExpired = hasExpiredCoverage;
+
+                return (
+                  <div className="px-4 py-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5">
+                        {latestExpiration ? (
+                          isExpired ? (
+                            <XCircle className="h-4 w-4 text-red-500 shrink-0" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                          )
+                        ) : (
+                          <div className="h-4 w-4 rounded-full bg-slate-200 shrink-0" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">Expiration</p>
+                        <p className={`mt-1 text-xs ${isExpired ? 'text-red-600' : 'text-emerald-700'}`}>
+                          {latestExpiration
+                            ? isExpired
+                              ? `Expired on ${formatDate(latestExpiration.expiration_date!)}`
+                              : 'Valid'
+                            : 'No expiration date found'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* Additional coverages (not required by template) */}
+        {hasCertificate && additionalCoverages.length > 0 && (
+          <AdditionalCoveragesSection coverages={additionalCoverages} />
+        )}
+
+        {/* No compliance template assigned */}
+        {hasCertificate && templateRequirements.length === 0 && (
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-center">
             <p className="text-sm text-muted-foreground">
               No compliance template assigned. Assign a template to see compliance results.
@@ -389,9 +542,9 @@ export function CompliancePanel({
                   href={`/dashboard/certificates/${latestCert?.id}/review`}
                   className="text-brand font-medium hover:underline"
                 >
-                  full certificate review page
+                  certificate detail page
                 </Link>
-                , where you can modify coverage details, entity names, and confirm changes.
+                , where you can modify coverage details, entity names, and save changes.
               </p>
             </div>
           </div>
@@ -402,46 +555,20 @@ export function CompliancePanel({
 }
 
 // ---------------------------------------------------------------------------
-// Compliance Group (collapsible section)
+// Additional Coverages (collapsed section)
 // ---------------------------------------------------------------------------
-interface ComplianceGroupProps {
-  icon: React.ReactNode;
-  label: string;
-  count: number;
-  variant: 'red' | 'green';
-  defaultOpen: boolean;
-  items: ComplianceResult[];
-  extractedCoverages: ExtractedCoverage[];
-  templateRequirements: TemplateCoverageRequirement[];
-}
-
-function ComplianceGroup({
-  icon,
-  label,
-  count,
-  variant,
-  defaultOpen,
-  items,
-  extractedCoverages,
-  templateRequirements,
-}: ComplianceGroupProps) {
-  const [open, setOpen] = useState(defaultOpen);
-
-  const borderColor =
-    variant === 'red' ? 'border-red-200' : 'border-emerald-200';
-  const bgColor = variant === 'red' ? 'bg-red-50' : 'bg-emerald-50';
-  const textColor = variant === 'red' ? 'text-red-800' : 'text-emerald-800';
+function AdditionalCoveragesSection({ coverages }: { coverages: ExtractedCoverage[] }) {
+  const [open, setOpen] = useState(false);
 
   return (
-    <div className={`rounded-lg border ${borderColor} ${bgColor}`}>
+    <div className="rounded-lg border border-slate-200 bg-slate-50">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`flex w-full items-center gap-2 px-4 py-3 text-left`}
+        className="flex w-full items-center gap-2 px-4 py-3 text-left"
       >
-        {icon}
-        <span className={`text-sm font-medium ${textColor} flex-1`}>
-          {label} ({count})
+        <span className="text-xs font-medium text-muted-foreground flex-1">
+          Additional coverages ({coverages.length}) — not required by template
         </span>
         {open ? (
           <ChevronDown className="h-4 w-4 text-slate-400" />
@@ -450,41 +577,17 @@ function ComplianceGroup({
         )}
       </button>
       {open && (
-        <div className="border-t border-slate-100 bg-white px-4 py-2 space-y-2 rounded-b-lg">
-          {items.map((item) => {
-            const req = templateRequirements.find(
-              (r) => r.id === item.coverage_requirement_id
-            );
-            const coverage = extractedCoverages.find(
-              (c) => c.coverage_type === req?.coverage_type
-            );
-            return (
-              <div key={item.id} className="py-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">
-                    {COVERAGE_LABELS[req?.coverage_type ?? ''] ??
-                      req?.coverage_type ??
-                      'Unknown'}
-                  </span>
-                  {coverage && (
-                    <span className="text-xs text-muted-foreground">
-                      {formatCurrency(coverage.limit_amount)}
-                    </span>
-                  )}
-                </div>
-                {item.gap_description && (
-                  <p className="text-xs text-red-600 mt-0.5">
-                    {item.gap_description}
-                  </p>
-                )}
-                {req && item.status === 'met' && (
-                  <p className="text-xs text-emerald-600 mt-0.5">
-                    Required: {formatCurrency(req.minimum_limit)} — Met
-                  </p>
-                )}
-              </div>
-            );
-          })}
+        <div className="border-t border-slate-200 bg-white px-4 py-2 space-y-2 rounded-b-lg">
+          {coverages.map((c) => (
+            <div key={c.id} className="flex items-center justify-between py-1.5">
+              <span className="text-sm text-foreground">
+                {COVERAGE_LABELS[c.coverage_type] ?? c.coverage_type}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {formatCurrency(c.limit_amount)}
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>

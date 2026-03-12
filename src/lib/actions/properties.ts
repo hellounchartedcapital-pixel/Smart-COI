@@ -799,9 +799,8 @@ export async function toggleTenantNotifications(tenantId: string, paused: boolea
 
 /**
  * Run compliance calculation for an entity against its most recent certificate.
- * Unlike confirmCertificate() which only runs on review_confirmed certs, this
- * works on both 'extracted' and 'review_confirmed' certificates so that
- * compliance is visible immediately after bulk upload.
+ * Runs compliance for an entity using its most recent extracted certificate.
+ * Compliance is calculated automatically — no manual review step needed.
  */
 export async function runComplianceForEntity(
   entityId: string,
@@ -853,7 +852,7 @@ export async function runComplianceForEntity(
     .select('id')
     .match(certFilter)
     .eq('organization_id', orgId)
-    .eq('processing_status', 'review_confirmed')
+    .in('processing_status', ['extracted', 'review_confirmed'])
     .order('uploaded_at', { ascending: false })
     .limit(1)
     .maybeSingle();
