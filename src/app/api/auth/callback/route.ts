@@ -103,9 +103,14 @@ export async function GET(request: Request) {
       const fullName = rawName.replace(/<[^>]*>/g, '').trim().slice(0, 100);
       const email = user.email ?? '';
 
+      const trialEndsAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
       const { data: org, error: orgError } = await service
         .from('organizations')
-        .insert({ name: `${fullName}'s Organization` })
+        .insert({
+          name: `${fullName}'s Organization`,
+          plan: 'trial',
+          trial_ends_at: trialEndsAt,
+        })
         .select('id')
         .single();
 
