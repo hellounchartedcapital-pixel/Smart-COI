@@ -6,6 +6,7 @@ import { checkExtractionLimit } from '@/lib/plan-limits';
 import { getActivePlanStatus, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import { createServiceClient } from '@/lib/supabase/service';
 import { captureServerEvent } from '@/lib/posthog-server';
+import { runAutoCompliance } from '@/lib/actions/certificates';
 
 /**
  * Create a Supabase client using the request cookies (for auth).
@@ -242,6 +243,14 @@ export async function POST(req: NextRequest) {
       coverages: result.coverages.length,
       entities: result.entities.length,
     });
+
+    // Run compliance automatically after extraction
+    try {
+      await runAutoCompliance(certificateId, orgId);
+    } catch (compErr) {
+      console.error(`[extract] Auto-compliance failed for cert=${certificateId}:`, compErr);
+      // Non-fatal — extraction still succeeded
+    }
 
     console.log(`[extract] ✓ Done certId=${certificateId}: ${result.coverages.length} coverages, ${result.entities.length} entities, insured="${result.insuredName}"`);
     return NextResponse.json({

@@ -331,18 +331,18 @@ export function StepBulkUpload({
         throw new Error(lastError);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Processing failed';
-        // Mark as "Needs Review" in DB if we have a certificate ID
+        // Mark as failed in DB if we have a certificate ID
         if (entry.certificateId) {
           supabase
             .from('certificates')
-            .update({ processing_status: 'needs_review' })
+            .update({ processing_status: 'failed' })
             .eq('id', entry.certificateId)
             .then(() => { /* fire and forget */ });
         }
         setFiles((prev) =>
           prev.map((f) =>
             f.id === entry.id
-              ? { ...f, status: 'failed', error: `Needs Review: ${message}`, attempts: (f.attempts || 0) + 1 }
+              ? { ...f, status: 'failed', error: `Processing failed: ${message}`, attempts: (f.attempts || 0) + 1 }
               : f
           )
         );
@@ -576,9 +576,9 @@ export function StepBulkUpload({
                   {entry.status === 'failed' && (
                     <p className="truncate text-xs text-red-500">
                       <span className="inline-flex items-center rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 mr-1">
-                        Needs Review
+                        Failed
                       </span>
-                      {entry.error?.replace(/^Needs Review: /, '')}
+                      {entry.error?.replace(/^Processing failed: /, '')}
                     </p>
                   )}
                 </div>

@@ -35,8 +35,6 @@ export interface ActionItem {
   daysUntilExpiration: number | null;
   daysSinceExpired: number | null;
   hasCertificate: boolean;
-  hasUnreviewedCert: boolean;
-  unreviewedCertId: string | null;
   contactEmail: string | null;
 }
 
@@ -204,56 +202,47 @@ async function getDashboardData(orgId: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allCerts = certResults.flatMap((r) => r.data ?? []) as any[];
 
-  // Map entityId → cert info
-  const entityCertMap = new Map<
-    string,
-    { hasCert: boolean; hasUnreviewed: boolean; certId: string | null; unreviewedCertId: string | null }
-  >();
+  // Map entityId → cert info (extracted or review_confirmed both count as having compliance data)
+  const entityCertMap = new Map<string, { hasCert: boolean; certId: string | null }>();
   for (const cert of allCerts) {
     const eid = cert.vendor_id ?? cert.tenant_id;
     if (!eid) continue;
     const existing = entityCertMap.get(eid);
+    const hasCompliance = cert.processing_status === 'extracted' || cert.processing_status === 'review_confirmed';
     if (!existing) {
       entityCertMap.set(eid, {
         hasCert: true,
-        hasUnreviewed: cert.processing_status === 'extracted',
-        certId: cert.processing_status === 'review_confirmed' ? cert.id : null,
-        unreviewedCertId: cert.processing_status === 'extracted' ? cert.id : null,
+        certId: hasCompliance ? cert.id : null,
       });
     } else {
-      if (cert.processing_status === 'extracted') {
-        existing.hasUnreviewed = true;
-        if (!existing.unreviewedCertId) existing.unreviewedCertId = cert.id;
-      }
-      if (cert.processing_status === 'review_confirmed' && !existing.certId)
-        existing.certId = cert.id;
+      if (hasCompliance && !existing.certId) existing.certId = cert.id;
     }
   }
 
-  // Gap counts + expirations from confirmed certs
-  const confirmedCertIds = [...entityCertMap.values()]
+  // Gap counts + expirations from certs with compliance data
+  const certsWithCompliance = [...entityCertMap.values()]
     .filter((v) => v.certId)
     .map((v) => v.certId!);
 
   const gapMap = new Map<string, number>();
   const expirationMap = new Map<string, string | null>();
 
-  if (confirmedCertIds.length > 0) {
+  if (certsWithCompliance.length > 0) {
     const [compResultsRes, entityGapsRes, covRes] = await Promise.all([
       supabase
         .from('compliance_results')
         .select('certificate_id, status')
-        .in('certificate_id', confirmedCertIds)
+        .in('certificate_id', certsWithCompliance)
         .in('status', ['not_met', 'missing']),
       supabase
         .from('entity_compliance_results')
         .select('certificate_id, status')
-        .in('certificate_id', confirmedCertIds)
+        .in('certificate_id', certsWithCompliance)
         .in('status', ['missing', 'partial_match']),
       supabase
         .from('extracted_coverages')
         .select('certificate_id, expiration_date')
-        .in('certificate_id', confirmedCertIds)
+        .in('certificate_id', certsWithCompliance)
         .not('expiration_date', 'is', null)
         .order('expiration_date', { ascending: true }),
     ]);
@@ -306,8 +295,6 @@ async function getDashboardData(orgId: string) {
       daysUntilExpiration,
       daysSinceExpired,
       hasCertificate: certInfo?.hasCert ?? false,
-      hasUnreviewedCert: certInfo?.hasUnreviewed ?? false,
-      unreviewedCertId: certInfo?.unreviewedCertId ?? null,
       contactEmail: e.contactEmail,
     };
   });

@@ -36,7 +36,7 @@ import {
   type CoverageInput,
   type EntityInput,
 } from '@/lib/compliance/calculate';
-import { confirmCertificate, type SavedCoverage, type SavedEntity } from '@/lib/actions/certificates';
+import { saveAndRerunCompliance, type SavedCoverage, type SavedEntity } from '@/lib/actions/certificates';
 import type {
   Certificate,
   ExtractedCoverage,
@@ -171,7 +171,7 @@ export function CertificateReviewClient({
   expirationThresholdDays,
 }: CertificateReviewClientProps) {
   const router = useRouter();
-  const isConfirmed = certificate.processing_status === 'review_confirmed';
+  const isConfirmed = false; // Review workflow removed — always editable
   const isFailed = certificate.processing_status === 'failed';
   const isProcessing = certificate.processing_status === 'processing';
 
@@ -431,13 +431,15 @@ function ReviewInterface({
         confidence_flag: e.confidence_flag,
       }));
 
-      const result = await confirmCertificate(certificate.id, savedCovs, savedEnts);
-      if (handleActionResult(result, 'Failed to confirm certificate', showUpgradeModal)) {
+      const result = await saveAndRerunCompliance(certificate.id, savedCovs, savedEnts);
+      if (handleActionResult(result, 'Failed to save changes', showUpgradeModal)) {
         setConfirming(false);
         return;
       }
-      toast.success('Certificate confirmed. Compliance status updated.');
-      router.push(`/dashboard/${result.entityType}s/${result.entityId}`);
+      toast.success('Changes saved. Compliance status updated.');
+      if ('entityType' in result) {
+        router.push(`/dashboard/${result.entityType}s/${result.entityId}`);
+      }
     } catch (err) {
       handleActionError(err, 'Failed to confirm certificate', showUpgradeModal);
       setConfirming(false);
@@ -466,7 +468,7 @@ function ReviewInterface({
       {/* Header */}
       <div className="space-y-1">
         <BackLink entityType={entityType} entityId={entityId} entityName={entityName} />
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">Review Certificate</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Edit Certificate Data</h1>
         <p className="text-sm text-muted-foreground">
           {entityType === 'vendor' ? 'Vendor' : 'Tenant'}:{' '}
           <span className="font-medium text-foreground">{entityName}</span>
@@ -522,7 +524,7 @@ function ReviewInterface({
                 <p className="mt-1 text-xs font-medium text-emerald-700">Name matches</p>
               ) : (
                 <p className="mt-1 text-xs text-amber-700">
-                  The insured name on this certificate doesn&apos;t appear to match this {entityType}. Please verify this is the correct certificate before confirming.
+                  The insured name on this certificate doesn&apos;t appear to match this {entityType}. Please verify this is the correct certificate before saving.
                 </p>
               )}
             </div>
@@ -549,24 +551,6 @@ function ReviewInterface({
               </p>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Confirmed banner */}
-      {isConfirmed && (
-        <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-          <Info className="h-5 w-5 flex-shrink-0 text-emerald-700" />
-          <p className="text-sm text-emerald-800">
-            This certificate was confirmed on{' '}
-            <span className="font-medium">{formatDate(certificate.reviewed_at!)}</span>
-            {reviewerName && (
-              <>
-                {' '}
-                by <span className="font-medium">{reviewerName}</span>
-              </>
-            )}
-            . Compliance results are final for this certificate.
-          </p>
         </div>
       )}
 
@@ -625,11 +609,9 @@ function ReviewInterface({
                 <h2 className="text-sm font-semibold text-foreground">
                   Extracted Coverage Data
                 </h2>
-                {!isConfirmed && (
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Review the data below and correct any errors before confirming.
-                  </p>
-                )}
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Review the extracted data below and correct any errors before saving.
+                </p>
               </div>
               {!isConfirmed && (
                 <Button size="sm" variant="outline" onClick={addCoverage}>
@@ -888,25 +870,23 @@ function ReviewInterface({
 
           {/* Actions */}
           <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-3">
-            {!isConfirmed && (
-              <Button
-                className="w-full font-semibold"
-                disabled={confirming}
-                onClick={handleConfirm}
-              >
-                {confirming ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Confirming…
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Confirm &amp; Save
-                  </>
-                )}
-              </Button>
-            )}
+            <Button
+              className="w-full font-semibold"
+              disabled={confirming}
+              onClick={handleConfirm}
+            >
+              {confirming ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Save Changes
+                </>
+              )}
+            </Button>
             <Button asChild variant="outline" className="w-full">
               <Link
                 href={`/dashboard/certificates/upload?${entityType}Id=${entityId}`}

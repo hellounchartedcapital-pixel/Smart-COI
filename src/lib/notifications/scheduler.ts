@@ -67,7 +67,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
           .from('certificates')
           .select('id, vendor_id, tenant_id, uploaded_at')
           .in('vendor_id', vendorIds)
-          .eq('processing_status', 'review_confirmed')
+          .in('processing_status', ['extracted', 'review_confirmed'])
           .order('uploaded_at', { ascending: false })
       )
     );
@@ -79,7 +79,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
           .from('certificates')
           .select('id, vendor_id, tenant_id, uploaded_at')
           .in('tenant_id', tenantIds)
-          .eq('processing_status', 'review_confirmed')
+          .in('processing_status', ['extracted', 'review_confirmed'])
           .order('uploaded_at', { ascending: false })
       )
     );

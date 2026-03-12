@@ -120,206 +120,62 @@ export async function saveExtractionEdits(
 }
 
 // ============================================================================
-// Confirm certificate — save edits, run compliance, update statuses
+// Save edits and re-run compliance (used by the extraction editor UI)
 // ============================================================================
 
-export async function confirmCertificate(
+export async function saveAndRerunCompliance(
   certificateId: string,
   coverages: SavedCoverage[],
   entities: SavedEntity[]
-) {
-  const planCheck = await checkActivePlan('Subscribe to upload certificates.');
-  if ('error' in planCheck) return { error: planCheck.error };
-  const { supabase, userId, orgId } = await getAuthContext();
+): Promise<{ entityType: string; entityId: string } | { error: string }> {
+  // Save the edits first
+  const saveResult = await saveExtractionEdits(certificateId, coverages, entities);
+  if (saveResult && 'error' in saveResult) return saveResult;
 
-  // Verify certificate
-  const { data: cert, error: certErr } = await supabase
+  const { supabase, orgId } = await getAuthContext();
+
+  // Get entity info for redirect
+  const { data: cert } = await supabase
     .from('certificates')
-    .select('*')
+    .select('vendor_id, tenant_id')
     .eq('id', certificateId)
-    .eq('organization_id', orgId)
-    .single();
-  if (certErr || !cert) throw new Error('Certificate not found');
-
-  // Save edited extraction data
-  await saveExtractionEdits(certificateId, coverages, entities);
-
-  // Re-fetch saved coverages/entities to get their new IDs
-  const { data: savedCoverages } = await supabase
-    .from('extracted_coverages')
-    .select('*')
-    .eq('certificate_id', certificateId);
-
-  const { data: savedEntities } = await supabase
-    .from('extracted_entities')
-    .select('*')
-    .eq('certificate_id', certificateId);
-
-  // Determine entity type and fetch template + property entities
-  const entityType = cert.vendor_id ? 'vendor' : 'tenant';
-  const entityId = cert.vendor_id ?? cert.tenant_id;
-  if (!entityId) throw new Error('Certificate has no vendor or tenant');
-
-  const tableName = entityType === 'vendor' ? 'vendors' : 'tenants';
-  const { data: entity } = await supabase
-    .from(tableName)
-    .select('template_id, property_id')
-    .eq('id', entityId)
     .single();
 
-  let requirements: RequirementInput[] = [];
-  if (entity?.template_id) {
-    const { data: reqs } = await supabase
-      .from('template_coverage_requirements')
-      .select('*')
-      .eq('template_id', entity.template_id);
-    requirements = (reqs ?? []) as RequirementInput[];
-  }
+  const entityType = cert?.vendor_id ? 'vendor' : 'tenant';
+  const entityId = cert?.vendor_id ?? cert?.tenant_id;
+  if (!entityId) throw new Error('Certificate not assigned to a vendor or tenant');
 
-  let propertyEntities: PropertyEntityInput[] = [];
-  if (entity?.property_id) {
-    const { data: pes } = await supabase
-      .from('property_entities')
-      .select('*')
-      .eq('property_id', entity.property_id);
-    propertyEntities = (pes ?? []) as PropertyEntityInput[];
-  }
+  // Run compliance
+  await runAutoCompliance(certificateId, orgId);
 
-  // Map saved data to calculation inputs
-  const covInputs: CoverageInput[] = (savedCoverages ?? []).map((c) => ({
-    id: c.id,
-    coverage_type: c.coverage_type,
-    carrier_name: c.carrier_name,
-    policy_number: c.policy_number,
-    limit_amount: c.limit_amount,
-    limit_type: c.limit_type,
-    effective_date: c.effective_date,
-    expiration_date: c.expiration_date,
-    additional_insured_listed: c.additional_insured_listed,
-    waiver_of_subrogation: c.waiver_of_subrogation,
-  }));
-
-  const entInputs: EntityInput[] = (savedEntities ?? []).map((e) => ({
-    id: e.id,
-    entity_name: e.entity_name,
-    entity_address: e.entity_address,
-    entity_type: e.entity_type,
-  }));
-
-  // Fetch org settings for expiration threshold
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('settings')
-    .eq('id', orgId)
-    .single();
-  const thresholdDays = org?.settings?.expiration_warning_threshold_days ?? 30;
-
-  // Run compliance calculation
-  const result = calculateCompliance(
-    covInputs,
-    entInputs,
-    requirements,
-    propertyEntities,
-    thresholdDays
-  );
-
-  // Clear old compliance results for this certificate
-  await supabase.from('compliance_results').delete().eq('certificate_id', certificateId);
-  await supabase.from('entity_compliance_results').delete().eq('certificate_id', certificateId);
-
-  // Insert coverage compliance results
-  if (result.coverageResults.length > 0) {
-    const rows = result.coverageResults.map((r) => ({
-      certificate_id: certificateId,
-      coverage_requirement_id: r.coverage_requirement_id,
-      extracted_coverage_id: r.extracted_coverage_id,
-      status: r.status,
-      gap_description: r.gap_description,
-    }));
-    await supabase.from('compliance_results').insert(rows);
-  }
-
-  // Insert entity compliance results
-  if (result.entityResults.length > 0) {
-    const rows = result.entityResults.map((r) => ({
-      certificate_id: certificateId,
-      property_entity_id: r.property_entity_id,
-      extracted_entity_id: r.extracted_entity_id,
-      status: r.status,
-      match_details: r.match_details,
-    }));
-    await supabase.from('entity_compliance_results').insert(rows);
-  }
-
-  // Update certificate status
-  await supabase
-    .from('certificates')
-    .update({
-      processing_status: 'review_confirmed',
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: userId,
-    })
-    .eq('id', certificateId);
-
-  // Update vendor/tenant compliance_status
-  await supabase
-    .from(tableName)
-    .update({ compliance_status: result.overallStatus })
-    .eq('id', entityId);
-
-  // Log activity
-  await supabase.from('activity_log').insert([
-    {
-      organization_id: orgId,
-      certificate_id: certificateId,
-      vendor_id: cert.vendor_id,
-      tenant_id: cert.tenant_id,
-      action: 'coi_review_confirmed',
-      description: `Certificate review confirmed`,
-      performed_by: userId,
-    },
-    {
-      organization_id: orgId,
-      certificate_id: certificateId,
-      vendor_id: cert.vendor_id,
-      tenant_id: cert.tenant_id,
-      action: 'compliance_checked',
-      description: `Compliance calculated: ${result.overallStatus}`,
-      performed_by: userId,
-    },
-  ]);
-
-  // Revalidate relevant pages
   revalidatePath(`/dashboard/${entityType}s/${entityId}`);
-  revalidatePath(`/dashboard/certificates/${certificateId}/review`);
-  revalidatePath('/dashboard');
-
-  return {
-    overallStatus: result.overallStatus,
-    entityType,
-    entityId,
-  };
+  return { entityType, entityId };
 }
 
 // ============================================================================
-// Quick Confirm — uses existing extracted data without re-saving
+// Auto-compliance — runs automatically after extraction completes.
+// Uses a service-role client so it can be called from API routes.
 // ============================================================================
 
-export async function quickConfirmCertificate(certificateId: string) {
-  const planCheck = await checkActivePlan('Subscribe to upload certificates.');
-  if ('error' in planCheck) return { error: planCheck.error };
-  const { supabase, userId, orgId } = await getAuthContext();
+export async function runAutoCompliance(
+  certificateId: string,
+  orgId: string,
+) {
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
 
-  // Verify certificate
+  // Fetch certificate
   const { data: cert, error: certErr } = await supabase
     .from('certificates')
     .select('*')
     .eq('id', certificateId)
-    .eq('organization_id', orgId)
     .single();
-  if (certErr || !cert) throw new Error('Certificate not found');
+  if (certErr || !cert) {
+    console.error(`[runAutoCompliance] Certificate not found: ${certificateId}`);
+    return;
+  }
 
-  // Fetch existing extracted data
+  // Fetch extracted data
   const { data: savedCoverages } = await supabase
     .from('extracted_coverages')
     .select('*')
@@ -330,10 +186,10 @@ export async function quickConfirmCertificate(certificateId: string) {
     .select('*')
     .eq('certificate_id', certificateId);
 
-  // Determine entity type and fetch template + property entities
+  // Determine entity type
   const entityType = cert.vendor_id ? 'vendor' : 'tenant';
   const entityId = cert.vendor_id ?? cert.tenant_id;
-  if (!entityId) throw new Error('Certificate has no vendor or tenant');
+  if (!entityId) return; // Certificate not assigned to an entity yet
 
   const tableName = entityType === 'vendor' ? 'vendors' : 'tenants';
   const { data: entity } = await supabase
@@ -360,7 +216,7 @@ export async function quickConfirmCertificate(certificateId: string) {
     propEntities = (pes ?? []) as PropertyEntityInput[];
   }
 
-  // Map saved data to calculation inputs
+  // Map to calculation inputs
   const covInputs: CoverageInput[] = (savedCoverages ?? []).map((c) => ({
     id: c.id,
     coverage_type: c.coverage_type,
@@ -410,16 +266,6 @@ export async function quickConfirmCertificate(certificateId: string) {
     );
   }
 
-  // Update certificate status
-  await supabase
-    .from('certificates')
-    .update({
-      processing_status: 'review_confirmed',
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: userId,
-    })
-    .eq('id', certificateId);
-
   // Update entity compliance_status
   await supabase
     .from(tableName)
@@ -427,19 +273,15 @@ export async function quickConfirmCertificate(certificateId: string) {
     .eq('id', entityId);
 
   // Log activity
-  await supabase.from('activity_log').insert([
-    {
-      organization_id: orgId,
-      action: 'coi_review_confirmed',
-      description: `Certificate confirmed for ${entityType} (quick review)`,
-      performed_by: userId,
-    },
-  ]);
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    certificate_id: certificateId,
+    [entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
+    action: 'compliance_checked',
+    description: `Compliance auto-calculated: ${result.overallStatus}`,
+  });
 
-  // Revalidate
-  revalidatePath(`/dashboard/${entityType}s/${entityId}`);
-  revalidatePath('/dashboard');
-
+  console.log(`[runAutoCompliance] cert=${certificateId} entity=${entityId} status=${result.overallStatus}`);
   return { overallStatus: result.overallStatus, entityType, entityId };
 }
 

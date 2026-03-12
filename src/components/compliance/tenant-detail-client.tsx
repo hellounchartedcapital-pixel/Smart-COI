@@ -4,10 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Info } from 'lucide-react';
 import { ComplianceBadge } from '@/components/properties/compliance-badge';
-import { ComplianceBreakdown } from './compliance-breakdown';
-import { EntityRequirements } from './entity-requirements';
 import { COIHistory } from './coi-history';
 import { NotificationHistory } from './notification-history';
 import { EditTenantDialog } from './edit-tenant-dialog';
@@ -244,33 +241,6 @@ export function TenantDetailClient({
             </dl>
           </div>
 
-          {/* Portal upload review banner */}
-          {(() => {
-            const pendingCert = certificates.find(
-              (c) => c.processing_status === 'extracted' && !c.reviewed_at
-            );
-            if (!pendingCert) return null;
-            return (
-              <div className="flex items-center justify-between gap-3 rounded-lg border-2 border-blue-300 bg-blue-50 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <svg className="h-5 w-5 flex-shrink-0 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="16" x2="12" y2="12" />
-                    <line x1="12" y1="8" x2="12.01" y2="8" />
-                  </svg>
-                  <p className="text-sm font-medium text-blue-800">
-                    New certificate uploaded via portal &mdash; review needed
-                  </p>
-                </div>
-                <Button size="sm" asChild>
-                  <Link href={`/dashboard/certificates/${pendingCert.id}/review`}>
-                    Review Certificate
-                  </Link>
-                </Button>
-              </div>
-            );
-          })()}
-
           {/* Expired alert banner — compact, consolidated */}
           {tenant.compliance_status === 'expired' && (() => {
             const summary = summarizeExpiredCoverages(extractedCoverages, formatDate);
@@ -318,6 +288,8 @@ export function TenantDetailClient({
                   entityName={tenant.company_name}
                   contactEmail={tenant.contact_email}
                   contactName={tenant.contact_name}
+                  contactPhone={tenant.contact_phone}
+                  complianceStatus={tenant.compliance_status}
                   certificates={certificates}
                   extractedCoverages={extractedCoverages}
                   complianceResults={complianceResults}
