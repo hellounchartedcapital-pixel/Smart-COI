@@ -15,39 +15,33 @@ interface TutorialStep {
 const STEPS: TutorialStep[] = [
   {
     target: 'dashboard-overview',
-    title: 'This is your Dashboard',
+    title: 'Portfolio Health',
     description:
-      'It shows your portfolio compliance at a glance. Properties with issues appear in the priority queue below.',
+      'Your overall compliance rate across all properties. Click the status pills to filter the action queue below.',
   },
   {
-    target: 'nav-properties',
+    target: 'properties-section',
     title: 'Properties',
     description:
-      'Each property contains your vendors and tenants. Click into a property to manage its entities.',
+      'See compliance status at a glance for each property. Click any property card to view its vendors, tenants, and certificates.',
+  },
+  {
+    target: 'action-queue',
+    title: 'Action Queue',
+    description:
+      'Your daily to-do list — everything that needs attention. Request updated COIs or upload new ones directly from here.',
+  },
+  {
+    target: 'activity-feed',
+    title: 'Activity Feed',
+    description:
+      'See what\u2019s happening automatically in the background — uploads, compliance checks, notifications sent, and more.',
   },
   {
     target: 'upload-coi',
-    title: 'Upload COIs',
+    title: 'Upload COI',
     description:
-      "Upload a single COI or use Bulk Upload to process your entire vendor portfolio at once. Our AI extracts coverage data and checks it against your requirements.",
-  },
-  {
-    target: 'nav-templates',
-    title: 'Templates',
-    description:
-      'Set up compliance requirement templates to define what coverage each vendor or tenant needs.',
-  },
-  {
-    target: 'nav-notifications',
-    title: 'Notifications',
-    description:
-      'SmartCOI automatically tracks expirations and sends follow-up emails to vendors with gaps.',
-  },
-  {
-    target: 'tutorial-finish',
-    title: "You're ready!",
-    description:
-      'Start by adding your properties and uploading your first COI. Need help? Contact support@smartcoi.io',
+      'Add new certificates of insurance here. Upload for an existing vendor or tenant, create a new one, or bulk upload multiple COIs at once.',
   },
 ];
 

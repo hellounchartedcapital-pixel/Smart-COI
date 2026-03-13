@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { sendManualFollowUp } from '@/lib/actions/notifications';
@@ -14,16 +15,12 @@ import { UploadCOIDialog } from '@/components/dashboard/upload-coi-dialog';
 import { DashboardTutorial, useTutorial } from '@/components/dashboard/dashboard-tutorial';
 import {
   ShieldCheck,
-  Clock,
   Upload,
-  Eye,
   Mail,
   CheckCircle2,
   FileCheck,
   Bell,
-  PlusCircle,
   ArrowRight,
-  AlertTriangle,
   User,
   X,
   RefreshCw,
@@ -277,9 +274,6 @@ export function DashboardClient({
             <Button variant="ghost" size="sm" onClick={startTutorial} className="text-xs text-muted-foreground">
               Take a Tour
             </Button>
-            <Button variant="outline" asChild>
-              <Link href="/dashboard/certificates/bulk-upload">Bulk Upload</Link>
-            </Button>
             <Button onClick={() => setUploadOpen(true)} data-tutorial="upload-coi">
               <Upload className="mr-2 h-4 w-4" />
               Upload COI
@@ -371,9 +365,9 @@ export function DashboardClient({
 
 function PropertiesSection({ properties }: { properties: PropertyOverview[] }) {
   return (
-    <div>
+    <div data-tutorial="properties-section">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-foreground" data-tutorial="properties-section">
+        <h2 className="text-sm font-semibold text-foreground">
           Properties
         </h2>
         <Link
@@ -518,11 +512,11 @@ function ActionQueue({
   const hasMore = items.length > 10;
 
   return (
-    <Card>
+    <Card data-tutorial="action-queue">
       <CardContent className="p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-foreground" data-tutorial="action-queue">
+            <h2 className="text-sm font-semibold text-foreground">
               Needs Your Attention
             </h2>
             {items.length > 0 && (
@@ -573,8 +567,9 @@ function ActionItemRow({ item }: { item: ActionItem }) {
   const config = STATUS_CONFIG[item.status as keyof StatusDistribution] ?? STATUS_CONFIG.pending;
   const [sending, setSending] = useState(false);
   const { showUpgradeModal } = useUpgradeModal();
+  const router = useRouter();
 
-  const handleFollowUp = useCallback(async () => {
+  const handleRequestCOI = useCallback(async () => {
     setSending(true);
     try {
       const result = await sendManualFollowUp(item.entityType as 'vendor' | 'tenant', item.id);
@@ -586,6 +581,11 @@ function ActionItemRow({ item }: { item: ActionItem }) {
       setSending(false);
     }
   }, [item.entityType, item.id, item.name, showUpgradeModal]);
+
+  const handleUploadCOI = useCallback(() => {
+    const param = item.entityType === 'vendor' ? 'vendorId' : 'tenantId';
+    router.push(`/dashboard/certificates/upload?${param}=${item.id}`);
+  }, [item.entityType, item.id, router]);
 
   let description = '';
   switch (item.status) {
@@ -614,6 +614,8 @@ function ActionItemRow({ item }: { item: ActionItem }) {
       description = item.status;
   }
 
+  const showRequestCOI = item.status !== 'pending' && item.contactEmail;
+
   return (
     <div
       className={`flex items-center gap-3 rounded-lg border border-l-4 ${config.borderColor} bg-white p-3`}
@@ -634,23 +636,26 @@ function ActionItemRow({ item }: { item: ActionItem }) {
         </p>
       </div>
       <div className="flex shrink-0 gap-1.5">
-        {item.contactEmail && (
+        {showRequestCOI && (
           <Button
             size="sm"
             variant="ghost"
             className="h-7 px-2 text-xs"
             disabled={sending}
-            onClick={handleFollowUp}
+            onClick={handleRequestCOI}
           >
             <Mail className="mr-1 h-3 w-3" />
-            {sending ? '...' : 'Send Reminder'}
+            {sending ? '...' : 'Request COI'}
           </Button>
         )}
-        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
-          <Link href={`/dashboard/${item.entityType}s/${item.id}`}>
-            <Eye className="mr-1 h-3 w-3" />
-            View
-          </Link>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs"
+          onClick={handleUploadCOI}
+        >
+          <Upload className="mr-1 h-3 w-3" />
+          Upload COI
         </Button>
       </div>
     </div>
@@ -665,7 +670,7 @@ function ActivitySidebar({ entries }: { entries: ActivityEntry[] }) {
   const visibleEntries = entries.slice(0, 8);
 
   return (
-    <Card className="h-fit">
+    <Card className="h-fit" data-tutorial="activity-feed">
       <CardContent className="p-5">
         <h2 className="text-sm font-semibold text-foreground">Recent Activity</h2>
 
