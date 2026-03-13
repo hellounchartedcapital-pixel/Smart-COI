@@ -1,5 +1,13 @@
 {
   "framework": "nextjs",
+  "redirects": [
+    {
+      "source": "/:path(.*)",
+      "has": [{ "type": "host", "value": "www.smartcoi.io" }],
+      "destination": "https://smartcoi.io/:path",
+      "permanent": true
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/daily-check",
