@@ -5,7 +5,7 @@
       "source": "/:path(.*)",
       "has": [{ "type": "host", "value": "www.smartcoi.io" }],
       "destination": "https://smartcoi.io/:path",
-      "permanent": true
+      "statusCode": 301
     }
   ],
   "crons": [
