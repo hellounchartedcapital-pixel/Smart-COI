@@ -304,7 +304,6 @@ export interface EntityComplianceResult {
   extracted_entity_id: string | null;
   status: EntityComplianceStatus;
   match_details: string | null;
-  fuzzy_match: boolean;
   created_at: string;
 }
 

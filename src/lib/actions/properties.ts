@@ -985,7 +985,6 @@ export async function runComplianceForEntity(
       extracted_entity_id: r.extracted_entity_id,
       status: r.status,
       match_details: r.match_details,
-      fuzzy_match: r.fuzzy_match ?? false,
     }));
     await supabase.from('entity_compliance_results').insert(rows);
   }

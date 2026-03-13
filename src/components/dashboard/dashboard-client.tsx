@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { sendManualFollowUp } from '@/lib/actions/notifications';
@@ -9,7 +9,7 @@ import { handleActionError, handleActionResult } from '@/lib/handle-action-error
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { formatRelativeDate } from '@/lib/utils';
+import { formatTimeAgo, formatDate } from '@/lib/utils';
 import { UploadCOIDialog } from '@/components/dashboard/upload-coi-dialog';
 import { DashboardTutorial, useTutorial } from '@/components/dashboard/dashboard-tutorial';
 import {
@@ -26,6 +26,11 @@ import {
   AlertTriangle,
   User,
   X,
+  RefreshCw,
+  Sparkles,
+  CalendarClock,
+  Building2,
+  Plus,
 } from 'lucide-react';
 import type {
   DashboardStats,
@@ -57,6 +62,7 @@ interface DashboardClientProps {
   actionItems: ActionItem[];
   propertyOverviews: PropertyOverview[];
   activity: ActivityEntry[];
+  notificationsSentThisMonth: number;
   propertyList: UploadDialogProperty[];
   vendorList: UploadDialogEntity[];
   tenantList: UploadDialogEntity[];
@@ -69,61 +75,80 @@ interface DashboardClientProps {
 
 const STATUS_CONFIG: Record<
   keyof StatusDistribution,
-  { label: string; color: string; bgColor: string; borderColor: string }
+  { label: string; color: string; bgColor: string; borderColor: string; pillBg: string; pillText: string }
 > = {
   compliant: {
     label: 'Compliant',
     color: 'text-emerald-700',
     bgColor: 'bg-status-compliant',
     borderColor: 'border-l-status-compliant',
+    pillBg: 'bg-emerald-100 hover:bg-emerald-200',
+    pillText: 'text-emerald-700',
   },
   expiring_soon: {
     label: 'Expiring Soon',
     color: 'text-amber-700',
     bgColor: 'bg-status-expiring',
     borderColor: 'border-l-status-expiring',
+    pillBg: 'bg-amber-100 hover:bg-amber-200',
+    pillText: 'text-amber-700',
   },
   non_compliant: {
     label: 'Non-Compliant',
     color: 'text-red-600',
     bgColor: 'bg-status-non-compliant',
     borderColor: 'border-l-status-non-compliant',
+    pillBg: 'bg-red-100 hover:bg-red-200',
+    pillText: 'text-red-700',
   },
   expired: {
     label: 'Expired',
     color: 'text-red-700',
     bgColor: 'bg-status-expired',
     borderColor: 'border-l-status-expired',
+    pillBg: 'bg-red-100 hover:bg-red-200',
+    pillText: 'text-red-700',
   },
   pending: {
     label: 'Pending',
     color: 'text-slate-500',
     bgColor: 'bg-status-pending',
     borderColor: 'border-l-status-pending',
+    pillBg: 'bg-slate-100 hover:bg-slate-200',
+    pillText: 'text-slate-600',
   },
   under_review: {
     label: 'Under Review',
     color: 'text-blue-600',
     bgColor: 'bg-status-under-review',
     borderColor: 'border-l-status-under-review',
+    pillBg: 'bg-blue-100 hover:bg-blue-200',
+    pillText: 'text-blue-600',
   },
 };
 
-const ACTIVITY_ICONS: Partial<Record<ActivityAction, typeof Upload>> = {
+const ACTIVITY_ICONS: Record<ActivityAction, typeof Upload> = {
   coi_uploaded: Upload,
-  coi_processed: FileCheck,
+  portal_upload_received: Upload,
+  coi_processed: Sparkles,
   coi_review_confirmed: CheckCircle2,
-  compliance_checked: ShieldCheck,
+  compliance_checked: CheckCircle2,
   notification_sent: Bell,
-  vendor_created: PlusCircle,
-  tenant_created: PlusCircle,
+  status_changed: RefreshCw,
+  template_updated: FileCheck,
+  vendor_created: User,
+  tenant_created: User,
 };
+
+// ============================================================================
+// Filter type for stat pills
+// ============================================================================
+
+type PillFilter = keyof StatusDistribution | null;
 
 // ============================================================================
 // Main component
 // ============================================================================
-
-type FilterCategory = 'all' | 'compliant' | 'needs_attention' | 'pending';
 
 export function DashboardClient({
   stats,
@@ -131,6 +156,7 @@ export function DashboardClient({
   actionItems,
   propertyOverviews,
   activity,
+  notificationsSentThisMonth,
   propertyList,
   vendorList,
   tenantList,
@@ -138,41 +164,62 @@ export function DashboardClient({
 }: DashboardClientProps) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
-  const [filter, setFilter] = useState<FilterCategory>('all');
+  const [pillFilter, setPillFilter] = useState<PillFilter>(null);
   const { showTutorial, startTutorial, closeTutorial } = useTutorial();
 
-  // Summary counts
-  const compliantCount = statusDistribution.compliant;
-  const needsAttentionCount =
-    statusDistribution.expiring_soon +
-    statusDistribution.non_compliant +
-    statusDistribution.expired;
-  const pendingCount =
-    statusDistribution.pending + statusDistribution.under_review;
+  // Filter action items by selected pill
+  const filteredActionItems = useMemo(() => {
+    if (!pillFilter) return actionItems;
+    return actionItems.filter((item) => item.status === pillFilter);
+  }, [actionItems, pillFilter]);
 
-  // Filter action items by category
-  const filteredItems = actionItems.filter((item) => {
-    if (filter === 'all') return true;
-    if (filter === 'needs_attention')
-      return ['expiring_soon', 'non_compliant', 'expired'].includes(item.status);
-    if (filter === 'pending')
-      return ['pending', 'under_review'].includes(item.status);
-    if (filter === 'compliant') return item.status === 'compliant';
-    return true;
-  });
+  // Compliance rate color
+  const rateColor =
+    stats.complianceRate == null
+      ? 'text-slate-400'
+      : stats.complianceRate >= 80
+        ? 'text-emerald-600'
+        : stats.complianceRate >= 60
+          ? 'text-amber-600'
+          : 'text-red-600';
 
-  // Sort needs_attention to top by default
-  const sortedItems = [...filteredItems].sort((a, b) => {
-    const priority: Record<string, number> = {
-      expired: 0,
-      non_compliant: 1,
-      expiring_soon: 2,
-      under_review: 3,
-      pending: 4,
-      compliant: 5,
-    };
-    return (priority[a.status] ?? 9) - (priority[b.status] ?? 9);
-  });
+  // "This Month" stats from activity log
+  const thisMonthStats = useMemo(() => {
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const monthStartTime = monthStart.getTime();
+
+    let coisUploaded = 0;
+    let vendorsAdded = 0;
+    let portalUploads = 0;
+
+    for (const entry of activity) {
+      if (new Date(entry.created_at).getTime() < monthStartTime) continue;
+      if (entry.action === 'coi_uploaded') coisUploaded++;
+      if (entry.action === 'vendor_created') vendorsAdded++;
+      if (entry.action === 'portal_upload_received') portalUploads++;
+    }
+
+    return { coisUploaded, vendorsAdded, portalUploads };
+  }, [activity]);
+
+  // Upcoming expirations (next 30 days) from action items
+  const upcomingExpirations = useMemo(() => {
+    return actionItems
+      .filter(
+        (item) =>
+          item.status === 'expiring_soon' &&
+          item.daysUntilExpiration != null &&
+          item.daysUntilExpiration <= 30
+      )
+      .sort((a, b) => (a.daysUntilExpiration ?? 0) - (b.daysUntilExpiration ?? 0))
+      .slice(0, 5);
+  }, [actionItems]);
+
+  const handlePillClick = (status: keyof StatusDistribution) => {
+    setPillFilter(pillFilter === status ? null : status);
+  };
 
   return (
     <div className="space-y-6">
@@ -205,27 +252,77 @@ export function DashboardClient({
         </div>
       )}
 
-      {/* ---- Page Header ---- */}
-      <div className="flex items-center justify-between" data-tutorial="dashboard-overview">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Overview</h1>
-          <p className="text-sm text-muted-foreground">
-            Compliance snapshot across all properties
-          </p>
+      {/* ---- Section 1: Portfolio Health Bar ---- */}
+      <div className="rounded-xl border bg-white p-5 md:p-6" data-tutorial="dashboard-overview">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          {/* Left: Compliance rate + subtitle */}
+          <div className="flex items-center gap-4">
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-4xl font-bold tracking-tight ${rateColor}`}>
+                  {stats.complianceRate != null ? `${stats.complianceRate}%` : '—'}
+                </span>
+                <span className={`text-lg font-semibold ${rateColor}`}>Compliant</span>
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Across {stats.propertyCount} {stats.propertyCount === 1 ? 'property' : 'properties'},{' '}
+                {stats.vendorCount} {stats.vendorCount === 1 ? 'vendor' : 'vendors'},{' '}
+                {stats.tenantCount} {stats.tenantCount === 1 ? 'tenant' : 'tenants'}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={startTutorial} className="text-xs text-muted-foreground">
+              Take a Tour
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="/dashboard/certificates/bulk-upload">Bulk Upload</Link>
+            </Button>
+            <Button onClick={() => setUploadOpen(true)} data-tutorial="upload-coi">
+              <Upload className="mr-2 h-4 w-4" />
+              Upload COI
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={startTutorial} className="text-xs text-muted-foreground">
-            Take a Tour
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/certificates/bulk-upload">
-              Bulk Upload
-            </Link>
-          </Button>
-          <Button onClick={() => setUploadOpen(true)} data-tutorial="upload-coi">
-            <Upload className="mr-2 h-4 w-4" />
-            Upload COI
-          </Button>
+
+        {/* Stat pills */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {(
+            ['compliant', 'expiring_soon', 'expired', 'non_compliant', 'pending'] as const
+          ).map((status) => {
+            const config = STATUS_CONFIG[status];
+            const count = statusDistribution[status];
+            const isActive = pillFilter === status;
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => handlePillClick(status)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all ${
+                  isActive
+                    ? `${config.pillBg} ${config.pillText} ring-2 ring-offset-1 ring-current`
+                    : `${config.pillBg} ${config.pillText}`
+                }`}
+              >
+                <span
+                  className={`inline-block h-2 w-2 rounded-full ${config.bgColor}`}
+                />
+                {config.label} {count}
+              </button>
+            );
+          })}
+          {pillFilter && (
+            <button
+              type="button"
+              onClick={() => setPillFilter(null)}
+              className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs text-muted-foreground hover:bg-slate-100"
+            >
+              <X className="h-3 w-3" />
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
@@ -237,258 +334,201 @@ export function DashboardClient({
         tenants={tenantList}
       />
 
-      {/* ---- Three Summary Cards (clickable filters) ---- */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <button
-          type="button"
-          onClick={() => setFilter(filter === 'compliant' ? 'all' : 'compliant')}
-          className={`rounded-xl border-2 p-5 text-left transition-all ${
-            filter === 'compliant'
-              ? 'border-emerald-400 bg-emerald-50 ring-2 ring-emerald-200'
-              : 'border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/50'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-            <span className="text-sm font-medium text-emerald-700">Compliant</span>
-          </div>
-          <p className="mt-2 text-3xl font-bold text-emerald-700">{compliantCount}</p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setFilter(filter === 'needs_attention' ? 'all' : 'needs_attention')}
-          className={`rounded-xl border-2 p-5 text-left transition-all ${
-            filter === 'needs_attention'
-              ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-200'
-              : 'border-slate-200 bg-white hover:border-amber-300 hover:bg-amber-50/50'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <span className="text-sm font-medium text-amber-700">Needs Attention</span>
-          </div>
-          <p className="mt-2 text-3xl font-bold text-amber-700">{needsAttentionCount}</p>
-          <p className="mt-0.5 text-xs text-amber-600">
-            Expiring, non-compliant, or expired
-          </p>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setFilter(filter === 'pending' ? 'all' : 'pending')}
-          className={`rounded-xl border-2 p-5 text-left transition-all ${
-            filter === 'pending'
-              ? 'border-slate-400 bg-slate-50 ring-2 ring-slate-200'
-              : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-slate-400" />
-            <span className="text-sm font-medium text-slate-600">Pending</span>
-          </div>
-          <p className="mt-2 text-3xl font-bold text-slate-600">{pendingCount}</p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Awaiting upload or review
-          </p>
-        </button>
-      </div>
-
-      {/* Active filter indicator */}
-      {filter !== 'all' && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            Showing: <span className="font-medium capitalize">{filter.replace('_', ' ')}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setFilter('all')}
-            className="text-xs text-primary hover:underline"
-          >
-            Clear filter
-          </button>
-        </div>
-      )}
-
-      {/* ---- Main entity list ---- */}
-      <div className="grid items-start gap-6 xl:grid-cols-[1fr_340px]">
+      {/* ---- Section 2: Two-column layout ---- */}
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
+        {/* Left column: Properties + Action Queue */}
         <div className="space-y-6">
-          <ActionQueue items={sortedItems} />
           <PropertiesSection properties={propertyOverviews} />
+          <ActionQueue
+            items={filteredActionItems}
+            totalCount={actionItems.length}
+            pillFilter={pillFilter}
+          />
         </div>
-        <ActivitySidebar entries={activity} />
+
+        {/* Right sidebar: Activity + Quick Stats + Upcoming Expirations */}
+        <div className="space-y-6">
+          <ActivitySidebar entries={activity} />
+          <QuickStatsCard
+            coisUploaded={thisMonthStats.coisUploaded}
+            remindersSent={notificationsSentThisMonth}
+            vendorsAdded={thisMonthStats.vendorsAdded}
+            portalUploads={thisMonthStats.portalUploads}
+          />
+          <UpcomingExpirations
+            items={upcomingExpirations}
+            onFilterExpiring={() => setPillFilter('expiring_soon')}
+          />
+        </div>
       </div>
     </div>
   );
 }
 
 // ============================================================================
-// Stats Cards
+// Properties Grid
 // ============================================================================
 
-function StatCard({
-  label,
-  value,
-  icon,
-  href,
-  sub,
-  valueColor = 'text-foreground',
-}: {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-  href?: string;
-  sub?: string;
-  valueColor?: string;
-}) {
-  const content = (
-    <Card className={href ? 'transition-shadow hover:shadow-md' : ''}>
-      <CardContent className="flex h-[96px] items-center gap-4 p-5">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">{label}</p>
-          <p className={`text-2xl font-bold ${valueColor}`}>{value}</p>
-          {sub && (
-            <p
-              className="text-[10px] text-muted-foreground"
-              dangerouslySetInnerHTML={{ __html: sub }}
-            />
-          )}
-        </div>
-        {href && <ArrowRight className="ml-auto h-4 w-4 text-slate-300" />}
-      </CardContent>
-    </Card>
-  );
-
-  if (href) {
-    return (
-      <Link href={href} className="block">
-        {content}
-      </Link>
-    );
-  }
-  return content;
-}
-
-function ComplianceRateCard({ rate }: { rate: number | null }) {
+function PropertiesSection({ properties }: { properties: PropertyOverview[] }) {
   return (
-    <Card>
-      <CardContent className="flex h-[96px] items-center gap-4 p-5">
-        <div className="relative flex h-12 w-12 items-center justify-center">
-          <svg className="h-12 w-12 -rotate-90" viewBox="0 0 36 36">
-            <circle
-              cx="18"
-              cy="18"
-              r="15.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              className="text-slate-100"
-            />
-            {rate != null && (
-              <circle
-                cx="18"
-                cy="18"
-                r="15.5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeDasharray={`${(rate / 100) * 97.4} 97.4`}
-                strokeLinecap="round"
-                className="text-emerald-500"
-              />
-            )}
-          </svg>
-          <span className="absolute text-[10px] font-bold text-foreground">
-            {rate != null ? `${rate}%` : '—'}
-          </span>
-        </div>
-        <div>
-          <p className="text-xs text-muted-foreground">Compliance Rate</p>
-          {rate != null ? (
-            <p className="text-2xl font-bold text-foreground">{rate}%</p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Upload your first COI to start tracking
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-foreground" data-tutorial="properties-section">
+          Properties
+        </h2>
+        <Link
+          href="/dashboard/properties"
+          className="text-xs font-medium text-primary hover:underline"
+        >
+          View All
+        </Link>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {properties.map((p) => (
+          <PropertyCard key={p.id} property={p} />
+        ))}
+        <AddPropertyCard />
+      </div>
+    </div>
   );
 }
 
-// ============================================================================
-// Compliance Overview Bar
-// ============================================================================
+function PropertyCard({ property }: { property: PropertyOverview }) {
+  const total = property.total;
+  const withCert = total - property.pending;
+  const complianceRate =
+    withCert > 0 ? Math.round((property.compliant / withCert) * 100) : null;
 
-function ComplianceBar({ distribution }: { distribution: StatusDistribution }) {
-  const total = Object.values(distribution).reduce((a, b) => a + b, 0);
-  if (total === 0) return null;
-
+  // Build mini compliance bar segments
   const segments: { key: keyof StatusDistribution; count: number }[] = (
     ['compliant', 'expiring_soon', 'non_compliant', 'expired', 'pending', 'under_review'] as const
   )
-    .map((key) => ({ key, count: distribution[key] }))
+    .map((key) => ({ key, count: property[key] }))
     .filter((s) => s.count > 0);
 
+  // Most urgent issue
+  let urgentIssue: string | null = null;
+  if (property.expired > 0) {
+    urgentIssue = `${property.expired} expired`;
+  } else if (property.non_compliant > 0) {
+    urgentIssue = `${property.non_compliant} non-compliant`;
+  } else if (property.expiring_soon > 0) {
+    urgentIssue = `${property.expiring_soon} expiring soon`;
+  } else if (total > 0 && property.compliant === withCert && withCert > 0) {
+    urgentIssue = 'All compliant';
+  }
+
+  const urgentColor =
+    property.expired > 0
+      ? 'text-red-600'
+      : property.non_compliant > 0
+        ? 'text-red-600'
+        : property.expiring_soon > 0
+          ? 'text-amber-600'
+          : 'text-emerald-600';
+
   return (
-    <Card>
-      <CardContent className="p-5">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Compliance Overview
-        </p>
-
-        {/* Bar */}
-        <div className="flex h-4 w-full overflow-hidden rounded-full bg-slate-100">
-          {segments.map((seg) => (
-            <div
-              key={seg.key}
-              className={`${STATUS_CONFIG[seg.key].bgColor} transition-all`}
-              style={{ width: `${(seg.count / total) * 100}%` }}
-              title={`${STATUS_CONFIG[seg.key].label}: ${seg.count}`}
-            />
-          ))}
-        </div>
-
-        {/* Legend */}
-        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
-          {segments.map((seg) => (
-            <div key={seg.key} className="flex items-center gap-1.5">
-              <div className={`h-2.5 w-2.5 rounded-full ${STATUS_CONFIG[seg.key].bgColor}`} />
-              <span className="text-xs text-muted-foreground">
-                {STATUS_CONFIG[seg.key].label}
-              </span>
-              <span className={`text-xs font-semibold ${STATUS_CONFIG[seg.key].color}`}>
-                {seg.count}
-              </span>
+    <Link href={`/dashboard/properties/${property.id}`} className="group block">
+      <Card className="transition-shadow hover:shadow-md">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">
+                {property.name}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {property.vendorCount} {property.vendorCount === 1 ? 'vendor' : 'vendors'} &middot;{' '}
+                {property.tenantCount} {property.tenantCount === 1 ? 'tenant' : 'tenants'}
+              </p>
             </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            {complianceRate != null && (
+              <span
+                className={`text-sm font-bold ${
+                  complianceRate >= 80
+                    ? 'text-emerald-600'
+                    : complianceRate >= 60
+                      ? 'text-amber-600'
+                      : 'text-red-600'
+                }`}
+              >
+                {complianceRate}%
+              </span>
+            )}
+          </div>
+
+          {total > 0 ? (
+            <>
+              <div className="mt-3 flex h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                {segments.map((seg) => (
+                  <div
+                    key={seg.key}
+                    className={`${STATUS_CONFIG[seg.key].bgColor}`}
+                    style={{ width: `${(seg.count / total) * 100}%` }}
+                  />
+                ))}
+              </div>
+              {urgentIssue && (
+                <p className={`mt-2 text-xs font-medium ${urgentColor}`}>
+                  {urgentIssue}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="mt-3 text-xs text-slate-400">No entities yet</p>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function AddPropertyCard() {
+  return (
+    <Link href="/dashboard/properties" className="group block">
+      <Card className="h-full border-dashed transition-shadow hover:shadow-md">
+        <CardContent className="flex h-full min-h-[100px] flex-col items-center justify-center p-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 group-hover:bg-primary/10">
+            <Plus className="h-4 w-4 text-slate-400 group-hover:text-primary" />
+          </div>
+          <p className="mt-2 text-xs font-medium text-muted-foreground group-hover:text-primary">
+            Add Property
+          </p>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
 // ============================================================================
-// Priority Action Queue
+// Action Queue
 // ============================================================================
 
-function ActionQueue({ items }: { items: ActionItem[] }) {
-  const displayItems = items.slice(0, 20);
-  const hasMore = items.length > 20;
+function ActionQueue({
+  items,
+  totalCount,
+  pillFilter,
+}: {
+  items: ActionItem[];
+  totalCount: number;
+  pillFilter: PillFilter;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const displayItems = showAll ? items : items.slice(0, 10);
+  const hasMore = items.length > 10;
 
   return (
     <Card>
       <CardContent className="p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-foreground">Needs Attention</h2>
+            <h2 className="text-sm font-semibold text-foreground" data-tutorial="action-queue">
+              Needs Your Attention
+            </h2>
             {items.length > 0 && (
               <Badge variant="secondary" className="text-[10px]">
                 {items.length}
+                {pillFilter && totalCount !== items.length && ` of ${totalCount}`}
               </Badge>
             )}
           </div>
@@ -501,7 +541,9 @@ function ActionQueue({ items }: { items: ActionItem[] }) {
             </div>
             <p className="mt-3 text-sm font-medium text-foreground">All caught up!</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Your portfolio is looking good.
+              {pillFilter
+                ? `No ${STATUS_CONFIG[pillFilter].label.toLowerCase()} items.`
+                : 'Your portfolio is fully compliant.'}
             </p>
           </div>
         ) : (
@@ -511,12 +553,13 @@ function ActionQueue({ items }: { items: ActionItem[] }) {
             ))}
             {hasMore && (
               <div className="pt-2 text-center">
-                <Link
-                  href="/dashboard/properties"
+                <button
+                  type="button"
+                  onClick={() => setShowAll(!showAll)}
                   className="text-xs font-medium text-primary hover:underline"
                 >
-                  View all {items.length} items
-                </Link>
+                  {showAll ? 'Show less' : `Show all ${items.length} items`}
+                </button>
               </div>
             )}
           </div>
@@ -548,17 +591,17 @@ function ActionItemRow({ item }: { item: ActionItem }) {
   switch (item.status) {
     case 'expired':
       description = item.earliestExpiration
-        ? `Certificate expired on ${item.earliestExpiration}`
+        ? `Expired ${formatDate(item.earliestExpiration)}`
         : 'Certificate expired';
       break;
     case 'non_compliant':
       description = item.gapCount > 0
-        ? `${item.gapCount} coverage gap${item.gapCount !== 1 ? 's' : ''}`
+        ? `Missing: ${item.gapCount} coverage gap${item.gapCount !== 1 ? 's' : ''}`
         : 'Non-compliant';
       break;
     case 'expiring_soon':
-      description = item.daysUntilExpiration != null
-        ? `Expires in ${item.daysUntilExpiration} day${item.daysUntilExpiration !== 1 ? 's' : ''}`
+      description = item.earliestExpiration
+        ? `Expires ${formatDate(item.earliestExpiration)}`
         : 'Expiring soon';
       break;
     case 'pending':
@@ -575,49 +618,22 @@ function ActionItemRow({ item }: { item: ActionItem }) {
     <div
       className={`flex items-center gap-3 rounded-lg border border-l-4 ${config.borderColor} bg-white p-3`}
     >
-      <Link
-        href={`/dashboard/${item.entityType}s/${item.id}`}
-        title={item.contactEmail ? `Contact: ${item.contactEmail}` : 'No contact — click to add'}
-        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-          item.contactEmail
-            ? 'bg-emerald-100 text-emerald-600'
-            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-        }`}
-      >
-        <User className="h-3.5 w-3.5" />
-      </Link>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
           <Badge
             variant="outline"
             className={`shrink-0 text-[10px] ${config.color}`}
           >
             {config.label}
           </Badge>
+          <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="mt-0.5 text-xs text-muted-foreground">
           {item.propertyName && <>{item.propertyName} &middot; </>}
           {description}
         </p>
       </div>
       <div className="flex shrink-0 gap-1.5">
-        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
-          <Link href={`/dashboard/${item.entityType}s/${item.id}`}>
-            <Eye className="mr-1 h-3 w-3" />
-            View
-          </Link>
-        </Button>
-        {!item.hasCertificate && (
-          <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
-            <Link
-              href={`/dashboard/certificates/upload?${item.entityType}Id=${item.id}`}
-            >
-              <Upload className="mr-1 h-3 w-3" />
-              Upload
-            </Link>
-          </Button>
-        )}
         {item.contactEmail && (
           <Button
             size="sm"
@@ -627,100 +643,26 @@ function ActionItemRow({ item }: { item: ActionItem }) {
             onClick={handleFollowUp}
           >
             <Mail className="mr-1 h-3 w-3" />
-            {sending ? '...' : 'Follow-up'}
+            {sending ? '...' : 'Send Reminder'}
           </Button>
         )}
+        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" asChild>
+          <Link href={`/dashboard/${item.entityType}s/${item.id}`}>
+            <Eye className="mr-1 h-3 w-3" />
+            View
+          </Link>
+        </Button>
       </div>
     </div>
   );
 }
 
 // ============================================================================
-// Properties Overview
-// ============================================================================
-
-function PropertiesSection({ properties }: { properties: PropertyOverview[] }) {
-  if (properties.length === 0) return null;
-
-  const displayProperties = properties.slice(0, 6);
-  const hasMore = properties.length > 6;
-
-  return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Properties</h2>
-          {hasMore && (
-            <Link
-              href="/dashboard/properties"
-              className="text-xs font-medium text-primary hover:underline"
-            >
-              View All Properties
-            </Link>
-          )}
-        </div>
-
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {displayProperties.map((p) => (
-            <PropertyCard key={p.id} property={p} />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function PropertyCard({ property }: { property: PropertyOverview }) {
-  const compliantCount = property.compliant;
-  const total = property.total;
-
-  // Build mini compliance bar segments
-  const segments: { key: keyof StatusDistribution; count: number }[] = (
-    ['compliant', 'expiring_soon', 'non_compliant', 'expired', 'pending', 'under_review'] as const
-  )
-    .map((key) => ({ key, count: property[key] }))
-    .filter((s) => s.count > 0);
-
-  return (
-    <Link href={`/dashboard/properties/${property.id}`} className="group block">
-      <div className="rounded-lg border p-3 transition-shadow hover:shadow-md">
-        <p className="truncate text-sm font-medium text-foreground group-hover:text-primary">
-          {property.name}
-        </p>
-
-        {total > 0 ? (
-          <>
-            {/* Mini compliance bar */}
-            <div className="mt-2 flex h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-              {segments.map((seg) => (
-                <div
-                  key={seg.key}
-                  className={`${STATUS_CONFIG[seg.key].bgColor}`}
-                  style={{ width: `${(seg.count / total) * 100}%` }}
-                />
-              ))}
-            </div>
-            <p className="mt-1.5 text-xs text-slate-600">
-              {compliantCount} of {total} compliant
-            </p>
-          </>
-        ) : (
-          <p className="mt-2 text-xs text-slate-400">No entities yet</p>
-        )}
-      </div>
-    </Link>
-  );
-}
-
-// ============================================================================
-// Recent Activity Sidebar
+// Activity Feed (right sidebar)
 // ============================================================================
 
 function ActivitySidebar({ entries }: { entries: ActivityEntry[] }) {
-  const [showAll, setShowAll] = useState(false);
-  const INITIAL_COUNT = 6;
-  const visibleEntries = showAll ? entries : entries.slice(0, INITIAL_COUNT);
-  const hasMore = entries.length > INITIAL_COUNT;
+  const visibleEntries = entries.slice(0, 8);
 
   return (
     <Card className="h-fit">
@@ -735,10 +677,7 @@ function ActivitySidebar({ entries }: { entries: ActivityEntry[] }) {
               {visibleEntries.map((entry, i) => {
                 const Icon = ACTIVITY_ICONS[entry.action] ?? FileCheck;
                 return (
-                  <div
-                    key={entry.id}
-                    className="flex gap-3 py-2.5"
-                  >
+                  <div key={entry.id} className="flex gap-3 py-2.5">
                     <div className="relative flex flex-col items-center">
                       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100">
                         <Icon className="h-3 w-3 text-slate-500" />
@@ -752,22 +691,130 @@ function ActivitySidebar({ entries }: { entries: ActivityEntry[] }) {
                         {entry.description}
                       </p>
                       <p className="mt-0.5 text-[10px] text-muted-foreground">
-                        {formatRelativeDate(entry.created_at)}
+                        {formatTimeAgo(entry.created_at)}
                       </p>
                     </div>
                   </div>
                 );
               })}
             </div>
-            {hasMore && (
-              <button
-                type="button"
-                onClick={() => setShowAll(!showAll)}
-                className="mt-2 w-full text-center text-xs font-medium text-primary hover:text-primary/80"
-              >
-                {showAll ? 'Show Less' : `See More (${entries.length - INITIAL_COUNT} more)`}
-              </button>
-            )}
+            <Link
+              href="/dashboard/notifications"
+              className="mt-3 block text-center text-xs font-medium text-primary hover:underline"
+            >
+              View all activity
+            </Link>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// Quick Stats Card — "This Month"
+// ============================================================================
+
+function QuickStatsCard({
+  coisUploaded,
+  remindersSent,
+  vendorsAdded,
+  portalUploads,
+}: {
+  coisUploaded: number;
+  remindersSent: number;
+  vendorsAdded: number;
+  portalUploads: number;
+}) {
+  return (
+    <Card className="h-fit">
+      <CardContent className="p-5">
+        <h2 className="text-sm font-semibold text-foreground">This Month</h2>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <QuickStat icon={Upload} label="COIs Uploaded" value={coisUploaded} />
+          <QuickStat icon={Bell} label="Reminders Sent" value={remindersSent} />
+          <QuickStat icon={User} label="Vendors Added" value={vendorsAdded} />
+          <QuickStat icon={Building2} label="Portal Uploads" value={portalUploads} />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function QuickStat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Upload;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="rounded-lg bg-slate-50 p-3">
+      <div className="flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="text-[10px] text-muted-foreground">{label}</span>
+      </div>
+      <p className="mt-1 text-xl font-bold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+// ============================================================================
+// Upcoming Expirations
+// ============================================================================
+
+function UpcomingExpirations({
+  items,
+  onFilterExpiring,
+}: {
+  items: ActionItem[];
+  onFilterExpiring: () => void;
+}) {
+  return (
+    <Card className="h-fit">
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Expiring in Next 30 Days</h2>
+          <CalendarClock className="h-4 w-4 text-muted-foreground" />
+        </div>
+
+        {items.length === 0 ? (
+          <p className="mt-3 text-xs text-muted-foreground">
+            No expirations in the next 30 days
+          </p>
+        ) : (
+          <>
+            <div className="mt-3 space-y-2">
+              {items.map((item) => (
+                <Link
+                  key={`${item.entityType}-${item.id}`}
+                  href={`/dashboard/${item.entityType}s/${item.id}`}
+                  className="block rounded-lg p-2 transition-colors hover:bg-slate-50"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="truncate text-xs font-medium text-foreground">
+                      {item.name}
+                    </p>
+                    <span className="shrink-0 text-[10px] font-semibold text-amber-600">
+                      {item.daysUntilExpiration}d
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">
+                    {item.propertyName && <>{item.propertyName} &middot; </>}
+                    {item.earliestExpiration && formatDate(item.earliestExpiration)}
+                  </p>
+                </Link>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={onFilterExpiring}
+              className="mt-3 block w-full text-center text-xs font-medium text-primary hover:underline"
+            >
+              View all
+            </button>
           </>
         )}
       </CardContent>

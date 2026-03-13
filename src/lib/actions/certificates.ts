@@ -272,9 +272,8 @@ export async function runAutoCompliance(
         certificate_id: certificateId,
         property_entity_id: r.property_entity_id,
         status: r.status,
-        matched_entity_id: r.extracted_entity_id,
+        extracted_entity_id: r.extracted_entity_id,
         match_details: r.match_details,
-        fuzzy_match: r.fuzzy_match ?? false,
       }))
     );
   }

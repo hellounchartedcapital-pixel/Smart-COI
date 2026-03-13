@@ -9,6 +9,8 @@ import type { ComplianceStatus, ActivityAction } from '@/types';
 
 export interface DashboardStats {
   propertyCount: number;
+  vendorCount: number;
+  tenantCount: number;
   entityCount: number;
   complianceRate: number | null; // null = no confirmed certificates yet
   expiringSoonCount: number;
@@ -41,6 +43,9 @@ export interface ActionItem {
 export interface PropertyOverview {
   id: string;
   name: string;
+  propertyType: string;
+  vendorCount: number;
+  tenantCount: number;
   compliant: number;
   expiring_soon: number;
   non_compliant: number;
@@ -64,11 +69,17 @@ export interface ActivityEntry {
 async function getDashboardData(orgId: string) {
   const supabase = await createClient();
 
+  // Start of current month for "This Month" stats
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const monthStartISO = monthStart.toISOString();
+
   // Parallel-fetch everything we need
-  const [propertiesRes, vendorsRes, tenantsRes, activityRes, orgRes] = await Promise.all([
+  const [propertiesRes, vendorsRes, tenantsRes, activityRes, orgRes, notificationsCountRes] = await Promise.all([
     supabase
       .from('properties')
-      .select('id, name')
+      .select('id, name, property_type')
       .eq('organization_id', orgId)
       .order('name'),
     supabase
@@ -94,6 +105,12 @@ async function getDashboardData(orgId: string) {
       .select('plan, trial_ends_at')
       .eq('id', orgId)
       .single(),
+    supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId)
+      .eq('status', 'sent')
+      .gte('sent_date', monthStartISO),
   ]);
 
   const properties = propertiesRes.data ?? [];
@@ -164,8 +181,12 @@ async function getDashboardData(orgId: string) {
     trialDaysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
   }
 
+  const notificationsSentThisMonth = notificationsCountRes.count ?? 0;
+
   const stats: DashboardStats = {
     propertyCount: properties.length,
+    vendorCount: vendors.length,
+    tenantCount: tenants.length,
     entityCount: allEntities.length,
     complianceRate,
     expiringSoonCount: statusCounts.expiring_soon,
@@ -311,11 +332,15 @@ async function getDashboardData(orgId: string) {
   actionItems.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
 
   // ---- Property overviews ----
-  const propertyOverviews: PropertyOverview[] = properties.map((p) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const propertyOverviews: PropertyOverview[] = properties.map((p: any) => {
     const propEntities = allEntities.filter((e) => e.propertyId === p.id);
     return {
       id: p.id,
       name: p.name,
+      propertyType: p.property_type ?? 'other',
+      vendorCount: propEntities.filter((e) => e.type === 'vendor').length,
+      tenantCount: propEntities.filter((e) => e.type === 'tenant').length,
       compliant: propEntities.filter((e) => e.status === 'compliant').length,
       expiring_soon: propEntities.filter((e) => e.status === 'expiring_soon').length,
       non_compliant: propEntities.filter((e) => e.status === 'non_compliant').length,
@@ -345,6 +370,7 @@ async function getDashboardData(orgId: string) {
     actionItems,
     propertyOverviews,
     activity,
+    notificationsSentThisMonth,
     propertyList,
     vendorList,
     tenantList,
