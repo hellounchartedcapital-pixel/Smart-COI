@@ -369,7 +369,7 @@ export function CompliancePanel({
                   (er) => er.property_entity_id === pe.id
                 );
                 const isMet = result?.status === 'found';
-                const isFuzzy = result?.fuzzy_match === true;
+                const isFuzzy = result?.match_details != null;
                 const label = pe.entity_type === 'certificate_holder'
                   ? 'Certificate Holder'
                   : 'Additional Insured';

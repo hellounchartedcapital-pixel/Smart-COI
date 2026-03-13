@@ -68,7 +68,6 @@ export interface EntityResultRow {
   extracted_entity_id: string | null;
   status: EntityComplianceStatus;
   match_details: string | null;
-  fuzzy_match?: boolean;
 }
 
 export interface ComplianceCalculationResult {
@@ -423,7 +422,6 @@ export function calculateCompliance(
         extracted_entity_id: null,
         status: 'missing',
         match_details: null,
-        fuzzy_match: false,
       });
       hasGap = true;
     } else {
@@ -450,7 +448,6 @@ export function calculateCompliance(
         extracted_entity_id: bestMatch.entity.id ?? null,
         status: 'found',
         match_details: details,
-        fuzzy_match: fuzzy,
       });
     }
   }
