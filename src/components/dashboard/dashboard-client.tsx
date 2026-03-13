@@ -615,6 +615,7 @@ function ActionItemRow({ item }: { item: ActionItem }) {
   }
 
   const showRequestCOI = item.status !== 'pending' && item.contactEmail;
+  const displayName = item.name.length > 40 ? item.name.slice(0, 40) + '...' : item.name;
 
   return (
     <div
@@ -628,7 +629,9 @@ function ActionItemRow({ item }: { item: ActionItem }) {
           >
             {config.label}
           </Badge>
-          <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
+          <p className="truncate text-sm font-medium text-foreground" title={item.name}>
+            {displayName}
+          </p>
         </div>
         <p className="mt-0.5 text-xs text-muted-foreground">
           {item.propertyName && <>{item.propertyName} &middot; </>}
@@ -799,8 +802,8 @@ function UpcomingExpirations({
                   className="block rounded-lg p-2 transition-colors hover:bg-slate-50"
                 >
                   <div className="flex items-center justify-between">
-                    <p className="truncate text-xs font-medium text-foreground">
-                      {item.name}
+                    <p className="truncate text-xs font-medium text-foreground" title={item.name}>
+                      {item.name.length > 40 ? item.name.slice(0, 40) + '...' : item.name}
                     </p>
                     <span className="shrink-0 text-[10px] font-semibold text-amber-600">
                       {item.daysUntilExpiration}d
