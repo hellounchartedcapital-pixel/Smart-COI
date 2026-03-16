@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { AnimateIn } from './animate-in';
 
 /* ─── Icons ─── */
@@ -70,31 +71,37 @@ const features = [
     icon: <IconUpload className="h-6 w-6" />,
     title: 'Bulk COI Upload',
     description: 'Upload your entire portfolio of certificates at once. Our AI processes them all in parallel and builds your vendor roster automatically.',
+    href: '/features/coi-tracking',
   },
   {
     icon: <IconCpu className="h-6 w-6" />,
     title: 'AI-Powered Extraction',
     description: 'AI reads every COI and extracts coverage types, limits, dates, carriers, and named insureds — no manual data entry.',
+    href: '/ai-coi-extraction',
   },
   {
     icon: <IconClipboard className="h-6 w-6" />,
     title: 'Compliance Templates',
     description: 'Define vendor and tenant insurance requirements using built-in templates with standard coverage types and minimum limits.',
+    href: '/features/compliance-automation',
   },
   {
     icon: <IconGlobe className="h-6 w-6" />,
     title: 'Self-Service Portal',
     description: 'Vendors and tenants upload certificates directly through a branded portal. No login required — just a secure link.',
+    href: '/features/vendor-management',
   },
   {
     icon: <IconBell className="h-6 w-6" />,
     title: 'Automated Notifications',
     description: 'Configurable expiration warnings and follow-up reminders. Non-compliant entities get notified automatically with escalating urgency.',
+    href: '/features/coi-tracking',
   },
   {
     icon: <IconBarChart className="h-6 w-6" />,
     title: 'Real-Time Dashboard',
     description: 'See compliance health across every property at a glance. Track status, identify gaps, and prioritize follow-ups from one view.',
+    href: '/features/coi-tracking',
   },
 ];
 
@@ -122,13 +129,13 @@ export function FeaturesGrid() {
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((feat, i) => (
             <AnimateIn key={feat.title} delay={i * 80}>
-              <div className="group rounded-2xl border border-slate-200 bg-white p-7 transition-all hover:shadow-lg hover:border-[#73E2A7]/30 h-full">
+              <Link href={feat.href} className="group block rounded-2xl border border-slate-200 bg-white p-7 transition-all hover:shadow-lg hover:border-[#73E2A7]/30 h-full">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#73E2A7]/10 text-[#4CC78A] transition-colors group-hover:bg-[#73E2A7]/15">
                   {feat.icon}
                 </div>
                 <h3 className="mt-4 text-lg font-bold text-slate-950">{feat.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-500">{feat.description}</p>
-              </div>
+              </Link>
             </AnimateIn>
           ))}
         </div>

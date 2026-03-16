@@ -58,6 +58,40 @@ export default function BlogIndexPage() {
             ))}
           </div>
         )}
+        {/* Related Resources */}
+        <section className="mt-16 border-t border-slate-200 pt-8">
+          <h2 className="text-lg font-bold text-foreground">Explore More</h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <Link
+              href="/features/coi-tracking"
+              className="rounded-lg border border-slate-200 p-4 transition-colors hover:border-[#4CC78A]/30 hover:bg-[#4CC78A]/5"
+            >
+              <p className="text-sm font-semibold text-foreground">COI Tracking Features</p>
+              <p className="mt-1 text-xs text-muted-foreground">See how SmartCOI automates certificate tracking</p>
+            </Link>
+            <Link
+              href="/compare"
+              className="rounded-lg border border-slate-200 p-4 transition-colors hover:border-[#4CC78A]/30 hover:bg-[#4CC78A]/5"
+            >
+              <p className="text-sm font-semibold text-foreground">Compare Solutions</p>
+              <p className="mt-1 text-xs text-muted-foreground">See how SmartCOI stacks up against alternatives</p>
+            </Link>
+            <Link
+              href="/insurance-requirements"
+              className="rounded-lg border border-slate-200 p-4 transition-colors hover:border-[#4CC78A]/30 hover:bg-[#4CC78A]/5"
+            >
+              <p className="text-sm font-semibold text-foreground">Insurance Requirements by Property Type</p>
+              <p className="mt-1 text-xs text-muted-foreground">Coverage guides for every commercial property type</p>
+            </Link>
+            <Link
+              href="/for/property-management-companies"
+              className="rounded-lg border border-slate-200 p-4 transition-colors hover:border-[#4CC78A]/30 hover:bg-[#4CC78A]/5"
+            >
+              <p className="text-sm font-semibold text-foreground">For Property Management Companies</p>
+              <p className="mt-1 text-xs text-muted-foreground">Portfolio-wide compliance automation</p>
+            </Link>
+          </div>
+        </section>
       </main>
       <Footer />
     </>

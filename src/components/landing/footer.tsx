@@ -55,6 +55,9 @@ export function Footer() {
               <Link href="/for/industrial" className="text-slate-400 transition-colors hover:text-white">
                 Industrial & Warehouse
               </Link>
+              <Link href="/for/mixed-use" className="text-slate-400 transition-colors hover:text-white">
+                Mixed-Use Developments
+              </Link>
               <Link href="/for/hoa" className="text-slate-400 transition-colors hover:text-white">
                 HOA & Community Associations
               </Link>
