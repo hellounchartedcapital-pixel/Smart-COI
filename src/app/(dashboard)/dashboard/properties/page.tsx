@@ -183,14 +183,14 @@ export default async function PropertiesPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
             Properties
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-slate-500">
             Manage your properties and track compliance.
           </p>
         </div>
