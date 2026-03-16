@@ -3,6 +3,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import {
+  initSessionIfNeeded,
   updateLastActive,
   checkSession,
   signOutWithSessionExpiry,
@@ -27,6 +28,9 @@ export function SessionGuard() {
 
   const runSessionCheck = useCallback(() => {
     if (signingOut.current) return;
+    // Seed localStorage for sessions established via server-side redirects
+    // (Google OAuth, password reset) where the login form was bypassed.
+    initSessionIfNeeded();
     const status = checkSession();
     if (!status.valid) {
       signingOut.current = true;
