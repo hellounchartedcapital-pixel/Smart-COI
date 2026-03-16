@@ -64,11 +64,17 @@ export default async function DashboardLayout({
       <UpgradeModalProvider>
         <SessionGuard />
         <CrispChat userEmail={userEmail} userName={userName ?? undefined} />
-        <div className="flex h-screen overflow-hidden bg-slate-50">
+        <div className="flex h-screen overflow-hidden bg-slate-50/50">
           <DashboardShell
             userName={userName ?? null}
             userEmail={userEmail}
             orgName={orgName}
+            trialDaysLeft={(() => {
+              if (orgPlan !== 'trial' || !trialEndsAt) return null;
+              const msLeft = new Date(trialEndsAt).getTime() - Date.now();
+              return Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
+            })()}
+            plan={orgPlan}
             topBanner={<TrialBanner plan={orgPlan} trialEndsAt={trialEndsAt} paymentFailed={paymentFailed} />}
           >
             {children}

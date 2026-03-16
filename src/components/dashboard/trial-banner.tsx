@@ -15,7 +15,6 @@ interface TrialBannerProps {
 export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerProps) {
   const [dismissed, setDismissed] = useState(false);
 
-  // Hydrate dismissed state from sessionStorage
   useEffect(() => {
     if (sessionStorage.getItem(DISMISSED_KEY) === 'true') {
       setDismissed(true);
@@ -25,14 +24,14 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
   // Payment failed banner — NOT dismissible, takes priority
   if (paymentFailed) {
     return (
-      <div className="flex items-center justify-center gap-2 border-b border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800">
-        <CreditCard className="h-4 w-4 flex-shrink-0 text-red-600" />
+      <div className="flex items-center justify-center gap-2.5 border-b border-red-100 bg-red-50 px-4 py-2.5 text-sm text-red-800">
+        <CreditCard className="h-4 w-4 flex-shrink-0 text-red-500" />
         <span className="font-medium">
           Your last payment failed. Please update your payment method to avoid service interruption.
         </span>
         <Link
           href="/dashboard/settings/billing"
-          className="ml-2 inline-flex items-center rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700"
+          className="ml-2 inline-flex items-center rounded-lg bg-red-600 px-3.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700"
         >
           Update Payment Method
         </Link>
@@ -45,10 +44,8 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
 
   const now = new Date();
   const expiresAt = trialEndsAt ? new Date(trialEndsAt) : null;
-  // Treat null trial_ends_at as expired — legacy accounts without an end date
   const isExpired = expiresAt ? now >= expiresAt : true;
 
-  // Calculate days remaining
   let daysRemaining: number | null = null;
   let daysText = '';
   if (expiresAt && !isExpired) {
@@ -65,17 +62,17 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
 
   const isUrgent = daysRemaining !== null && daysRemaining <= 3;
 
-  // Expired or null trial_ends_at banner — NOT dismissible
+  // Expired banner — NOT dismissible
   if (isExpired) {
     return (
-      <div className="flex items-center justify-center gap-2 bg-amber-50 border-b border-amber-200 px-4 py-2.5 text-sm text-amber-800">
-        <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-600" />
+      <div className="flex items-center justify-center gap-2.5 bg-amber-50 border-b border-amber-100 px-4 py-2.5 text-sm text-amber-800">
+        <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-500" />
         <span className="font-medium">
           Your free trial has expired. Upgrade to continue using SmartCOI.
         </span>
         <Link
           href="/dashboard/settings/billing"
-          className="ml-2 inline-flex items-center rounded-md bg-amber-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-amber-700"
+          className="ml-2 inline-flex items-center rounded-lg bg-amber-600 px-3.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-amber-700"
         >
           Upgrade
         </Link>
@@ -93,16 +90,16 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
 
   return (
     <div
-      className={`flex items-center justify-center gap-2 border-b px-4 py-2 text-sm ${
+      className={`flex items-center justify-center gap-2.5 border-b px-4 py-2 text-sm ${
         isUrgent
-          ? 'border-amber-200 bg-amber-50 text-amber-800'
-          : 'border-indigo-200 bg-indigo-50 text-indigo-700'
+          ? 'border-amber-100 bg-amber-50 text-amber-800'
+          : 'border-emerald-100 bg-emerald-50 text-emerald-800'
       }`}
     >
       {isUrgent ? (
-        <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-600" />
+        <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-500" />
       ) : (
-        <Clock className="h-4 w-4 flex-shrink-0 text-indigo-500" />
+        <Clock className="h-4 w-4 flex-shrink-0 text-emerald-500" />
       )}
       <span>
         You&apos;re on a free trial
@@ -110,20 +107,20 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
       </span>
       <Link
         href="/dashboard/settings/billing"
-        className={`ml-2 inline-flex items-center rounded-md px-3 py-1 text-xs font-semibold text-white transition-colors ${
+        className={`ml-2 inline-flex items-center rounded-lg px-3.5 py-1 text-xs font-semibold text-white transition-colors ${
           isUrgent
             ? 'bg-amber-600 hover:bg-amber-700'
-            : 'bg-indigo-600 hover:bg-indigo-700'
+            : 'bg-emerald-600 hover:bg-emerald-700'
         }`}
       >
         Upgrade
       </Link>
       <button
         onClick={handleDismiss}
-        className={`ml-1 rounded p-0.5 transition-colors ${
+        className={`ml-1 rounded-lg p-0.5 transition-colors ${
           isUrgent
             ? 'text-amber-400 hover:bg-amber-100 hover:text-amber-600'
-            : 'text-indigo-400 hover:bg-indigo-100 hover:text-indigo-600'
+            : 'text-emerald-400 hover:bg-emerald-100 hover:text-emerald-600'
         }`}
         aria-label="Dismiss trial banner"
       >
