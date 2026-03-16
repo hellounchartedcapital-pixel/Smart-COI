@@ -242,7 +242,7 @@ export function DashboardShell({
         {/* Navigation groups */}
         <nav className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
           {navGroups.map((group, gi) => (
-            <div key={group.title} className={cn(gi > 0 ? 'mt-6' : '')}>
+            <div key={group.title} className={cn(gi > 0 ? 'mt-6' : '')} {...(group.title === 'COMPLIANCE' ? { 'data-tour': 'sidebar-nav' } : {})}>
               {/* Group label */}
               <div
                 className={cn(
