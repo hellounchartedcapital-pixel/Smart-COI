@@ -71,6 +71,39 @@ export function updateLastActive(): void {
 }
 
 // ============================================================================
+// Session initialization (OAuth / server-side redirect flows)
+// ============================================================================
+
+/**
+ * Seed localStorage session state when it's missing but the session cookie
+ * exists. This happens after OAuth redirects (Google login) and password-reset
+ * flows where the server sets the session cookie but client-side localStorage
+ * is never initialized (the login form is bypassed entirely).
+ *
+ * Call this before the first `checkSession()` to prevent false expiration.
+ */
+export function initSessionIfNeeded(): void {
+  try {
+    const hasSessionCookie = document.cookie
+      .split('; ')
+      .some((c) => c.startsWith(`${SESSION_COOKIE_NAME}=`));
+
+    if (hasSessionCookie && !localStorage.getItem(LAST_ACTIVE_KEY)) {
+      const now = String(Date.now());
+      localStorage.setItem(LAST_ACTIVE_KEY, now);
+      localStorage.setItem(LOGIN_TIME_KEY, new Date().toISOString());
+      // Default to standard 24h timeout for OAuth sessions (no remember-me
+      // checkbox in the OAuth flow). Don't overwrite if already set.
+      if (!localStorage.getItem(REMEMBER_ME_KEY)) {
+        localStorage.setItem(REMEMBER_ME_KEY, 'false');
+      }
+    }
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
+// ============================================================================
 // Session checks
 // ============================================================================
 
