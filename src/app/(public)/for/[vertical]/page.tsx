@@ -177,20 +177,32 @@ export default async function VerticalPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* Related Insurance Requirements */}
-        {v.insuranceRequirementsSlug && (
-          <section className="mx-auto mt-16 max-w-4xl px-6 text-center">
-            <p className="text-sm text-slate-500">
-              Learn more about insurance requirements for your property type:{' '}
+        {/* Related Resources */}
+        <section className="mx-auto mt-16 max-w-4xl px-6">
+          <h2 className="text-xl font-bold text-slate-950">Related Resources</h2>
+          <div className="mt-4 flex flex-col gap-3">
+            {v.insuranceRequirementsSlug && (
               <Link
                 href={`/insurance-requirements/${v.insuranceRequirementsSlug}`}
-                className="font-medium text-[#4CC78A] hover:underline"
+                className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline"
               >
                 {v.name} Insurance Requirements
               </Link>
-            </p>
-          </section>
-        )}
+            )}
+            <Link href="/blog/vendor-onboarding-checklist-property-managers" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              Vendor Onboarding Checklist for Property Managers
+            </Link>
+            <Link href="/features/coi-tracking" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              COI Tracking Features
+            </Link>
+            <Link href="/blog/coi-compliance-guide-property-managers" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              The Complete Guide to COI Compliance
+            </Link>
+            <Link href="/compare" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              Compare COI Tracking Solutions
+            </Link>
+          </div>
+        </section>
 
         {/* CTA */}
         <section className="mx-auto mt-20 max-w-4xl px-6 text-center">

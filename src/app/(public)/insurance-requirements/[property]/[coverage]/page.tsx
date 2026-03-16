@@ -253,6 +253,22 @@ export default async function NicheInsurancePage({ params }: PageProps) {
           </div>
         </section>
 
+        {/* Related blog content */}
+        <section className="mx-auto max-w-4xl px-6 mt-16">
+          <h2 className="text-xl font-bold text-slate-900">Related Resources</h2>
+          <div className="mt-4 flex flex-col gap-3">
+            <Link href={`/insurance-requirements/${pt.slug}`} className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              All Insurance Requirements for {pt.plural}
+            </Link>
+            <Link href="/blog/how-to-set-insurance-requirements-commercial-real-estate" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              How to Set Vendor & Tenant Insurance Requirements
+            </Link>
+            <Link href="/blog/coi-compliance-guide-property-managers" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              The Complete Guide to COI Compliance
+            </Link>
+          </div>
+        </section>
+
         {/* Internal links — related coverages for this property type */}
         <section className="mx-auto max-w-4xl px-6 mt-16">
           <h2 className="text-xl font-bold text-slate-900">

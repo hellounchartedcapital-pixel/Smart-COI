@@ -85,6 +85,25 @@ export default function InsuranceRequirementsIndex() {
           </div>
         </section>
 
+        {/* Related Resources */}
+        <section className="mx-auto max-w-4xl px-6 mt-16">
+          <h2 className="text-xl font-bold text-slate-900">Related Resources</h2>
+          <div className="mt-4 flex flex-col gap-3">
+            <Link href="/blog/how-to-set-insurance-requirements-commercial-real-estate" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              How to Set Vendor & Tenant Insurance Requirements
+            </Link>
+            <Link href="/blog/coi-compliance-guide-property-managers" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              The Complete Guide to COI Compliance
+            </Link>
+            <Link href="/blog/what-is-additional-insured-commercial-real-estate" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              Additional Insured in Commercial Real Estate
+            </Link>
+            <Link href="/features/compliance-automation" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              Automated Compliance Checking
+            </Link>
+          </div>
+        </section>
+
         {/* CTA */}
         <section className="mx-auto max-w-4xl px-6 mt-20 text-center">
           <div className="rounded-2xl bg-slate-950 px-8 py-14">

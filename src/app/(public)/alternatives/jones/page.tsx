@@ -247,6 +247,25 @@ export default function JonesAlternativesPage() {
           </div>
         </section>
 
+        {/* Related Content */}
+        <section className="mx-auto mt-16 max-w-4xl px-6">
+          <h2 className="text-xl font-bold text-slate-950">Related</h2>
+          <div className="mt-4 flex flex-col gap-3">
+            <Link href="/compare/smartcoi-vs-jones" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              SmartCOI vs Jones: Detailed Comparison
+            </Link>
+            <Link href="/features/vendor-management" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              Vendor Management Features
+            </Link>
+            <Link href="/blog/cost-of-not-tracking-vendor-insurance" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              The Hidden Cost of Skipping Vendor COI Tracking
+            </Link>
+            <Link href="/compare" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              Compare All COI Tracking Solutions
+            </Link>
+          </div>
+        </section>
+
         {/* CTA */}
         <section className="mx-auto mt-20 max-w-4xl px-6 text-center">
           <div className="rounded-2xl bg-slate-950 px-8 py-14 sm:px-14">

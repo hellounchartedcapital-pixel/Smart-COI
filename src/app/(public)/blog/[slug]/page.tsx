@@ -6,6 +6,55 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 import { getAllPosts, getPostBySlug } from '@/lib/blog';
 
+/** Static map of related resource links per blog post slug. */
+const relatedResources: Record<string, { href: string; label: string }[]> = {
+  'acord-25-certificate-explained': [
+    { href: '/features/coi-tracking', label: 'COI Tracking Features' },
+    { href: '/blog/coi-compliance-guide-property-managers', label: 'The Complete Guide to COI Compliance' },
+    { href: '/compare/smartcoi-vs-spreadsheets', label: 'Software vs Spreadsheets for COI Tracking' },
+  ],
+  'vendor-onboarding-checklist-property-managers': [
+    { href: '/features/vendor-management', label: 'Vendor Management Features' },
+    { href: '/blog/cost-of-not-tracking-vendor-insurance', label: 'The Hidden Cost of Skipping Vendor COI Tracking' },
+    { href: '/for/property-management-companies', label: 'SmartCOI for Property Management Companies' },
+  ],
+  'waiver-of-subrogation-property-managers': [
+    { href: '/blog/what-is-additional-insured-commercial-real-estate', label: 'What Is Additional Insured in Commercial Real Estate?' },
+    { href: '/features/compliance-automation', label: 'Automated Compliance Checking' },
+    { href: '/insurance-requirements', label: 'Insurance Requirements by Property Type' },
+  ],
+  'coi-expiration-tracking-best-practices': [
+    { href: '/features/coi-tracking', label: 'COI Tracking Features' },
+    { href: '/blog/building-coi-compliance-policy-property-management', label: 'Building a COI Compliance Policy' },
+    { href: '/compare/smartcoi-vs-mycoi', label: 'SmartCOI vs myCOI' },
+  ],
+  'cost-of-not-tracking-vendor-insurance': [
+    { href: '/features/vendor-management', label: 'Vendor Management Features' },
+    { href: '/blog/vendor-onboarding-checklist-property-managers', label: 'Vendor Onboarding Checklist for Property Managers' },
+    { href: '/compare/smartcoi-vs-jones', label: 'SmartCOI vs Jones' },
+  ],
+  'coi-compliance-guide-property-managers': [
+    { href: '/features/compliance-automation', label: 'Automated Compliance Checking' },
+    { href: '/blog/how-to-set-insurance-requirements-commercial-real-estate', label: 'How to Set Insurance Requirements' },
+    { href: '/blog/building-coi-compliance-policy-property-management', label: 'Building a COI Compliance Policy' },
+  ],
+  'what-is-additional-insured-commercial-real-estate': [
+    { href: '/blog/waiver-of-subrogation-property-managers', label: 'Waiver of Subrogation for Property Managers' },
+    { href: '/features/compliance-automation', label: 'Automated Compliance Checking' },
+    { href: '/blog/coi-compliance-guide-property-managers', label: 'The Complete Guide to COI Compliance' },
+  ],
+  'how-to-set-insurance-requirements-commercial-real-estate': [
+    { href: '/insurance-requirements', label: 'Insurance Requirements by Property Type' },
+    { href: '/blog/coi-compliance-guide-property-managers', label: 'The Complete Guide to COI Compliance' },
+    { href: '/features/compliance-automation', label: 'Automated Compliance Checking' },
+  ],
+  'building-coi-compliance-policy-property-management': [
+    { href: '/blog/coi-compliance-guide-property-managers', label: 'The Complete Guide to COI Compliance' },
+    { href: '/blog/vendor-onboarding-checklist-property-managers', label: 'Vendor Onboarding Checklist' },
+    { href: '/features/vendor-management', label: 'Vendor Management Features' },
+  ],
+};
+
 interface Props {
   params: Promise<{ slug: string }>;
 }
@@ -40,6 +89,10 @@ export default async function BlogPostPage({ params }: Props) {
   const post = getPostBySlug(slug);
   if (!post) notFound();
 
+  const allPosts = getAllPosts();
+  const otherPosts = allPosts.filter((p) => p.slug !== slug).slice(0, 3);
+  const resources = relatedResources[slug] ?? [];
+
   return (
     <>
       <Navbar />
@@ -72,6 +125,43 @@ export default async function BlogPostPage({ params }: Props) {
             <MDXRemote source={post.content} />
           </div>
         </article>
+
+        {/* Related Resources */}
+        {resources.length > 0 && (
+          <section className="mt-12 border-t border-slate-200 pt-8">
+            <h2 className="text-lg font-bold text-foreground">Related Resources</h2>
+            <div className="mt-4 flex flex-col gap-3">
+              {resources.map((r) => (
+                <Link
+                  key={r.href}
+                  href={r.href}
+                  className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline"
+                >
+                  {r.label}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* More from the Blog */}
+        {otherPosts.length > 0 && (
+          <section className="mt-10 border-t border-slate-200 pt-8">
+            <h2 className="text-lg font-bold text-foreground">More from the Blog</h2>
+            <div className="mt-4 space-y-4">
+              {otherPosts.map((p) => (
+                <Link key={p.slug} href={`/blog/${p.slug}`} className="block group">
+                  <p className="text-sm font-semibold text-foreground group-hover:text-[#4CC78A] transition-colors">
+                    {p.title}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
+                    {p.description}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
       <Footer />
     </>

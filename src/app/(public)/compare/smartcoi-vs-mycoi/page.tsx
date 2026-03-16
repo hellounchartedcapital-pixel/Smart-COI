@@ -185,6 +185,25 @@ export default function SmartCOIvsMyCOIPage() {
           </div>
         </section>
 
+        {/* Related Content */}
+        <section className="mx-auto mt-16 max-w-4xl px-6">
+          <h2 className="text-xl font-bold text-slate-950">Related</h2>
+          <div className="mt-4 flex flex-col gap-3">
+            <Link href="/alternatives/mycoi" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              myCOI Alternatives for COI Tracking
+            </Link>
+            <Link href="/features/compliance-automation" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              Automated Compliance Checking
+            </Link>
+            <Link href="/blog/cost-of-not-tracking-vendor-insurance" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              The Hidden Cost of Skipping Vendor COI Tracking
+            </Link>
+            <Link href="/compare/smartcoi-vs-trustlayer" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              SmartCOI vs TrustLayer
+            </Link>
+          </div>
+        </section>
+
         {/* CTA */}
         <section className="mx-auto mt-20 max-w-4xl px-6 text-center">
           <div className="rounded-2xl bg-slate-950 px-8 py-14 sm:px-14">

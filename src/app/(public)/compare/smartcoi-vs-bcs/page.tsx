@@ -165,6 +165,25 @@ export default function SmartCOIvsBCSPage() {
           </div>
         </section>
 
+        {/* Related Content */}
+        <section className="mx-auto mt-16 max-w-4xl px-6">
+          <h2 className="text-xl font-bold text-slate-950">Related</h2>
+          <div className="mt-4 flex flex-col gap-3">
+            <Link href="/features/coi-tracking" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              SmartCOI COI Tracking Features
+            </Link>
+            <Link href="/blog/acord-25-certificate-explained" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              ACORD 25 Certificate Explained
+            </Link>
+            <Link href="/compare/smartcoi-vs-jones" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              SmartCOI vs Jones
+            </Link>
+            <Link href="/blog/coi-compliance-guide-property-managers" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              The Complete Guide to COI Compliance
+            </Link>
+          </div>
+        </section>
+
         {/* CTA */}
         <section className="mx-auto mt-20 max-w-4xl px-6 text-center">
           <div className="rounded-2xl bg-slate-950 px-8 py-14 sm:px-14">

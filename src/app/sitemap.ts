@@ -199,18 +199,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     // Utility pages
     {
-      url: `${BASE_URL}/signup`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.5,
-    },
-    {
-      url: `${BASE_URL}/login`,
-      lastModified: new Date(),
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
       url: `${BASE_URL}/terms`,
       lastModified: new Date(),
       changeFrequency: 'yearly',
