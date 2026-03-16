@@ -256,7 +256,7 @@ export function DashboardClient({
       )}
 
       {/* ---- Greeting + Actions ---- */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between" data-tutorial="dashboard-overview">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
             Hello{stats.propertyCount > 0 ? '' : ' there'}
@@ -269,7 +269,7 @@ export function DashboardClient({
           <Button variant="ghost" size="sm" onClick={startTutorial} className="text-xs text-slate-500 hover:text-slate-700">
             Take a Tour
           </Button>
-          <Button onClick={() => setUploadOpen(true)} data-tutorial="upload-coi" className="rounded-lg">
+          <Button onClick={() => setUploadOpen(true)} data-tour="upload-coi" className="rounded-lg">
             <Upload className="mr-2 h-4 w-4" />
             Upload COI
           </Button>
@@ -484,7 +484,7 @@ function SummaryStatBlock({ label, value }: { label: string; value: number }) {
 
 function PropertiesSection({ properties }: { properties: PropertyOverview[] }) {
   return (
-    <div data-tutorial="properties-section">
+    <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-base font-semibold text-slate-900">
           Properties
@@ -626,7 +626,7 @@ function ActionQueue({
   const hasMore = items.length > 10;
 
   return (
-    <div className="rounded-2xl border border-slate-200/60 bg-white" data-tutorial="action-queue">
+    <div className="rounded-2xl border border-slate-200/60 bg-white" data-tour="action-queue">
       <div className="px-6 py-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -793,7 +793,7 @@ function ActivitySidebar({ entries }: { entries: ActivityEntry[] }) {
   const visibleEntries = entries.slice(0, 8);
 
   return (
-    <div className="rounded-2xl border border-slate-200/60 bg-white p-5" data-tutorial="activity-feed">
+    <div className="rounded-2xl border border-slate-200/60 bg-white p-5">
       <div className="flex items-center gap-2.5 mb-4">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50">
           <TrendingUp className="h-4 w-4 text-slate-500" />
