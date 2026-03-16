@@ -1,49 +1,62 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 const TUTORIAL_KEY = 'smartcoi_has_seen_tutorial';
 
-interface TutorialStep {
-  target: string; // data-tutorial attribute value
+// ============================================================================
+// Tour step definitions (6 steps)
+// ============================================================================
+
+interface TourStep {
+  target: string; // data-tour attribute value
   title: string;
   description: string;
 }
 
-const STEPS: TutorialStep[] = [
+const STEPS: TourStep[] = [
   {
-    target: 'dashboard-overview',
+    target: 'health-pills',
     title: 'Portfolio Health',
     description:
       'Your overall compliance rate across all properties. Click the status pills to filter the action queue below.',
   },
   {
-    target: 'properties-section',
-    title: 'Properties',
-    description:
-      'See compliance status at a glance for each property. Click any property card to view its vendors, tenants, and certificates.',
-  },
-  {
     target: 'action-queue',
     title: 'Action Queue',
     description:
-      'Your daily to-do list — everything that needs attention. Request updated COIs or upload new ones directly from here.',
-  },
-  {
-    target: 'activity-feed',
-    title: 'Activity Feed',
-    description:
-      'See what\u2019s happening automatically in the background — uploads, compliance checks, notifications sent, and more.',
+      'Vendors and tenants that need your attention — expired certificates, missing coverage, and compliance gaps. Handle items directly from here.',
   },
   {
     target: 'upload-coi',
-    title: 'Upload COI',
+    title: 'Upload Certificates',
     description:
-      'Add new certificates of insurance here. Upload for an existing vendor or tenant, create a new one, or bulk upload multiple COIs at once.',
+      'Upload certificates of insurance here. Our AI will automatically extract coverage details and match them to the right vendor.',
+  },
+  {
+    target: 'row-actions',
+    title: 'Quick Actions',
+    description:
+      'Request a certificate directly from a vendor via email, or upload one you\'ve already received — right from the action queue.',
+  },
+  {
+    target: 'portfolio-snapshot',
+    title: 'Portfolio Snapshot',
+    description:
+      'A quick summary of your portfolio — total properties, vendors, tenants, your compliance score, and upcoming expirations.',
+  },
+  {
+    target: 'sidebar-nav',
+    title: 'Navigation',
+    description:
+      'Manage your properties and vendors, set up insurance requirement templates, and configure compliance notifications from here.',
   },
 ];
+
+// ============================================================================
+// Hook: useTutorial
+// ============================================================================
 
 export function useTutorial() {
   const [show, setShow] = useState(false);
@@ -71,6 +84,10 @@ export function useTutorial() {
   return { showTutorial: show, startTutorial, closeTutorial };
 }
 
+// ============================================================================
+// Main tour component
+// ============================================================================
+
 interface DashboardTutorialProps {
   active: boolean;
   onClose: () => void;
@@ -78,30 +95,35 @@ interface DashboardTutorialProps {
 
 export function DashboardTutorial({ active, onClose }: DashboardTutorialProps) {
   const [step, setStep] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (active) setStep(0);
   }, [active]);
 
-  if (!active) return null;
-
-  const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
-
-  function handleNext() {
-    if (isLast) {
+  const handleNext = useCallback(() => {
+    if (step === STEPS.length - 1) {
       onClose();
     } else {
       setStep((s) => s + 1);
     }
-  }
+  }, [step, onClose]);
 
-  function handlePrev() {
+  const handlePrev = useCallback(() => {
     setStep((s) => Math.max(0, s - 1));
-  }
+  }, []);
 
-  return (
-    <TutorialOverlay
+  if (!active || !mounted) return null;
+
+  const current = STEPS[step];
+  const isLast = step === STEPS.length - 1;
+
+  return createPortal(
+    <TourOverlay
       step={step}
       totalSteps={STEPS.length}
       target={current.target}
@@ -110,12 +132,82 @@ export function DashboardTutorial({ active, onClose }: DashboardTutorialProps) {
       isLast={isLast}
       onNext={handleNext}
       onPrev={handlePrev}
-      onClose={onClose}
-    />
+      onSkip={onClose}
+    />,
+    document.body
   );
 }
 
-function TutorialOverlay({
+// ============================================================================
+// Tooltip placement logic
+// ============================================================================
+
+type Placement = 'top' | 'bottom' | 'left' | 'right';
+
+const TOOLTIP_GAP = 14;
+const TOOLTIP_WIDTH = 340;
+const TOOLTIP_APPROX_HEIGHT = 200;
+
+function computePlacement(
+  rect: DOMRect,
+  preferredOrder: Placement[] = ['bottom', 'top', 'right', 'left']
+): Placement {
+  const spaceAbove = rect.top;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const spaceLeft = rect.left;
+  const spaceRight = window.innerWidth - rect.right;
+
+  const fits: Record<Placement, boolean> = {
+    top: spaceAbove > TOOLTIP_APPROX_HEIGHT + TOOLTIP_GAP,
+    bottom: spaceBelow > TOOLTIP_APPROX_HEIGHT + TOOLTIP_GAP,
+    left: spaceLeft > TOOLTIP_WIDTH + TOOLTIP_GAP,
+    right: spaceRight > TOOLTIP_WIDTH + TOOLTIP_GAP,
+  };
+
+  for (const p of preferredOrder) {
+    if (fits[p]) return p;
+  }
+  return 'bottom'; // fallback
+}
+
+function computeTooltipPosition(
+  rect: DOMRect,
+  placement: Placement
+): { top: number; left: number } {
+  let top = 0;
+  let left = 0;
+
+  switch (placement) {
+    case 'bottom':
+      top = rect.bottom + TOOLTIP_GAP;
+      left = rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2;
+      break;
+    case 'top':
+      top = rect.top - TOOLTIP_GAP - TOOLTIP_APPROX_HEIGHT;
+      left = rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2;
+      break;
+    case 'right':
+      top = rect.top + rect.height / 2 - TOOLTIP_APPROX_HEIGHT / 2;
+      left = rect.right + TOOLTIP_GAP;
+      break;
+    case 'left':
+      top = rect.top + rect.height / 2 - TOOLTIP_APPROX_HEIGHT / 2;
+      left = rect.left - TOOLTIP_GAP - TOOLTIP_WIDTH;
+      break;
+  }
+
+  // Clamp within viewport
+  left = Math.max(12, Math.min(left, window.innerWidth - TOOLTIP_WIDTH - 12));
+  top = Math.max(12, Math.min(top, window.innerHeight - TOOLTIP_APPROX_HEIGHT - 12));
+
+  return { top, left };
+}
+
+// ============================================================================
+// Overlay + highlight ring + tooltip
+// ============================================================================
+
+function TourOverlay({
   step,
   totalSteps,
   target,
@@ -124,7 +216,7 @@ function TutorialOverlay({
   isLast,
   onNext,
   onPrev,
-  onClose,
+  onSkip,
 }: {
   step: number;
   totalSteps: number;
@@ -134,77 +226,51 @@ function TutorialOverlay({
   isLast: boolean;
   onNext: () => void;
   onPrev: () => void;
-  onClose: () => void;
+  onSkip: () => void;
 }) {
-  const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({});
-  const [spotlightStyle, setSpotlightStyle] = useState<React.CSSProperties>({});
+  const [rect, setRect] = useState<DOMRect | null>(null);
   const [ready, setReady] = useState(false);
+  const [placement, setPlacement] = useState<Placement>('bottom');
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setReady(false);
     let cancelled = false;
 
-    const el = document.querySelector(`[data-tutorial="${target}"]`);
+    const el = document.querySelector(`[data-tour="${target}"]`);
     if (!el) {
-      // Fallback: center tooltip on screen (e.g. "finish" step)
-      setSpotlightStyle({ display: 'none' });
-      setTooltipStyle({
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 10002,
-      });
+      // Element not found — show tooltip centered
+      setRect(null);
       setReady(true);
       return;
     }
 
-    // Scroll the element into view
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Scroll element into view smoothly
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-    // Wait 500ms for scroll to settle, then measure
+    // Give scroll time to finish, then measure
     const timer = setTimeout(() => {
       if (cancelled) return;
-      positionFromElement(el);
+      measure(el);
       setReady(true);
-    }, 500);
+    }, 350);
 
-    function positionFromElement(element: Element) {
-      const rect = element.getBoundingClientRect();
-      const pad = 8;
-      setSpotlightStyle({
-        position: 'fixed',
-        top: rect.top - pad,
-        left: rect.left - pad,
-        width: rect.width + pad * 2,
-        height: rect.height + pad * 2,
-        borderRadius: '8px',
-      });
+    function measure(element: Element) {
+      const r = element.getBoundingClientRect();
+      setRect(r);
 
-      // Determine if element is in the sidebar (left side, narrow)
-      const isSidebarElement = rect.left < 250 && rect.width < 250;
-
-      if (isSidebarElement) {
-        setTooltipStyle({
-          position: 'fixed',
-          top: Math.max(16, Math.min(rect.top, window.innerHeight - 250)),
-          left: rect.right + pad + 12,
-          zIndex: 10002,
-        });
-      } else {
-        const tooltipTop = rect.bottom + pad + 12;
-        setTooltipStyle({
-          position: 'fixed',
-          top: tooltipTop > window.innerHeight - 200 ? rect.top - 200 : tooltipTop,
-          left: Math.max(16, Math.min(rect.left, window.innerWidth - 360)),
-          zIndex: 10002,
-        });
-      }
+      // For sidebar elements, prefer placing tooltip to the right
+      const isSidebar = r.left < 280 && r.width < 280;
+      const p = computePlacement(
+        r,
+        isSidebar ? ['right', 'bottom', 'top', 'left'] : ['bottom', 'top', 'right', 'left']
+      );
+      setPlacement(p);
     }
 
     function handleResize() {
-      const el2 = document.querySelector(`[data-tutorial="${target}"]`);
-      if (el2) positionFromElement(el2);
+      const el2 = document.querySelector(`[data-tour="${target}"]`);
+      if (el2) measure(el2);
     }
 
     window.addEventListener('resize', handleResize);
@@ -215,64 +281,156 @@ function TutorialOverlay({
     };
   }, [target, step]);
 
+  // Compute positions
+  const tooltipPos = rect
+    ? computeTooltipPosition(rect, placement)
+    : { top: window.innerHeight / 2 - 100, left: window.innerWidth / 2 - TOOLTIP_WIDTH / 2 };
+
+  const highlightPad = 8;
+
   return (
     <>
-      {/* Dark overlay */}
+      {/* Very subtle page dimming — 10% opacity, page stays visible */}
       <div
-        className="fixed inset-0 z-[10000] bg-black/50 transition-opacity"
-        onClick={onClose}
+        className="fixed inset-0 z-[10000] bg-white/10 backdrop-blur-[0.5px]"
+        onClick={onSkip}
+        aria-hidden
       />
 
-      {/* Spotlight cutout */}
-      <div
-        className="fixed z-[10001] ring-[9999px] ring-black/50 transition-all duration-300"
-        style={spotlightStyle}
-      />
+      {/* Highlight ring around target element */}
+      {rect && (
+        <div
+          className="fixed z-[10001] pointer-events-none transition-all duration-300 ease-out"
+          style={{
+            top: rect.top - highlightPad,
+            left: rect.left - highlightPad,
+            width: rect.width + highlightPad * 2,
+            height: rect.height + highlightPad * 2,
+            borderRadius: '16px',
+            boxShadow: '0 0 0 3px rgba(16, 185, 129, 0.25), 0 0 20px 4px rgba(16, 185, 129, 0.1)',
+          }}
+        />
+      )}
 
       {/* Tooltip card */}
       <div
-        className={`z-[10002] w-[340px] rounded-lg border border-slate-200 bg-white p-5 shadow-xl transition-opacity duration-200 ${ready ? 'opacity-100' : 'opacity-0'}`}
-        style={tooltipStyle}
+        ref={tooltipRef}
+        className={`fixed z-[10002] transition-all duration-300 ease-out ${ready ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+        style={{
+          top: tooltipPos.top,
+          left: tooltipPos.left,
+          width: TOOLTIP_WIDTH,
+        }}
       >
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">
-              {step + 1} of {totalSteps}
-            </p>
-            <h3 className="mt-1 text-sm font-semibold text-foreground">{title}</h3>
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-lg shadow-slate-200/50">
+          {/* Step counter */}
+          <p className="text-[11px] font-medium text-slate-400">
+            {step + 1} of {totalSteps}
+          </p>
+
+          {/* Title */}
+          <h3 className="mt-1.5 text-sm font-semibold text-slate-900">
+            {title}
+          </h3>
+
+          {/* Description */}
+          <p className="mt-2 text-[13px] leading-relaxed text-slate-500">
+            {description}
+          </p>
+
+          {/* Navigation */}
+          <div className="mt-5 flex items-center justify-between">
+            {/* Step dots */}
+            <div className="flex gap-1.5">
+              {Array.from({ length: totalSteps }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all duration-200 ${
+                    i === step
+                      ? 'w-4 bg-emerald-500'
+                      : i < step
+                        ? 'w-1.5 bg-emerald-300'
+                        : 'w-1.5 bg-slate-200'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex items-center gap-2">
+              {step > 0 && (
+                <button
+                  type="button"
+                  onClick={onPrev}
+                  className="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+                >
+                  Back
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onNext}
+                className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+              >
+                {isLast ? 'Finish' : 'Next'}
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
+
+          {/* Skip tour link */}
+          <div className="mt-3 text-center">
+            <button
+              type="button"
+              onClick={onSkip}
+              className="text-[11px] text-slate-400 transition-colors hover:text-slate-600"
+            >
+              Skip tour
+            </button>
+          </div>
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          {description}
-        </p>
-        <div className="mt-4 flex items-center justify-between">
-          <div className="flex gap-1">
-            {Array.from({ length: totalSteps }).map((_, i) => (
-              <div
-                key={i}
-                className={`h-1.5 w-1.5 rounded-full ${i === step ? 'bg-brand' : 'bg-slate-200'}`}
-              />
-            ))}
-          </div>
-          <div className="flex gap-2">
-            {step > 0 && (
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onPrev}>
-                Back
-              </Button>
-            )}
-            <Button size="sm" className="h-7 text-xs" onClick={onNext}>
-              {isLast ? 'Get Started' : 'Next'}
-            </Button>
-          </div>
-        </div>
+
+        {/* Arrow pointing to the target */}
+        {rect && <TooltipArrow placement={placement} />}
       </div>
     </>
   );
+}
+
+// ============================================================================
+// Tooltip arrow
+// ============================================================================
+
+function TooltipArrow({ placement }: { placement: Placement }) {
+  const base = 'absolute w-3 h-3 bg-white border-slate-200/80 rotate-45';
+
+  switch (placement) {
+    case 'bottom':
+      return (
+        <div
+          className={`${base} border-l border-t`}
+          style={{ top: -6, left: '50%', marginLeft: -6 }}
+        />
+      );
+    case 'top':
+      return (
+        <div
+          className={`${base} border-r border-b`}
+          style={{ bottom: -6, left: '50%', marginLeft: -6 }}
+        />
+      );
+    case 'right':
+      return (
+        <div
+          className={`${base} border-l border-b`}
+          style={{ top: '50%', left: -6, marginTop: -6 }}
+        />
+      );
+    case 'left':
+      return (
+        <div
+          className={`${base} border-r border-t`}
+          style={{ top: '50%', right: -6, marginTop: -6 }}
+        />
+      );
+  }
 }

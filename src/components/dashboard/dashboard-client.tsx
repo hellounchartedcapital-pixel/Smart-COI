@@ -289,7 +289,7 @@ export function DashboardClient({
         {/* Left column: Action items + Properties */}
         <div className="space-y-8">
           {/* Portfolio Health Summary */}
-          <div className="rounded-2xl border border-slate-200/60 bg-white p-6">
+          <div className="rounded-2xl border border-slate-200/60 bg-white p-6" data-tour="health-pills">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-5">
                 <div>
@@ -359,7 +359,7 @@ export function DashboardClient({
         </div>
 
         {/* Right sidebar: Summary cards + Activity + Stats + Expirations */}
-        <div className="space-y-6">
+        <div className="space-y-6" data-tour="portfolio-snapshot">
           {/* Portfolio Overview Card */}
           <SummaryCard
             title="Portfolio Overview"
@@ -661,7 +661,7 @@ function ActionQueue({
       ) : (
         <div>
           {displayItems.map((item, i) => (
-            <ActionItemRow key={`${item.entityType}-${item.id}`} item={item} isLast={i === displayItems.length - 1} />
+            <ActionItemRow key={`${item.entityType}-${item.id}`} item={item} isLast={i === displayItems.length - 1} isFirst={i === 0} />
           ))}
           {hasMore && (
             <div className="border-t border-slate-100 px-6 py-3 text-center">
@@ -680,7 +680,7 @@ function ActionQueue({
   );
 }
 
-function ActionItemRow({ item, isLast }: { item: ActionItem; isLast: boolean }) {
+function ActionItemRow({ item, isLast, isFirst = false }: { item: ActionItem; isLast: boolean; isFirst?: boolean }) {
   const config = STATUS_CONFIG[item.status as keyof StatusDistribution] ?? STATUS_CONFIG.pending;
   const [sending, setSending] = useState(false);
   const { showUpgradeModal } = useUpgradeModal();
@@ -758,7 +758,7 @@ function ActionItemRow({ item, isLast }: { item: ActionItem; isLast: boolean }) 
           {description}
         </p>
       </div>
-      <div className="flex shrink-0 gap-1.5">
+      <div className="flex shrink-0 gap-1.5" {...(isFirst ? { 'data-tour': 'row-actions' } : {})}>
         {showRequestCOI && (
           <Button
             size="sm"
