@@ -50,6 +50,19 @@ export function PricingSection() {
           </div>
         </AnimateIn>
 
+        {/* Value anchor */}
+        <AnimateIn delay={30}>
+          <div className="mx-auto mt-8 max-w-2xl text-center">
+            <p className="text-base leading-relaxed text-slate-500 sm:text-[17px]">
+              Manual COI tracking costs property managers 15–20 hours per month in chasing
+              certificates, checking expirations, and following up with vendors. At $35/hour,
+              that&apos;s over <span className="font-semibold text-slate-700">$600/month in labor alone</span> — before
+              counting the risk of a single uninsured incident that could cost $500,000 or
+              more. SmartCOI starts at <span className="font-semibold text-emerald-700">$63/month</span>.
+            </p>
+          </div>
+        </AnimateIn>
+
         {/* Monthly / Annual toggle */}
         <AnimateIn delay={50}>
           <div className="mt-10 flex items-center justify-center gap-3">
@@ -123,6 +136,12 @@ export function PricingSection() {
               <p className="mt-2 text-sm text-slate-500">
                 Up to 50 certificates
               </p>
+              <p className="mt-1 text-xs text-slate-400">
+                $1.26 per certificate/month
+              </p>
+              <p className="mt-1 text-xs font-medium text-slate-400">
+                Ideal for 1–2 properties
+              </p>
 
               <ul className="mt-8 flex-1 space-y-4">
                 {[
@@ -147,7 +166,7 @@ export function PricingSection() {
                 href="/signup"
                 className="mt-8 flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
               >
-                Start Free — Upload 50 COIs
+                Start Free Trial
               </Link>
             </div>
           </AnimateIn>
@@ -182,6 +201,12 @@ export function PricingSection() {
               <p className="mt-2 text-sm text-slate-500">
                 Up to 150 certificates
               </p>
+              <p className="mt-1 text-xs text-slate-400">
+                $0.79 per certificate/month
+              </p>
+              <p className="mt-1 text-xs font-medium text-slate-400">
+                Ideal for 3–5 properties
+              </p>
 
               <ul className="mt-8 flex-1 space-y-4">
                 {[
@@ -206,7 +231,7 @@ export function PricingSection() {
                 href="/signup"
                 className="mt-8 flex h-12 w-full items-center justify-center rounded-xl bg-brand-dark text-sm font-semibold text-white shadow-lg shadow-brand-dark/20 transition-all hover:bg-[#3BB87A] hover:shadow-xl hover:shadow-brand-dark/30"
               >
-                Start Free — Upload 50 COIs
+                Start Free Trial
               </Link>
             </div>
           </AnimateIn>
@@ -237,6 +262,12 @@ export function PricingSection() {
               <p className="mt-2 text-sm text-slate-500">
                 Unlimited certificates + priority support
               </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Unlimited — best value at scale
+              </p>
+              <p className="mt-1 text-xs font-medium text-slate-400">
+                Ideal for 6+ properties or growing portfolios
+              </p>
 
               <ul className="mt-8 flex-1 space-y-4">
                 {[
@@ -262,7 +293,7 @@ export function PricingSection() {
                 href="/signup"
                 className="mt-8 flex h-12 w-full items-center justify-center rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
               >
-                Start Free — Upload 50 COIs
+                Start Free Trial
               </Link>
             </div>
           </AnimateIn>
