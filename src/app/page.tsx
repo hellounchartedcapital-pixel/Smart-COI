@@ -10,6 +10,7 @@ import { FeaturesGrid } from '@/components/landing/features-grid';
 import { TestimonialSection } from '@/components/landing/testimonial-section';
 import { PricingSection } from '@/components/landing/pricing-section';
 import { ResourcesSection } from '@/components/landing/resources-section';
+import { FAQSection } from '@/components/landing/faq-section';
 import { FinalCTA } from '@/components/landing/final-cta';
 
 export const metadata: Metadata = {
@@ -60,50 +61,66 @@ const jsonLd = {
       mainEntity: [
         {
           '@type': 'Question',
-          name: 'What is COI compliance tracking?',
+          name: 'How does the 14-day free trial work?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'COI compliance tracking is the process of collecting, reviewing, and monitoring Certificates of Insurance from vendors and tenants to ensure they carry the insurance coverage required by their contracts or leases.',
+            text: 'Sign up with just your email — no credit card required. You get full access to all features on the Starter plan for 14 days. Upload certificates, set up compliance templates, and see your dashboard populate in real time. If you decide SmartCOI is right for you, choose a plan before your trial ends. If not, your account simply deactivates — no charges, no hassle.',
           },
         },
         {
           '@type': 'Question',
-          name: 'How does SmartCOI extract data from insurance certificates?',
+          name: 'What file formats do you accept?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'SmartCOI uses AI to read uploaded COI PDFs and extract structured data including coverage types, policy limits, expiration dates, carrier names, and entity information — typically in under 30 seconds.',
+            text: 'SmartCOI accepts PDF files — the standard format for certificates of insurance. You can upload individual files or drag and drop up to 50 PDFs at once using our bulk upload feature.',
           },
         },
         {
           '@type': 'Question',
-          name: 'Can vendors upload their own certificates?',
+          name: 'Can vendors and tenants upload their own COIs?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Yes. SmartCOI provides a self-service upload portal where vendors and tenants can upload their certificates directly. The AI extracts and checks the data automatically, and property managers are notified only when review is needed.',
+            text: 'Yes. Every account includes a self-service portal where vendors and tenants can upload certificates directly through a secure link — no login or account creation required on their end. You can include the portal link in your onboarding emails or compliance notices.',
           },
         },
         {
           '@type': 'Question',
-          name: 'What happens when a certificate expires?',
+          name: 'What happens if I reach my certificate limit?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'SmartCOI automatically tracks expiration dates and sends configurable notifications to vendors/tenants before their certificates expire, with escalating follow-ups if they remain non-compliant.',
+            text: "You'll get a notification when you're approaching your plan's limit. You can upgrade to a higher tier at any time — your data and settings carry over instantly. If you're on a trial, the 50-certificate limit gives you plenty of room to evaluate the platform.",
           },
         },
         {
           '@type': 'Question',
-          name: 'Is there a free trial?',
+          name: 'How accurate is the AI extraction?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Yes. Upload up to 50 COIs free and see your compliance dashboard in minutes — no credit card required. All plans include a 14-day free trial with full access to every feature.',
+            text: "SmartCOI's AI is trained specifically on ACORD certificate formats and achieves 99%+ accuracy on standard fields including coverage types, policy limits, expiration dates, carrier names, and named insureds. Every extraction is visible for review, so you always have final say.",
           },
         },
         {
           '@type': 'Question',
-          name: 'Does SmartCOI replace my insurance broker or legal counsel?',
+          name: 'Can I import data from my current system?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'No. SmartCOI is a compliance tracking tool that assists property managers with data extraction and monitoring. It does not provide legal, insurance, or compliance advice. Users should always review extracted data and consult professionals for compliance decisions.',
+            text: 'If you\'re currently tracking COIs in spreadsheets or another tool, the fastest way to migrate is our bulk upload feature — simply upload all your existing certificate PDFs and SmartCOI will extract the data and build your vendor roster automatically. No manual data entry or CSV mapping required.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Is my data secure?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Yes. SmartCOI uses industry-standard encryption for data in transit and at rest, runs on secure cloud infrastructure, and follows best practices for authentication and access control. Your certificate data is never shared with third parties.',
+          },
+        },
+        {
+          '@type': 'Question',
+          name: 'Can I cancel anytime?',
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: 'Yes. There are no long-term contracts. Monthly plans can be canceled at any time. Annual plans are billed upfront for the year but you can cancel renewal at any time. If you cancel, you retain access through the end of your billing period.',
           },
         },
       ],
@@ -129,6 +146,7 @@ export default function LandingPage() {
         <FeaturesGrid />
         <TestimonialSection />
         <PricingSection />
+        <FAQSection />
         <ResourcesSection />
         <FinalCTA />
       </main>

@@ -32,12 +32,15 @@ export function FinalCTA() {
                 href="/signup"
                 className="group inline-flex h-12 items-center rounded-xl bg-slate-950 px-8 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 transition-all hover:bg-slate-800 hover:-translate-y-0.5"
               >
-                Upload 50 COIs Free
+                Start Your Free Trial
                 <IconArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
             <p className="mt-5 text-sm text-slate-800/60">
               14-day free trial &middot; Full access to all features
+            </p>
+            <p className="mt-1.5 text-sm text-slate-800/50">
+              No credit card required &middot; Set up in under 5 minutes
             </p>
           </div>
         </AnimateIn>
