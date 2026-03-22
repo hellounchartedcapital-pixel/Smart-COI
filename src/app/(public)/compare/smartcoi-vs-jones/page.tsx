@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'SmartCOI vs Jones: Which COI Tracker Is Better?',
+  title: 'SmartCOI vs Jones: COI Tracking Software Compared',
   description:
-    'Jones uses human reviewers and charges per certificate. SmartCOI uses AI for instant extraction at a flat monthly rate. See the full comparison.',
+    'Jones charges per certificate with human reviewers. SmartCOI uses AI for instant extraction at a flat rate. Compare pricing, speed, and features.',
   alternates: {
     canonical: 'https://smartcoi.io/compare/smartcoi-vs-jones',
   },
   openGraph: {
-    title: 'SmartCOI vs Jones: Which COI Tracker Is Better?',
+    title: 'SmartCOI vs Jones: COI Tracking Software Compared',
     description:
-      'Jones uses human reviewers and charges per certificate. SmartCOI uses AI for instant extraction at a flat monthly rate. See the full comparison.',
+      'Jones charges per certificate with human reviewers. SmartCOI uses AI for instant extraction at a flat rate. Compare pricing, speed, and features.',
     type: 'website',
     url: 'https://smartcoi.io/compare/smartcoi-vs-jones',
   },
@@ -38,6 +38,17 @@ export default function SmartCOIvsJonesPage() {
             extraction with self-serve setup. Jones offers a managed service with deep
             enterprise integrations. Here&apos;s an honest comparison.
           </p>
+        </section>
+
+        {/* Above-fold CTA */}
+        <section className="mx-auto mt-8 max-w-4xl px-6 text-center">
+          <Link
+            href="/signup"
+            className="inline-flex h-11 items-center rounded-xl bg-[#4CC78A] px-7 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#3BB87A]"
+          >
+            Try SmartCOI Free for 14 Days
+          </Link>
+          <p className="mt-2 text-xs text-slate-400">No credit card required</p>
         </section>
 
         {/* Comparison Table */}
@@ -195,7 +206,7 @@ export default function SmartCOIvsJonesPage() {
               href="/signup"
               className="mt-8 inline-flex h-12 items-center rounded-xl bg-[#73E2A7] px-8 text-sm font-bold text-slate-950 shadow-lg shadow-[#73E2A7]/20 transition-all hover:bg-[#4CC78A]"
             >
-              Upload 50 COIs Free
+              Start Your Free Trial
             </Link>
           </div>
         </section>

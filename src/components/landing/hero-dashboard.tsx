@@ -18,13 +18,13 @@ export function HeroDashboard() {
             <div className="h-2.5 w-2.5 rounded-full bg-[#FEBC2E]" />
             <div className="h-2.5 w-2.5 rounded-full bg-[#28C840]" />
           </div>
-          <div className="mx-auto rounded-md bg-white/80 border border-slate-200/60 px-12 py-1 text-[11px] text-slate-400">
+          <div className="mx-auto rounded-md bg-white/80 border border-slate-200/60 px-4 sm:px-12 py-1 text-[10px] sm:text-[11px] text-slate-400 truncate max-w-[200px] sm:max-w-none">
             app.smartcoi.io/dashboard
           </div>
         </div>
 
         {/* Dashboard layout: sidebar + main */}
-        <div className="flex min-h-[480px] sm:min-h-[520px]">
+        <div className="flex min-h-[360px] sm:min-h-[480px] md:min-h-[520px]">
           {/* Sidebar */}
           <Sidebar />
 

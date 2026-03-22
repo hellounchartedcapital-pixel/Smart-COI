@@ -40,6 +40,17 @@ export default function SmartCOIvsBCSPage() {
           </p>
         </section>
 
+        {/* Above-fold CTA */}
+        <section className="mx-auto mt-8 max-w-4xl px-6 text-center">
+          <Link
+            href="/signup"
+            className="inline-flex h-11 items-center rounded-xl bg-[#4CC78A] px-7 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#3BB87A]"
+          >
+            Try SmartCOI Free for 14 Days
+          </Link>
+          <p className="mt-2 text-xs text-slate-400">No credit card required</p>
+        </section>
+
         {/* Comparison Table */}
         <section className="mx-auto mt-16 max-w-4xl px-6">
           <div className="overflow-hidden rounded-2xl border border-slate-200">
@@ -197,7 +208,7 @@ export default function SmartCOIvsBCSPage() {
               href="/signup"
               className="mt-8 inline-flex h-12 items-center rounded-xl bg-[#73E2A7] px-8 text-sm font-bold text-slate-950 shadow-lg shadow-[#73E2A7]/20 transition-all hover:bg-[#4CC78A]"
             >
-              Upload 50 COIs Free
+              Start Your Free Trial
             </Link>
           </div>
         </section>
