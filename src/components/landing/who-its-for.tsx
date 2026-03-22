@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { AnimateIn } from './animate-in';
 
 function IconBuilding({ className }: { className?: string }) {
@@ -28,24 +29,42 @@ function IconShieldCheck({ className }: { className?: string }) {
   );
 }
 
+function IconArrowRight({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12,5 19,12 12,19" />
+    </svg>
+  );
+}
+
 const personas = [
   {
     icon: <IconBuilding className="h-7 w-7" />,
     title: 'Property Managers',
     description:
       'Stop chasing vendors for updated COIs. SmartCOI automates collection, verification, and follow-up so you can focus on managing properties.',
+    scenario:
+      'Track 50+ vendor certificates across multiple properties without spreadsheets.',
+    href: '/for/property-management-companies',
   },
   {
     icon: <IconTrendingUp className="h-7 w-7" />,
     title: 'Asset Managers',
     description:
       'Get portfolio-wide visibility into compliance risk. Know which properties and vendors are exposed — without digging through spreadsheets.',
+    scenario:
+      'See which properties in your portfolio have compliance gaps — in one view.',
+    href: '/signup',
   },
   {
     icon: <IconShieldCheck className="h-7 w-7" />,
     title: 'Building Owners',
     description:
       'Protect your investment with automated insurance compliance tracking across all tenants and vendors.',
+    scenario:
+      'Know every tenant and vendor is properly insured before an incident happens.',
+    href: '/signup',
   },
 ];
 
@@ -70,7 +89,7 @@ export function WhoItsFor() {
         <div className="mt-14 grid gap-8 sm:grid-cols-3">
           {personas.map((persona, i) => (
             <AnimateIn key={persona.title} delay={i * 120}>
-              <div className="group relative h-full rounded-2xl border border-slate-200 bg-white p-8 transition-all hover:shadow-lg hover:border-[#73E2A7]/30">
+              <div className="group relative flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-8 transition-all hover:shadow-lg hover:border-[#73E2A7]/30">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#73E2A7]/10 text-[#4CC78A] transition-colors group-hover:bg-[#73E2A7]/15">
                   {persona.icon}
                 </div>
@@ -80,6 +99,18 @@ export function WhoItsFor() {
                 <p className="mt-3 leading-relaxed text-slate-500">
                   {persona.description}
                 </p>
+                <p className="mt-3 text-sm font-medium text-slate-700">
+                  {persona.scenario}
+                </p>
+                <div className="mt-auto pt-5">
+                  <Link
+                    href={persona.href}
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-[#4CC78A] transition-colors hover:text-[#3BB87A]"
+                  >
+                    Learn more
+                    <IconArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
               </div>
             </AnimateIn>
           ))}
