@@ -6,14 +6,14 @@ import { Footer } from '@/components/landing/footer';
 export const metadata: Metadata = {
   title: 'Certificate of Insurance Tracking Software | SmartCOI',
   description:
-    'Manually reviewing every COI? Automate certificate of insurance tracking with AI extraction and instant compliance checks. No credit card required.',
+    'Automate certificate of insurance tracking with AI-powered extraction and instant compliance checks. Built for property managers. Try free for 14 days.',
   alternates: {
     canonical: 'https://smartcoi.io/certificate-of-insurance-tracking',
   },
   openGraph: {
     title: 'Certificate of Insurance Tracking Software | SmartCOI',
     description:
-      'Manually reviewing every COI? Automate certificate of insurance tracking with AI extraction and instant compliance checks. No credit card required.',
+      'Automate certificate of insurance tracking with AI-powered extraction and instant compliance checks. Built for property managers. Try free for 14 days.',
     type: 'website',
     url: 'https://smartcoi.io/certificate-of-insurance-tracking',
   },

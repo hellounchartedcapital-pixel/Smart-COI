@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'Best COI Tracking Software for Property Managers | SmartCOI',
+  title: 'COI Tracking Software for Property Managers | SmartCOI',
   description:
-    'Still tracking COIs in spreadsheets? SmartCOI automates collection, AI-powered extraction, and compliance checks across your portfolio. Start free.',
+    'Ditch the spreadsheets. SmartCOI automates COI collection, AI extraction, and compliance checks across your portfolio. 14-day free trial, no card required.',
   alternates: {
     canonical: 'https://smartcoi.io/coi-tracking-software',
   },
   openGraph: {
-    title: 'Best COI Tracking Software for Property Managers | SmartCOI',
+    title: 'COI Tracking Software for Property Managers | SmartCOI',
     description:
-      'Still tracking COIs in spreadsheets? SmartCOI automates collection, AI-powered extraction, and compliance checks across your portfolio. Start free.',
+      'Ditch the spreadsheets. SmartCOI automates COI collection, AI extraction, and compliance checks across your portfolio. 14-day free trial, no card required.',
     type: 'website',
     url: 'https://smartcoi.io/coi-tracking-software',
   },

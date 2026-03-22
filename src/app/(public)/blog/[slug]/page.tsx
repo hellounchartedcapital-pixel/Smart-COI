@@ -5,6 +5,7 @@ import { MDXRemote } from 'next-mdx-remote/rsc';
 import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 import { getAllPosts, getPostBySlug } from '@/lib/blog';
+import { BlogCTA } from '@/components/landing/blog-cta';
 
 /** Static map of related resource links per blog post slug. */
 const relatedResources: Record<string, { href: string; label: string }[]> = {
@@ -122,9 +123,29 @@ export default async function BlogPostPage({ params }: Props) {
           </header>
 
           <div className="prose-section mt-10">
-            <MDXRemote source={post.content} />
+            <MDXRemote source={post.content} components={{ BlogCTA }} />
           </div>
         </article>
+
+        {/* Bottom-of-post CTA */}
+        <div className="mt-12 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white px-8 py-8 text-center sm:px-12">
+          <h3 className="text-xl font-bold text-slate-900">
+            Ready to automate your COI compliance?
+          </h3>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-600">
+            SmartCOI handles certificate collection, AI-powered data extraction,
+            and real-time compliance monitoring — so you don&apos;t have to.
+          </p>
+          <Link
+            href="/signup"
+            className="mt-5 inline-flex h-11 items-center rounded-xl bg-[#4CC78A] px-7 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#3BB87A]"
+          >
+            Start Your Free Trial
+          </Link>
+          <p className="mt-3 text-xs text-slate-400">
+            14-day free trial &middot; No credit card required
+          </p>
+        </div>
 
         {/* Related Resources */}
         {resources.length > 0 && (

@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'SmartCOI vs Certificial: COI Tracking Comparison',
+  title: 'SmartCOI vs Certificial: Honest COI Software Comparison',
   description:
-    'Certificial offers real-time carrier monitoring and fraud detection. SmartCOI is simpler, faster to implement, and purpose-built for property managers. Compare both.',
+    'Compare SmartCOI and Certificial for COI tracking. See pricing, features, and ease of setup side by side. Find the right fit for your properties.',
   alternates: {
     canonical: 'https://smartcoi.io/compare/smartcoi-vs-certificial',
   },
   openGraph: {
-    title: 'SmartCOI vs Certificial: COI Tracking Comparison',
+    title: 'SmartCOI vs Certificial: Honest COI Software Comparison',
     description:
-      'Certificial offers real-time carrier monitoring and fraud detection. SmartCOI is simpler, faster to implement, and purpose-built for property managers. Compare both.',
+      'Compare SmartCOI and Certificial for COI tracking. See pricing, features, and ease of setup side by side. Find the right fit for your properties.',
     type: 'website',
     url: 'https://smartcoi.io/compare/smartcoi-vs-certificial',
   },
@@ -39,6 +39,17 @@ export default function SmartCOIvsCertificialPage() {
             focuses on AI-powered extraction and compliance tracking built specifically for
             property managers. Here&apos;s how they compare.
           </p>
+        </section>
+
+        {/* Above-fold CTA */}
+        <section className="mx-auto mt-8 max-w-4xl px-6 text-center">
+          <Link
+            href="/signup"
+            className="inline-flex h-11 items-center rounded-xl bg-[#4CC78A] px-7 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#3BB87A]"
+          >
+            Try SmartCOI Free for 14 Days
+          </Link>
+          <p className="mt-2 text-xs text-slate-400">No credit card required</p>
         </section>
 
         {/* Comparison Table */}
@@ -196,7 +207,7 @@ export default function SmartCOIvsCertificialPage() {
               href="/signup"
               className="mt-8 inline-flex h-12 items-center rounded-xl bg-[#73E2A7] px-8 text-sm font-bold text-slate-950 shadow-lg shadow-[#73E2A7]/20 transition-all hover:bg-[#4CC78A]"
             >
-              Upload 50 COIs Free
+              Start Your Free Trial
             </Link>
           </div>
         </section>
