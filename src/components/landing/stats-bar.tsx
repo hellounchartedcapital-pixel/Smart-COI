@@ -1,10 +1,10 @@
 import { AnimateIn } from './animate-in';
 
 const stats = [
-  { value: '10 min', label: 'To onboard 50 COIs', sublabel: 'Bulk upload + AI extraction' },
-  { value: '99%+', label: 'Extraction accuracy', sublabel: 'AI-powered data extraction' },
-  { value: '20+ hrs', label: 'Saved per month', sublabel: 'vs. manual COI tracking' },
-  { value: 'Real-time', label: 'Compliance visibility', sublabel: 'Across your entire portfolio' },
+  { value: '50', label: 'COIs per batch', sublabel: 'Bulk upload with one drag & drop' },
+  { value: '< 30s', label: 'Per certificate', sublabel: 'From upload to compliance result' },
+  { value: '0', label: 'Manual data entry', sublabel: 'AI handles every field automatically' },
+  { value: '24/7', label: 'Expiration monitoring', sublabel: 'Automated alerts before gaps appear' },
 ];
 
 export function StatsBar() {
