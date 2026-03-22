@@ -12,6 +12,14 @@ function IconArrowRight({ className }: { className?: string }) {
   );
 }
 
+function IconCheck({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20,6 9,17 4,12" />
+    </svg>
+  );
+}
+
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-28">
@@ -35,16 +43,15 @@ export function HeroSection() {
 
           <AnimateIn delay={50}>
             <h1 className="text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-              Certificate of Insurance Compliance on{' '}
+              COI Compliance on{' '}
               <span className="text-gradient-primary">Autopilot</span>
             </h1>
           </AnimateIn>
 
           <AnimateIn delay={150}>
             <p className="mt-6 text-lg leading-relaxed text-slate-500 sm:text-xl">
-              Stop manually checking COIs. SmartCOI uses AI to extract, verify, and
-              track insurance compliance across your entire portfolio — so you can
-              focus on managing properties, not paperwork.
+              AI-powered COI tracking that extracts, verifies, and monitors
+              compliance across your entire portfolio.
             </p>
           </AnimateIn>
 
@@ -66,16 +73,51 @@ export function HeroSection() {
             </div>
           </AnimateIn>
 
+          {/* Trust bar */}
           <AnimateIn delay={300}>
-            <p className="mt-5 text-xs text-slate-400">
-              See your compliance dashboard in minutes &middot; No credit card required
-            </p>
+            <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-5">
+              {[
+                'Purpose-built for commercial property managers',
+                'No credit card required',
+                'Set up in 5 minutes',
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-1.5">
+                  <IconCheck className="h-3.5 w-3.5 flex-shrink-0 text-[#4CC78A]" />
+                  <span className="text-[13px] text-slate-400">{item}</span>
+                </div>
+              ))}
+            </div>
           </AnimateIn>
         </div>
 
+        {/* Stat badges */}
+        <AnimateIn delay={350}>
+          <div className="mx-auto mt-10 flex max-w-md items-center justify-center gap-3 sm:mt-12 sm:max-w-none sm:gap-4">
+            {[
+              { value: '10 min', label: 'to onboard 50 COIs' },
+              { value: '99%+', label: 'extraction accuracy' },
+              { value: '20+ hrs', label: 'saved per month' },
+            ].map((stat) => (
+              <div
+                key={stat.value}
+                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm sm:gap-2.5 sm:px-4 sm:py-2"
+              >
+                <span className="text-sm font-bold text-[#4CC78A] sm:text-base">
+                  {stat.value}
+                </span>
+                <span className="text-[11px] leading-tight text-slate-500 sm:text-xs">
+                  {stat.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </AnimateIn>
+
         {/* Hero dashboard visual */}
-        <AnimateIn delay={400} className="mt-16 sm:mt-20">
-          <HeroDashboard />
+        <AnimateIn delay={400} className="mt-10 sm:mt-14">
+          <div className="md:block">
+            <HeroDashboard />
+          </div>
         </AnimateIn>
       </div>
     </section>

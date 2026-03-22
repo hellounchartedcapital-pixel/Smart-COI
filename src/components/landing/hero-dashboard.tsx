@@ -9,8 +9,8 @@ export function HeroDashboard() {
       {/* Glow effect behind the dashboard */}
       <div className="absolute -inset-4 rounded-3xl bg-gradient-to-br from-[#73E2A7]/20 via-[#4CC78A]/10 to-transparent blur-2xl" />
 
-      {/* Browser frame */}
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/10">
+      {/* Browser frame — cropped on mobile to show top portion only */}
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl shadow-slate-900/10 max-h-[320px] sm:max-h-[480px] md:max-h-none">
         {/* macOS-style title bar */}
         <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/80 px-4 py-2.5">
           <div className="flex gap-1.5">
@@ -73,6 +73,9 @@ export function HeroDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Bottom fade on mobile when cropped */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent md:hidden" />
       </div>
     </div>
   );

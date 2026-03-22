@@ -299,8 +299,20 @@ export function PricingSection() {
           </AnimateIn>
         </div>
 
+        {/* Early adopter note */}
+        <AnimateIn delay={380}>
+          <div className="mx-auto mt-10 flex max-w-md items-center justify-center gap-2.5">
+            <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-600">
+              Early Adopter
+            </span>
+            <span className="text-sm text-slate-400">
+              Lock in these rates before our public launch
+            </span>
+          </div>
+        </AnimateIn>
+
         {/* Footer notes */}
-        <div className="mt-10 space-y-2 text-center">
+        <div className="mt-4 space-y-2 text-center">
           <AnimateIn delay={400}>
             <p className="text-sm text-slate-500">
               All plans include a 14-day free trial. No credit card required.
