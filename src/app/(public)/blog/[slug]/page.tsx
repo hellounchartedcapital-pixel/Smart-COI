@@ -54,6 +54,16 @@ const relatedResources: Record<string, { href: string; label: string }[]> = {
     { href: '/blog/vendor-onboarding-checklist-property-managers', label: 'Vendor Onboarding Checklist' },
     { href: '/features/vendor-management', label: 'Vendor Management Features' },
   ],
+  'acord-28-evidence-of-property-insurance': [
+    { href: '/blog/acord-25-certificate-explained', label: 'ACORD 25 Certificate of Insurance Guide' },
+    { href: '/blog/what-is-additional-insured-commercial-real-estate', label: 'What Is Additional Insured?' },
+    { href: '/features/compliance-automation', label: 'Automated Compliance Checking' },
+  ],
+  'coi-tracking-software-vs-spreadsheets': [
+    { href: '/compare/smartcoi-vs-spreadsheets', label: 'SmartCOI vs Spreadsheets' },
+    { href: '/blog/cost-of-not-tracking-vendor-insurance', label: 'The Hidden Cost of Skipping Vendor COI Tracking' },
+    { href: '/features/coi-tracking', label: 'COI Tracking Features' },
+  ],
 };
 
 interface Props {
