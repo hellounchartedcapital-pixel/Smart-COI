@@ -32,6 +32,8 @@ interface EditVendorDialogProps {
   templates: RequirementTemplate[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onArchive?: () => void;
+  onDelete?: () => void;
 }
 
 export function EditVendorDialog({
@@ -39,6 +41,8 @@ export function EditVendorDialog({
   templates,
   open,
   onOpenChange,
+  onArchive,
+  onDelete,
 }: EditVendorDialogProps) {
   const [saving, setSaving] = useState(false);
   const [companyName, setCompanyName] = useState(vendor.company_name);
@@ -135,11 +139,37 @@ export function EditVendorDialog({
               </SelectContent>
             </Select>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-            <Button type="submit" disabled={saving || !companyName.trim()}>
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Button>
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+            <div className="flex gap-2">
+              {onArchive && !vendor.archived_at && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                  onClick={() => { onOpenChange(false); onArchive(); }}
+                >
+                  Archive
+                </Button>
+              )}
+              {onDelete && !vendor.archived_at && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => { onOpenChange(false); onDelete(); }}
+                >
+                  Delete
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+              <Button type="submit" disabled={saving || !companyName.trim()}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
