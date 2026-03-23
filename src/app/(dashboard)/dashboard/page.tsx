@@ -70,14 +70,8 @@ export interface ActivityEntry {
 async function getDashboardData(orgId: string) {
   const supabase = await createClient();
 
-  // Start of current month for "This Month" stats
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
-  const monthStartISO = monthStart.toISOString();
-
   // Parallel-fetch everything we need
-  const [propertiesRes, vendorsRes, tenantsRes, activityRes, orgRes, notificationsCountRes] = await Promise.all([
+  const [propertiesRes, vendorsRes, tenantsRes, activityRes, orgRes] = await Promise.all([
     supabase
       .from('properties')
       .select('id, name, property_type')
@@ -106,12 +100,6 @@ async function getDashboardData(orgId: string) {
       .select('plan, trial_ends_at')
       .eq('id', orgId)
       .single(),
-    supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('organization_id', orgId)
-      .eq('status', 'sent')
-      .gte('sent_date', monthStartISO),
   ]);
 
   const properties = propertiesRes.data ?? [];
@@ -181,8 +169,6 @@ async function getDashboardData(orgId: string) {
     const msLeft = new Date(org.trial_ends_at).getTime() - Date.now();
     trialDaysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
   }
-
-  const notificationsSentThisMonth = notificationsCountRes.count ?? 0;
 
   const stats: DashboardStats = {
     propertyCount: properties.length,
@@ -396,7 +382,6 @@ async function getDashboardData(orgId: string) {
     actionItems,
     propertyOverviews,
     activity,
-    notificationsSentThisMonth,
     propertyList,
     vendorList,
     tenantList,
