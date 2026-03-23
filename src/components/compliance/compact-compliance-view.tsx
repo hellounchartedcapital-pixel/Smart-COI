@@ -57,6 +57,17 @@ function formatLimitType(type: string | null | undefined): string {
   return type.replace(/_/g, ' ');
 }
 
+const LIMIT_TYPE_SUFFIXES: Record<string, string> = {
+  per_occurrence: 'per occurrence',
+  aggregate: 'aggregate',
+};
+
+function getCoverageDisplayName(coverageType: string, limitType: string | null | undefined): string {
+  const base = COVERAGE_LABELS[coverageType] ?? coverageType;
+  const suffix = limitType ? LIMIT_TYPE_SUFFIXES[limitType] : null;
+  return suffix ? `${base} (${suffix})` : base;
+}
+
 // ============================================================================
 // Info tooltip — CSS-only hover tooltip
 // ============================================================================
@@ -311,7 +322,7 @@ export function CompactComplianceView({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-sm font-medium text-foreground inline-flex items-center">
-                        {COVERAGE_LABELS[req.coverage_type] ?? req.coverage_type}
+                        {getCoverageDisplayName(req.coverage_type, req.limit_type)}
                         {getCoverageTooltip(req.coverage_type, req.limit_type) && (
                           <InfoTooltip text={getCoverageTooltip(req.coverage_type, req.limit_type)!} />
                         )}
