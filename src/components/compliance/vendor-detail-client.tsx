@@ -284,10 +284,8 @@ export function VendorDetailClient({
 
         {/* RIGHT COLUMN: Name + badge, actions, coverage, certificate details */}
         <div className="space-y-4">
-          {/* Sticky header on desktop: name + badge + actions */}
-          <div className="space-y-4 lg:sticky lg:top-14 lg:z-10 lg:bg-slate-50/50 lg:pb-4 lg:-mb-4">
-          {/* Header: Name + compliance badge */}
-          <div className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+          {/* Header: Name + compliance badge — sticky on desktop */}
+          <div className="rounded-lg border border-slate-200 bg-white px-5 py-4 lg:sticky lg:top-14 lg:z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <h1 className="text-xl font-bold tracking-tight text-foreground truncate">
@@ -412,7 +410,6 @@ export function VendorDetailClient({
                 )}
               </div>
             </div>
-          </div>
           </div>
 
           {/* Coverage Requirements + Certificate Details — flat, non-scrollable */}
