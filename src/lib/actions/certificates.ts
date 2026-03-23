@@ -346,3 +346,166 @@ export async function getCOISignedUrl(
 
   return { url: data.signedUrl };
 }
+
+// ============================================================================
+// Recheck Compliance — re-runs compliance check using existing extraction data
+// against current template requirements. No AI call, no credit usage.
+// ============================================================================
+
+export async function recheckCompliance(
+  entityType: 'vendor' | 'tenant',
+  entityId: string,
+): Promise<{ success: true; status: string } | { error: string }> {
+  const { supabase, orgId } = await getAuthContext();
+
+  const tableName = entityType === 'vendor' ? 'vendors' : 'tenants';
+  const { data: entity } = await supabase
+    .from(tableName)
+    .select('id, property_id')
+    .eq('id', entityId)
+    .single();
+  if (!entity) return { error: `${entityType === 'vendor' ? 'Vendor' : 'Tenant'} not found` };
+
+  // Find the latest certificate for this entity
+  const certQuery = supabase
+    .from('certificates')
+    .select('id')
+    .eq('organization_id', orgId)
+    .order('uploaded_at', { ascending: false })
+    .limit(1);
+
+  if (entityType === 'vendor') {
+    certQuery.eq('vendor_id', entityId);
+  } else {
+    certQuery.eq('tenant_id', entityId);
+  }
+
+  const { data: certs } = await certQuery;
+  if (!certs || certs.length === 0) return { error: 'No certificate found to check compliance against' };
+
+  const result = await runAutoCompliance(certs[0].id, orgId);
+  revalidatePath(`/dashboard/${entityType}s/${entityId}`);
+  return { success: true, status: result?.overallStatus ?? 'unknown' };
+}
+
+// ============================================================================
+// Re-extract Certificate — re-runs AI extraction on the latest certificate PDF
+// then re-runs compliance. Uses 1 AI extraction credit.
+// ============================================================================
+
+export async function reExtractCertificate(
+  entityType: 'vendor' | 'tenant',
+  entityId: string,
+): Promise<{ success: true } | { error: string }> {
+  const planCheck = await checkActivePlan('Subscribe to extract certificates.');
+  if ('error' in planCheck) return { error: planCheck.error };
+
+  const { supabase, orgId } = await getAuthContext();
+
+  const tableName = entityType === 'vendor' ? 'vendors' : 'tenants';
+  const { data: entity } = await supabase
+    .from(tableName)
+    .select('id')
+    .eq('id', entityId)
+    .single();
+  if (!entity) return { error: `${entityType === 'vendor' ? 'Vendor' : 'Tenant'} not found` };
+
+  // Find the latest certificate with a file
+  const certQuery = supabase
+    .from('certificates')
+    .select('id, file_path')
+    .eq('organization_id', orgId)
+    .not('file_path', 'is', null)
+    .order('uploaded_at', { ascending: false })
+    .limit(1);
+
+  if (entityType === 'vendor') {
+    certQuery.eq('vendor_id', entityId);
+  } else {
+    certQuery.eq('tenant_id', entityId);
+  }
+
+  const { data: certs } = await certQuery;
+  if (!certs || certs.length === 0) return { error: 'No certificate with a PDF found' };
+
+  const certificateId = certs[0].id;
+
+  // Check extraction limit
+  const { checkExtractionLimit } = await import('@/lib/plan-limits');
+  const limitCheck = await checkExtractionLimit(orgId);
+  if (!limitCheck.allowed) return { error: limitCheck.error };
+
+  // Download PDF from storage
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const serviceClient = createServiceClient();
+
+  const { data: fileData, error: downloadError } = await serviceClient.storage
+    .from('coi-documents')
+    .download(certs[0].file_path!);
+
+  if (downloadError || !fileData) {
+    return { error: 'Failed to download PDF from storage' };
+  }
+
+  const buffer = Buffer.from(await fileData.arrayBuffer());
+  const pdfBase64 = buffer.toString('base64');
+
+  // Run AI extraction
+  const { extractCOIFromPDF } = await import('@/lib/ai/extraction');
+  const result = await extractCOIFromPDF(pdfBase64);
+
+  if (!result.success) {
+    return { error: result.userMessage ?? result.error ?? 'Extraction failed' };
+  }
+
+  // Clear old extraction data and insert new
+  await serviceClient.from('extracted_coverages').delete().eq('certificate_id', certificateId);
+  await serviceClient.from('extracted_entities').delete().eq('certificate_id', certificateId);
+
+  if (result.coverages.length > 0) {
+    await serviceClient.from('extracted_coverages').insert(
+      result.coverages.map((c) => ({
+        certificate_id: certificateId,
+        coverage_type: c.coverage_type,
+        carrier_name: c.carrier_name,
+        policy_number: c.policy_number,
+        limit_amount: c.limit_amount,
+        limit_type: c.limit_type,
+        effective_date: c.effective_date,
+        expiration_date: c.expiration_date,
+        additional_insured_listed: c.additional_insured_listed,
+        additional_insured_entities: c.additional_insured_entities,
+        waiver_of_subrogation: c.waiver_of_subrogation,
+        confidence_flag: c.confidence_flag,
+        raw_extracted_text: c.raw_extracted_text,
+      })),
+    );
+  }
+
+  if (result.entities.length > 0) {
+    await serviceClient.from('extracted_entities').insert(
+      result.entities.map((e) => ({
+        certificate_id: certificateId,
+        entity_name: e.entity_name,
+        entity_address: e.entity_address,
+        entity_type: e.entity_type,
+        confidence_flag: e.confidence_flag,
+      })),
+    );
+  }
+
+  // Update certificate status
+  await serviceClient
+    .from('certificates')
+    .update({
+      processing_status: 'extracted',
+      ...(result.insuredName ? { insured_name: result.insuredName } : {}),
+    })
+    .eq('id', certificateId);
+
+  // Re-run compliance
+  await runAutoCompliance(certificateId, orgId);
+
+  revalidatePath(`/dashboard/${entityType}s/${entityId}`);
+  return { success: true };
+}
