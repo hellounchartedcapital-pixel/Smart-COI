@@ -99,8 +99,8 @@ const features = [
   },
   {
     icon: <IconBarChart className="h-6 w-6" />,
-    title: 'Real-Time Dashboard',
-    description: 'See compliance health across every property at a glance. Track status, identify coverage gaps with detailed descriptions, export compliance reports, and prioritize follow-ups from one view.',
+    title: 'Dashboard & Reporting',
+    description: 'See compliance health across every property at a glance. Track status, identify gaps, and prioritize follow-ups from one view. Export audit-ready compliance reports as PDF or CSV anytime.',
     href: '/features/coi-tracking',
   },
 ];
