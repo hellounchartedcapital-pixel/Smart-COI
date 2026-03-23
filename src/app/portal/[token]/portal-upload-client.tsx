@@ -147,10 +147,12 @@ export function PortalUploadClient({ token, pmName }: PortalUploadClientProps) {
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-slate-900 mb-2">Certificate Received</h2>
-          <p className="text-sm text-slate-500 leading-relaxed max-w-md mx-auto">
-            Thank you! Your certificate has been received and will be reviewed by{' '}
-            <span className="font-medium text-slate-700">{pmName}</span>.
-            You&apos;ll be notified if any additional information is needed.
+          <p className="text-sm text-slate-500 leading-relaxed max-w-md mx-auto mb-4">
+            Thank you! Your certificate has been received and compliance will be verified automatically.
+            You&apos;ll receive an email with results shortly.
+          </p>
+          <p className="text-xs text-slate-400 max-w-md mx-auto">
+            If anything needs to be updated, {pmName} will reach out with details.
           </p>
         </div>
       </section>

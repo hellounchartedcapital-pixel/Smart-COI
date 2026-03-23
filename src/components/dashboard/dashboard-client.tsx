@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatTimeAgo, formatDate } from '@/lib/utils';
 import { UploadCOIDialog } from '@/components/dashboard/upload-coi-dialog';
+import { ExportReportButton } from '@/components/dashboard/export-report-button';
+import { ComplianceTrendChart } from '@/components/dashboard/compliance-trend-chart';
 import { DashboardTutorial, useTutorial } from '@/components/dashboard/dashboard-tutorial';
 import {
   ShieldCheck,
@@ -269,6 +271,7 @@ export function DashboardClient({
           <Button variant="ghost" size="sm" onClick={startTutorial} className="text-xs text-slate-500 hover:text-slate-700">
             Take a Tour
           </Button>
+          <ExportReportButton />
           <Button onClick={() => setUploadOpen(true)} data-tour="upload-coi" className="rounded-lg">
             <Upload className="mr-2 h-4 w-4" />
             Upload COI
@@ -407,6 +410,9 @@ export function DashboardClient({
               <span className="text-sm text-slate-500">in next 30 days</span>
             </div>
           </SummaryCard>
+
+          {/* Compliance Trend */}
+          <ComplianceTrendChart />
 
           {/* Activity Feed */}
           <ActivitySidebar entries={activity} />
@@ -704,17 +710,30 @@ function ActionItemRow({ item, isLast, isFirst = false }: { item: ActionItem; is
     router.push(`/dashboard/certificates/upload?${param}=${item.id}`);
   }, [item.entityType, item.id, router]);
 
+  // Build specific gap description
   let description = '';
+  let gapDetail: string | null = null;
   switch (item.status) {
     case 'expired':
       description = item.earliestExpiration
         ? `Expired ${formatDate(item.earliestExpiration)}`
         : 'Certificate expired';
+      if (item.gapDetails.length > 0) {
+        gapDetail = item.gapDetails[0];
+      }
       break;
     case 'non_compliant':
-      description = item.gapCount > 0
-        ? `Missing: ${item.gapCount} coverage gap${item.gapCount !== 1 ? 's' : ''}`
-        : 'Non-compliant';
+      if (item.gapDetails.length > 0) {
+        // Show the first specific gap
+        description = item.gapDetails[0];
+        if (item.gapDetails.length > 1) {
+          gapDetail = `+${item.gapDetails.length - 1} more gap${item.gapDetails.length - 1 !== 1 ? 's' : ''}`;
+        }
+      } else if (item.gapCount > 0) {
+        description = `${item.gapCount} coverage gap${item.gapCount !== 1 ? 's' : ''}`;
+      } else {
+        description = 'Non-compliant';
+      }
       break;
     case 'expiring_soon':
       description = item.earliestExpiration
@@ -757,6 +776,9 @@ function ActionItemRow({ item, isLast, isFirst = false }: { item: ActionItem; is
           {item.propertyName && <>{item.propertyName} &middot; </>}
           {description}
         </p>
+        {gapDetail && (
+          <p className="mt-0.5 text-[11px] text-slate-400">{gapDetail}</p>
+        )}
       </div>
       <div className="flex shrink-0 gap-1.5" {...(isFirst ? { 'data-tour': 'row-actions' } : {})}>
         {showRequestCOI && (

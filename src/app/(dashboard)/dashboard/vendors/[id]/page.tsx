@@ -172,13 +172,31 @@ export default async function VendorDetailPage({ params }: Props) {
     .order('scheduled_date', { ascending: false });
   const notifications = (notifs ?? []) as Notification[];
 
-  // Fetch org templates for the edit dialog
-  const { data: orgTemplates } = await supabase
-    .from('requirement_templates')
-    .select('*')
-    .eq('organization_id', orgId)
-    .order('category')
-    .order('name');
+  // Fetch org templates and waivers in parallel
+  const [{ data: orgTemplates }, { data: activeWaiverData }, { data: waiverHistoryData }] = await Promise.all([
+    supabase
+      .from('requirement_templates')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('category')
+      .order('name'),
+    supabase
+      .from('compliance_waivers')
+      .select('*')
+      .eq('vendor_id', id)
+      .eq('organization_id', orgId)
+      .is('revoked_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single(),
+    supabase
+      .from('compliance_waivers')
+      .select('*')
+      .eq('vendor_id', id)
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false }),
+  ]);
 
   return (
     <VendorDetailClient
@@ -194,6 +212,8 @@ export default async function VendorDetailPage({ params }: Props) {
       notifications={notifications}
       orgTemplates={(orgTemplates ?? []) as RequirementTemplate[]}
       hasCertificate={hasCertificate}
+      activeWaiver={activeWaiverData ?? null}
+      waiverHistory={waiverHistoryData ?? []}
     />
   );
 }

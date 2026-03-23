@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { checkAndScheduleNotifications } from '@/lib/notifications/scheduler';
 import { processScheduledNotifications } from '@/lib/notifications/scheduler';
+import { takeComplianceSnapshots } from '@/lib/actions/compliance-snapshots';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // Allow up to 60 seconds
@@ -30,11 +31,15 @@ export async function POST(request: Request) {
   const startTime = Date.now();
 
   try {
-    // Step 1: Check expirations and schedule new notifications
+    // Step 1: Take compliance snapshots for trend tracking
+    const snapshots = await takeComplianceSnapshots();
+    console.log(`[daily-check] Took ${snapshots} compliance snapshots`);
+
+    // Step 2: Check expirations and schedule new notifications
     const scheduled = await checkAndScheduleNotifications();
     console.log(`[daily-check] Scheduled ${scheduled} new notifications`);
 
-    // Step 2: Send all pending scheduled notifications
+    // Step 3: Send all pending scheduled notifications
     const { sent, failed } = await processScheduledNotifications();
     console.log(`[daily-check] Sent ${sent}, failed ${failed}`);
 
@@ -42,6 +47,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
+      snapshots,
       scheduled,
       sent,
       failed,

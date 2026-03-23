@@ -33,6 +33,7 @@ export interface ActionItem {
   entityType: 'vendor' | 'tenant';
   status: ComplianceStatus;
   gapCount: number;
+  gapDetails: string[];
   earliestExpiration: string | null;
   daysUntilExpiration: number | null;
   daysSinceExpired: number | null;
@@ -193,8 +194,24 @@ async function getDashboardData(orgId: string) {
     trialDaysLeft,
   };
 
-  // ---- Action items: entities that aren't compliant ----
-  const needsAttention = allEntities.filter((e) => e.status !== 'compliant');
+  // ---- Fetch active waivers to exclude from action queue ----
+  const { data: activeWaivers } = await supabase
+    .from('compliance_waivers')
+    .select('vendor_id, tenant_id')
+    .eq('organization_id', orgId)
+    .is('revoked_at', null)
+    .gt('expires_at', new Date().toISOString());
+
+  const waivedEntityIds = new Set<string>();
+  for (const w of activeWaivers ?? []) {
+    if (w.vendor_id) waivedEntityIds.add(w.vendor_id);
+    if (w.tenant_id) waivedEntityIds.add(w.tenant_id);
+  }
+
+  // ---- Action items: entities that aren't compliant and not waived ----
+  const needsAttention = allEntities.filter(
+    (e) => e.status !== 'compliant' && !waivedEntityIds.has(e.id)
+  );
 
   const vendorIds = needsAttention.filter((e) => e.type === 'vendor').map((e) => e.id);
   const tenantIds = needsAttention.filter((e) => e.type === 'tenant').map((e) => e.id);
@@ -246,13 +263,14 @@ async function getDashboardData(orgId: string) {
     .map((v) => v.certId!);
 
   const gapMap = new Map<string, number>();
+  const gapDetailsMap = new Map<string, string[]>();
   const expirationMap = new Map<string, string | null>();
 
   if (certsWithCompliance.length > 0) {
     const [compResultsRes, entityGapsRes, covRes] = await Promise.all([
       supabase
         .from('compliance_results')
-        .select('certificate_id, status')
+        .select('certificate_id, status, gap_description')
         .in('certificate_id', certsWithCompliance)
         .in('status', ['not_met', 'missing']),
       supabase
@@ -269,8 +287,14 @@ async function getDashboardData(orgId: string) {
     ]);
 
     const gapsByCert = new Map<string, number>();
+    const gapDescsByCert = new Map<string, string[]>();
     for (const r of compResultsRes.data ?? []) {
       gapsByCert.set(r.certificate_id, (gapsByCert.get(r.certificate_id) ?? 0) + 1);
+      if (r.gap_description) {
+        const descs = gapDescsByCert.get(r.certificate_id) ?? [];
+        descs.push(r.gap_description);
+        gapDescsByCert.set(r.certificate_id, descs);
+      }
     }
     for (const r of entityGapsRes.data ?? []) {
       gapsByCert.set(r.certificate_id, (gapsByCert.get(r.certificate_id) ?? 0) + 1);
@@ -286,6 +310,7 @@ async function getDashboardData(orgId: string) {
     for (const [eid, info] of entityCertMap.entries()) {
       if (info.certId) {
         gapMap.set(eid, gapsByCert.get(info.certId) ?? 0);
+        gapDetailsMap.set(eid, gapDescsByCert.get(info.certId) ?? []);
         expirationMap.set(eid, expByCert.get(info.certId) ?? null);
       }
     }
@@ -312,6 +337,7 @@ async function getDashboardData(orgId: string) {
       entityType: e.type,
       status: e.status,
       gapCount: gapMap.get(e.id) ?? 0,
+      gapDetails: gapDetailsMap.get(e.id) ?? [],
       earliestExpiration: earliestExp,
       daysUntilExpiration,
       daysSinceExpired,

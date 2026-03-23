@@ -11,6 +11,7 @@ import { EditTenantDialog } from './edit-tenant-dialog';
 import { SplitPanelView } from './split-panel-view';
 import { CompliancePanel } from './compliance-panel';
 import { ConfirmDialog } from '@/components/properties/confirm-dialog';
+import { GrantWaiverDialog, WaiverBadge, WaiverHistory } from './waiver-dialog';
 import {
   softDeleteTenant,
   toggleTenantNotifications,
@@ -21,6 +22,7 @@ import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
 import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
+import type { ComplianceWaiver } from '@/lib/actions/waivers';
 import type {
   Tenant,
   Property,
@@ -47,6 +49,8 @@ interface TenantDetailClientProps {
   notifications: Notification[];
   orgTemplates: RequirementTemplate[];
   hasCertificate: boolean;
+  activeWaiver?: ComplianceWaiver | null;
+  waiverHistory?: ComplianceWaiver[];
 }
 
 export function TenantDetailClient({
@@ -62,12 +66,15 @@ export function TenantDetailClient({
   notifications,
   orgTemplates,
   hasCertificate,
+  activeWaiver,
+  waiverHistory = [],
 }: TenantDetailClientProps) {
   const router = useRouter();
   const { showUpgradeModal } = useUpgradeModal();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [hardDeleteOpen, setHardDeleteOpen] = useState(false);
+  const [waiverOpen, setWaiverOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [togglingNotif, setTogglingNotif] = useState(false);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
@@ -252,6 +259,11 @@ export function TenantDetailClient({
             );
           })()}
 
+          {/* Active waiver notice */}
+          {activeWaiver && (
+            <WaiverBadge waiver={activeWaiver} onRevoke={() => router.refresh()} />
+          )}
+
           {/* Split-panel: PDF viewer + Compliance panel */}
           {(() => {
             const latestCert = certificates
@@ -288,6 +300,9 @@ export function TenantDetailClient({
 
           {/* Notification History */}
           <NotificationHistory notifications={notifications} />
+
+          {/* Waiver History */}
+          <WaiverHistory waivers={waiverHistory} />
         </div>
 
         {/* Right column: actions panel */}
@@ -317,6 +332,15 @@ export function TenantDetailClient({
               >
                 {generatingLink ? 'Generating...' : 'Generate Portal Link'}
               </Button>
+              {!activeWaiver && tenant.compliance_status !== 'compliant' && tenant.compliance_status !== 'pending' && (
+                <Button
+                  variant="outline"
+                  className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
+                  onClick={() => setWaiverOpen(true)}
+                >
+                  Grant Waiver
+                </Button>
+              )}
             </div>
           </div>
 
@@ -395,6 +419,13 @@ export function TenantDetailClient({
       </div>
 
       {/* Dialogs */}
+      <GrantWaiverDialog
+        open={waiverOpen}
+        onClose={() => setWaiverOpen(false)}
+        entityType="tenant"
+        entityId={tenant.id}
+        entityName={tenant.company_name}
+      />
       <EditTenantDialog
         tenant={tenant}
         templates={orgTemplates}
