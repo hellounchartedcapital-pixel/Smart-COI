@@ -10,6 +10,7 @@ import {
   ChevronRight,
   AlertTriangle,
   ShieldCheck,
+  Info,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import type {
@@ -54,6 +55,21 @@ function formatCurrency(amount: number | null | undefined): string {
 function formatLimitType(type: string | null | undefined): string {
   if (!type) return '';
   return type.replace(/_/g, ' ');
+}
+
+// ============================================================================
+// Info tooltip — CSS-only hover tooltip
+// ============================================================================
+
+function InfoTooltip({ text }: { text: string }) {
+  return (
+    <span className="relative inline-flex items-center ml-1 group/tip">
+      <Info className="h-3.5 w-3.5 text-slate-400 cursor-help" />
+      <span className="pointer-events-none absolute left-1/2 bottom-full mb-1.5 -translate-x-1/2 w-[250px] rounded-md bg-white px-3 py-2 text-[11px] leading-relaxed text-slate-600 shadow-lg ring-1 ring-slate-200 opacity-0 transition-opacity duration-150 delay-200 group-hover/tip:opacity-100 group-hover/tip:pointer-events-auto z-50">
+        {text}
+      </span>
+    </span>
+  );
 }
 
 // ============================================================================
@@ -367,15 +383,26 @@ export function CompactComplianceView({
                     </div>
                     {isMet ? (
                       isVerified && aiEndorsementStatus?.matchedEndorsement ? (
-                        <span className="text-xs text-emerald-700">
+                        <span className="text-xs text-emerald-700 inline-flex items-center">
                           Verified — {aiEndorsementStatus.matchedEndorsement.form_number ?? aiEndorsementStatus.matchedEndorsement.type} endorsement attached
+                          <InfoTooltip text="Verified means the actual endorsement document was found in the uploaded certificate pages, confirming this coverage provision is legally in place." />
                         </span>
                       ) : isWarning ? (
-                        <span className="text-xs text-amber-700">
+                        <span className="text-xs text-amber-700 inline-flex items-center">
                           Found on certificate — endorsement not attached
+                          <InfoTooltip text="This item is indicated on the ACORD 25 form but no endorsement document was attached to confirm it. Upload the full certificate packet including endorsement pages for full verification." />
                         </span>
                       ) : (
-                        <span className="text-xs text-emerald-700">Found on certificate</span>
+                        <span className="text-xs text-emerald-700 inline-flex items-center">
+                          Found on certificate
+                          {pe.entity_type === 'certificate_holder' ? (
+                            <InfoTooltip text="This entity was matched in the certificate holder section of the ACORD 25 form." />
+                          ) : showEndorsement && aiEndorsementStatus?.verification === 'indicated' ? (
+                            <InfoTooltip text="This item is indicated on the ACORD 25 form but no endorsement document was attached to confirm it. Upload the full certificate packet including endorsement pages for full verification." />
+                          ) : (
+                            <InfoTooltip text="This entity was matched in the certificate holder section of the ACORD 25 form." />
+                          )}
+                        </span>
                       )
                     ) : (
                       <span className="text-xs text-red-600">Not found on certificate</span>
@@ -436,20 +463,22 @@ export function CompactComplianceView({
                   <div>
                     <span className="text-sm font-medium text-foreground">Expiration</span>
                     {earliestExpiration ? (
-                      <p className="text-xs">
+                      <p className="text-xs inline-flex items-center">
                         {hasExpiredCoverage ? (
-                          <span className="text-red-600">
+                          <span className="text-red-600 inline-flex items-center">
                             Expired {formatDate(earliestExpiration.expiration_date!)}
+                            <InfoTooltip text="This certificate has expired. Request an updated certificate from the vendor." />
                           </span>
                         ) : (
-                          <>
+                          <span className="inline-flex items-center">
                             <span className="text-foreground">
                               Expires {formatDate(earliestExpiration.expiration_date!)}
                             </span>
                             <span className="ml-1.5 text-emerald-700 font-medium">
                               — Current
                             </span>
-                          </>
+                            <InfoTooltip text="This certificate's expiration date has not passed." />
+                          </span>
                         )}
                       </p>
                     ) : (
@@ -499,7 +528,10 @@ function EndorsementRow({ item }: { item: EndorsementItem }) {
               Verified
             </span>
           </div>
-          <span className="text-xs text-emerald-700">{item.detail}</span>
+          <span className="text-xs text-emerald-700 inline-flex items-center">
+            {item.detail}
+            <InfoTooltip text="Verified means the actual endorsement document was found in the uploaded certificate pages, confirming this coverage provision is legally in place." />
+          </span>
         </div>
       </div>
     );
@@ -511,7 +543,10 @@ function EndorsementRow({ item }: { item: EndorsementItem }) {
         <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-foreground">{item.label}</span>
-          <p className="text-xs text-amber-700">{item.detail}</p>
+          <p className="text-xs text-amber-700 inline-flex items-center">
+            {item.detail}
+            <InfoTooltip text="This item is indicated on the ACORD 25 form but no endorsement document was attached to confirm it. Upload the full certificate packet including endorsement pages for full verification." />
+          </p>
         </div>
       </div>
     );
@@ -523,7 +558,10 @@ function EndorsementRow({ item }: { item: EndorsementItem }) {
       <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
         <span className="text-sm font-medium text-foreground">{item.label}</span>
-        <p className="text-xs text-emerald-700">{item.detail}</p>
+        <p className="text-xs text-emerald-700 inline-flex items-center">
+          {item.detail}
+          <InfoTooltip text="This item is indicated on the ACORD 25 form but no endorsement document was attached to confirm it. Upload the full certificate packet including endorsement pages for full verification." />
+        </p>
         {item.hint && (
           <p className="text-[10px] text-muted-foreground mt-0.5">{item.hint}</p>
         )}
