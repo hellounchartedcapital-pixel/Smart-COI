@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,7 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronRight } from 'lucide-react';
 import { ComplianceBadge } from './compliance-badge';
 import { EditPropertyDialog } from './edit-property-dialog';
 import { AddVendorDialog } from './add-vendor-dialog';
@@ -468,65 +467,6 @@ export function PropertyDetailClient({
         </div>
       </div>
 
-      {/* Entity Requirements */}
-      <div className="rounded-lg border border-slate-200 bg-white p-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">
-            Entity Requirements
-          </h2>
-          <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-            Edit Entities
-          </Button>
-        </div>
-
-        <div className="mt-3 space-y-3">
-          {certHolders.length > 0 && (
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Certificate Holder
-              </p>
-              {certHolders.map((e) => (
-                <div key={e.id} className="mt-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {e.entity_name}
-                  </p>
-                  {e.entity_address && (
-                    <p className="text-xs text-muted-foreground">
-                      {e.entity_address}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {additionalInsured.length > 0 && (
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Additional Insured
-              </p>
-              {additionalInsured.map((e) => (
-                <div key={e.id} className="mt-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {e.entity_name}
-                  </p>
-                  {e.entity_address && (
-                    <p className="text-xs text-muted-foreground">
-                      {e.entity_address}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {certHolders.length === 0 && additionalInsured.length === 0 && (
-            <p className="text-xs text-muted-foreground">
-              No entities configured. Click &quot;Edit Entities&quot; to add certificate
-              holders and additional insured entities.
-            </p>
-          )}
-        </div>
-      </div>
-
       {/* Vendors / Tenants / Archived Tabs */}
       <Tabs defaultValue="vendors">
         <TabsList>
@@ -632,8 +572,8 @@ export function PropertyDetailClient({
                 </TableHeader>
                 <TableBody>
                   {filteredVendors.map((v) => (
-                    <TableRow key={v.id} className={selectedVendorIds.has(v.id) ? 'bg-emerald-50/50' : ''}>
-                      <TableCell>
+                    <TableRow key={v.id} className={`cursor-pointer hover:bg-slate-50 ${selectedVendorIds.has(v.id) ? 'bg-emerald-50/50' : ''}`} onClick={() => router.push(`/dashboard/vendors/${v.id}`)}>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
@@ -642,12 +582,9 @@ export function PropertyDetailClient({
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        <Link
-                          href={`/dashboard/vendors/${v.id}`}
-                          className="hover:underline"
-                        >
+                        <span className="text-foreground hover:text-emerald-600 transition-colors">
                           {v.company_name}
-                        </Link>
+                        </span>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <span className="text-sm text-muted-foreground">
@@ -671,43 +608,46 @@ export function PropertyDetailClient({
                           return <span className={`text-sm ${colorClass}`}>{formatDate(d)}</span>;
                         })()}
                       </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
-                              </svg>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/vendors/${v.id}`)}>
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/certificates/upload?vendorId=${v.id}`)}>
-                              Upload COI
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={sendingFollowUp}
-                              onClick={() => handleSendFollowUp('vendor', v.id)}
-                            >
-                              Send Follow-up
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-amber-600 focus:text-amber-600"
-                              onClick={() => setDeleteVendorId(v.id)}
-                            >
-                              Archive
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => setHardDeleteVendorId(v.id)}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
+                                </svg>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/vendors/${v.id}`)}>
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/certificates/upload?vendorId=${v.id}`)}>
+                                Upload COI
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={sendingFollowUp}
+                                onClick={() => handleSendFollowUp('vendor', v.id)}
+                              >
+                                Send Follow-up
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-amber-600 focus:text-amber-600"
+                                onClick={() => setDeleteVendorId(v.id)}
+                              >
+                                Archive
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => setHardDeleteVendorId(v.id)}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <ChevronRight className="h-4 w-4 text-slate-300" />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -806,8 +746,8 @@ export function PropertyDetailClient({
                 </TableHeader>
                 <TableBody>
                   {filteredTenants.map((t) => (
-                    <TableRow key={t.id} className={selectedTenantIds.has(t.id) ? 'bg-emerald-50/50' : ''}>
-                      <TableCell>
+                    <TableRow key={t.id} className={`cursor-pointer hover:bg-slate-50 ${selectedTenantIds.has(t.id) ? 'bg-emerald-50/50' : ''}`} onClick={() => router.push(`/dashboard/tenants/${t.id}`)}>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
@@ -816,17 +756,14 @@ export function PropertyDetailClient({
                         />
                       </TableCell>
                       <TableCell className="font-medium">
-                        <Link
-                          href={`/dashboard/tenants/${t.id}`}
-                          className="hover:underline"
-                        >
+                        <span className="text-foreground hover:text-emerald-600 transition-colors">
                           {t.company_name}
                           {t.unit_suite && (
                             <span className="ml-1 text-xs text-muted-foreground">
                               ({t.unit_suite})
                             </span>
                           )}
-                        </Link>
+                        </span>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         <span className="text-sm text-muted-foreground">
@@ -850,43 +787,46 @@ export function PropertyDetailClient({
                           return <span className={`text-sm ${colorClass}`}>{formatDate(d)}</span>;
                         })()}
                       </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
-                              </svg>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/tenants/${t.id}`)}>
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => router.push(`/dashboard/certificates/upload?tenantId=${t.id}`)}>
-                              Upload COI
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={sendingFollowUp}
-                              onClick={() => handleSendFollowUp('tenant', t.id)}
-                            >
-                              Send Follow-up
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-amber-600 focus:text-amber-600"
-                              onClick={() => setDeleteTenantId(t.id)}
-                            >
-                              Archive
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => setHardDeleteTenantId(t.id)}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v.01M12 12v.01M12 19v.01" />
+                                </svg>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/tenants/${t.id}`)}>
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/certificates/upload?tenantId=${t.id}`)}>
+                                Upload COI
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={sendingFollowUp}
+                                onClick={() => handleSendFollowUp('tenant', t.id)}
+                              >
+                                Send Follow-up
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-amber-600 focus:text-amber-600"
+                                onClick={() => setDeleteTenantId(t.id)}
+                              >
+                                Archive
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => setHardDeleteTenantId(t.id)}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <ChevronRight className="h-4 w-4 text-slate-300" />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
