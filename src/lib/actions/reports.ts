@@ -164,8 +164,8 @@ export async function getComplianceReportData(): Promise<ComplianceReportData> {
 
   // Fetch coverages, compliance results for all certs
   const certIds = [...new Set(entityCertMap.values())];
-  let coveragesMap = new Map<string, { coverage_type: CoverageType; limit_amount: number | null; expiration_date: string | null }[]>();
-  let gapsMap = new Map<string, string[]>();
+  const coveragesMap = new Map<string, { coverage_type: CoverageType; limit_amount: number | null; expiration_date: string | null }[]>();
+  const gapsMap = new Map<string, string[]>();
 
   if (certIds.length > 0) {
     const [covsRes, gapsRes] = await Promise.all([
