@@ -16,6 +16,7 @@ import {
   toggleTenantNotifications,
 } from '@/lib/actions/properties';
 import { sendManualFollowUp, generatePortalLink } from '@/lib/actions/notifications';
+import { recheckCompliance, reExtractCertificate } from '@/lib/actions/certificates';
 import { summarizeExpiredCoverages } from '@/lib/compliance/calculate';
 import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -29,6 +30,8 @@ import {
   ShieldOff,
   MoreHorizontal,
   Pencil,
+  RefreshCw,
+  RotateCcw,
 } from 'lucide-react';
 import type { ComplianceWaiver } from '@/lib/actions/waivers';
 import type {
@@ -88,6 +91,9 @@ export function TenantDetailClient({
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [showSecondaryActions, setShowSecondaryActions] = useState(false);
+  const [recheckingCompliance, setRecheckingCompliance] = useState(false);
+  const [reExtracting, setReExtracting] = useState(false);
+  const [reExtractConfirmOpen, setReExtractConfirmOpen] = useState(false);
 
   const latestCert = certificates
     .slice()
@@ -166,6 +172,41 @@ export function TenantDetailClient({
       toast.error(err instanceof Error ? err.message : 'Failed to update notifications');
     } finally {
       setTogglingNotif(false);
+    }
+  }
+
+  async function handleRecheckCompliance() {
+    setRecheckingCompliance(true);
+    try {
+      const result = await recheckCompliance('tenant', tenant.id);
+      if ('error' in result) {
+        toast.error(result.error);
+      } else {
+        toast.success('Compliance rechecked');
+        router.refresh();
+      }
+    } catch (err) {
+      handleActionError(err, 'Failed to recheck compliance', showUpgradeModal);
+    } finally {
+      setRecheckingCompliance(false);
+    }
+  }
+
+  async function handleReExtract() {
+    setReExtracting(true);
+    try {
+      const result = await reExtractCertificate('tenant', tenant.id);
+      if ('error' in result) {
+        handleActionResult(result, 'Failed to re-extract certificate', showUpgradeModal);
+      } else {
+        toast.success('Certificate re-extracted and compliance updated');
+        router.refresh();
+      }
+    } catch (err) {
+      handleActionError(err, 'Failed to re-extract certificate', showUpgradeModal);
+    } finally {
+      setReExtracting(false);
+      setReExtractConfirmOpen(false);
     }
   }
 
@@ -284,6 +325,17 @@ export function TenantDetailClient({
                 <Send className="mr-1.5 h-3.5 w-3.5" />
                 {sendingFollowUp ? 'Sending...' : 'Send Follow-Up'}
               </Button>
+              {hasCertificate && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRecheckCompliance}
+                  disabled={recheckingCompliance}
+                >
+                  <RefreshCw className={`mr-1.5 h-3.5 w-3.5${recheckingCompliance ? ' animate-spin' : ''}`} />
+                  {recheckingCompliance ? 'Rechecking...' : 'Recheck Compliance'}
+                </Button>
+              )}
               <div className="relative">
                 <Button
                   variant="outline"
@@ -308,6 +360,20 @@ export function TenantDetailClient({
                         <LinkIcon className="h-3.5 w-3.5 text-slate-500" />
                         {generatingLink ? 'Generating...' : 'Generate Portal Link'}
                       </button>
+                      {hasCertificate && (
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-slate-50"
+                          onClick={() => {
+                            setShowSecondaryActions(false);
+                            setReExtractConfirmOpen(true);
+                          }}
+                          disabled={reExtracting}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
+                          {reExtracting ? 'Re-extracting...' : 'Re-extract Certificate'}
+                        </button>
+                      )}
                       {!activeWaiver && tenant.compliance_status !== 'compliant' && tenant.compliance_status !== 'pending' && (
                         <button
                           type="button"
@@ -398,6 +464,16 @@ export function TenantDetailClient({
         destructive
         loading={deleting}
         onConfirm={handleHardDelete}
+      />
+      <ConfirmDialog
+        open={reExtractConfirmOpen}
+        onOpenChange={setReExtractConfirmOpen}
+        title="Re-extract Certificate"
+        description="This will re-process the certificate using AI and will use 1 extraction credit. Continue?"
+        confirmLabel="Re-extract"
+        destructive={false}
+        loading={reExtracting}
+        onConfirm={handleReExtract}
       />
     </div>
   );
