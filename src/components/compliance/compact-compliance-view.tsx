@@ -73,6 +73,26 @@ function InfoTooltip({ text }: { text: string }) {
 }
 
 // ============================================================================
+// Coverage requirement tooltip descriptions
+// ============================================================================
+
+function getCoverageTooltip(coverageType: string, limitType: string | null | undefined): string | null {
+  if (coverageType === 'general_liability') {
+    if (limitType === 'aggregate') {
+      return 'The maximum total amount the insurer will pay for all claims during the policy period.';
+    }
+    return 'The maximum amount the insurer will pay for a single claim or incident.';
+  }
+  const tooltips: Record<string, string> = {
+    automobile_liability: 'Covers liability for bodily injury and property damage arising from the use of vehicles.',
+    workers_compensation: 'Covers employee injuries and illnesses that occur on the job. Statutory means state-required minimum limits.',
+    employers_liability: "Covers employer liability for employee injuries beyond what Workers' Compensation covers.",
+    umbrella_excess_liability: 'Provides additional coverage above the limits of underlying policies like GL and Auto.',
+  };
+  return tooltips[coverageType] ?? null;
+}
+
+// ============================================================================
 // Endorsement verification helpers
 // ============================================================================
 
@@ -290,8 +310,11 @@ export function CompactComplianceView({
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-sm font-medium text-foreground">
+                      <span className="text-sm font-medium text-foreground inline-flex items-center">
                         {COVERAGE_LABELS[req.coverage_type] ?? req.coverage_type}
+                        {getCoverageTooltip(req.coverage_type, req.limit_type) && (
+                          <InfoTooltip text={getCoverageTooltip(req.coverage_type, req.limit_type)!} />
+                        )}
                       </span>
                       <span className="text-xs text-muted-foreground shrink-0">
                         Required: {formatCurrency(req.minimum_limit)}
