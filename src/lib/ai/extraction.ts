@@ -172,7 +172,13 @@ Extract all standard certificate fields from page 1 ONLY:
 5. ADDL INSD column — if marked "Y" for a coverage line, set additional_insured to true
 6. SUBR WVD column — if marked "Y" for a coverage line, set waiver_of_subrogation to true
 7. CERTIFICATE HOLDER — name and address from the bottom-left box
-8. DESCRIPTION OF OPERATIONS — look for additional insured language, waiver of subrogation mentions, and any entity names listed
+   IMPORTANT — Multi-entity certificate holder blocks:
+   The certificate holder box often contains multiple entity names, especially with "c/o" (care of), "Attn:" (attention), or multi-line entries where a management company appears on a separate line. Examples:
+   - "Alturas Stanford, LLC c/o Alturas Capital Partners, LLC" → extract BOTH as certificate_holder entities
+   - "XYZ Property LLC\\nAttn: ABC Management" → extract BOTH as certificate_holder entities
+   - "Property Owner LLC\\nManagement Company LLC\\n123 Main St" → extract BOTH company names
+   For the certificate_holder field, use the PRIMARY entity name (the first/main one). Then add ALL other entity names from the certificate holder box to the additional_insured_entities array so they can be matched during compliance checking.
+8. DESCRIPTION OF OPERATIONS — look for additional insured language, waiver of subrogation mentions, and any entity names listed. Extract ALL entity names mentioned as additional insureds and add them to additional_insured_entities.
 
 === PASS 2 — ENDORSEMENT PAGES (Pages 2+) ===
 
@@ -359,6 +365,29 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
 // Map AI response → database rows
 // ============================================================================
 
+/**
+ * Split entity names that contain "c/o", "Attn:", or multi-line separators
+ * into individual names. Returns an array of trimmed, non-empty names.
+ */
+function splitEntityNames(name: string): string[] {
+  // Split on c/o, attn:, and newlines
+  const parts = name
+    .split(/\bc\/o\b|\bC\/O\b|\battn:\s*/i)
+    .flatMap((p) => p.split(/\n/))
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+
+  // Filter out parts that look like addresses (start with a number, contain
+  // common address tokens like "St", "Ave", "Blvd", state abbreviations, or zip codes)
+  return parts.filter((p) => {
+    // Skip if it starts with a digit (street address line)
+    if (/^\d/.test(p)) return false;
+    // Skip if it looks like "City, ST 12345"
+    if (/,\s*[A-Z]{2}\s+\d{5}/.test(p)) return false;
+    return true;
+  });
+}
+
 function mapToDbRows(parsed: AIExtractionResponse): ExtractionResult {
   const coverages: ExtractedCoverageRow[] = [];
   const entities: ExtractedEntityRow[] = [];
@@ -405,25 +434,56 @@ function mapToDbRows(parsed: AIExtractionResponse): ExtractionResult {
     }
   }
 
-  // Certificate holder
+  // Certificate holder — split c/o and multi-line entries into separate entities.
+  // The first name stays as certificate_holder; additional names from c/o, Attn:,
+  // or separate lines are added as certificate_holder entities so the compliance
+  // matcher can find them.
   if (parsed.certificate_holder?.name) {
-    entities.push({
-      entity_name: parsed.certificate_holder.name,
-      entity_address: parsed.certificate_holder.address || null,
-      entity_type: 'certificate_holder',
-      confidence_flag: parsed.certificate_holder.confidence !== 'low',
-    });
+    const certHolderNames = splitEntityNames(parsed.certificate_holder.name);
+    const address = parsed.certificate_holder.address || null;
+    const confidence = parsed.certificate_holder.confidence !== 'low';
+
+    if (certHolderNames.length > 0) {
+      // Primary certificate holder
+      entities.push({
+        entity_name: certHolderNames[0],
+        entity_address: address,
+        entity_type: 'certificate_holder',
+        confidence_flag: confidence,
+      });
+      // Additional names from c/o, Attn:, or multi-line — also as certificate_holder
+      for (let i = 1; i < certHolderNames.length; i++) {
+        entities.push({
+          entity_name: certHolderNames[i],
+          entity_address: address,
+          entity_type: 'certificate_holder',
+          confidence_flag: confidence,
+        });
+      }
+    } else {
+      // Fallback: use the raw name as-is if splitting produced nothing
+      entities.push({
+        entity_name: parsed.certificate_holder.name,
+        entity_address: address,
+        entity_type: 'certificate_holder',
+        confidence_flag: confidence,
+      });
+    }
   }
 
-  // Additional insured entities
+  // Additional insured entities — also split c/o patterns
   for (const ent of parsed.additional_insured_entities ?? []) {
     if (ent.name) {
-      entities.push({
-        entity_name: ent.name,
-        entity_address: ent.address || null,
-        entity_type: 'additional_insured',
-        confidence_flag: ent.confidence !== 'low',
-      });
+      const names = splitEntityNames(ent.name);
+      if (names.length === 0) names.push(ent.name);
+      for (const name of names) {
+        entities.push({
+          entity_name: name,
+          entity_address: ent.address || null,
+          entity_type: 'additional_insured',
+          confidence_flag: ent.confidence !== 'low',
+        });
+      }
     }
   }
 
