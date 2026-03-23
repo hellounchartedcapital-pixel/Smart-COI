@@ -20,6 +20,9 @@ export interface ReportEntity {
   umbrellaLimit: string;
   expirationDate: string;
   gaps: string[];
+  additionalInsuredStatus: string;
+  waiverOfSubStatus: string;
+  primaryNCStatus: string;
 }
 
 export interface ReportProperty {
@@ -132,7 +135,7 @@ export async function getComplianceReportData(): Promise<ComplianceReportData> {
     certQueries.push(
       supabase
         .from('certificates')
-        .select('id, vendor_id, tenant_id')
+        .select('id, vendor_id, tenant_id, endorsement_data')
         .in('vendor_id', vendorIds)
         .in('processing_status', ['extracted', 'review_confirmed'])
         .order('uploaded_at', { ascending: false })
@@ -142,7 +145,7 @@ export async function getComplianceReportData(): Promise<ComplianceReportData> {
     certQueries.push(
       supabase
         .from('certificates')
-        .select('id, vendor_id, tenant_id')
+        .select('id, vendor_id, tenant_id, endorsement_data')
         .in('tenant_id', tenantIds)
         .in('processing_status', ['extracted', 'review_confirmed'])
         .order('uploaded_at', { ascending: false })
@@ -153,25 +156,30 @@ export async function getComplianceReportData(): Promise<ComplianceReportData> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allCerts = certResults.flatMap((r) => r.data ?? []) as any[];
 
-  // Map entity -> latest cert
+  // Map entity -> latest cert id and endorsement data
   const entityCertMap = new Map<string, string>();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const certEndorsementMap = new Map<string, any[]>();
   for (const cert of allCerts) {
     const eid = cert.vendor_id ?? cert.tenant_id;
     if (eid && !entityCertMap.has(eid)) {
       entityCertMap.set(eid, cert.id);
+      if (cert.endorsement_data) {
+        certEndorsementMap.set(cert.id, cert.endorsement_data);
+      }
     }
   }
 
   // Fetch coverages, compliance results for all certs
   const certIds = [...new Set(entityCertMap.values())];
-  const coveragesMap = new Map<string, { coverage_type: CoverageType; limit_amount: number | null; expiration_date: string | null }[]>();
+  const coveragesMap = new Map<string, { coverage_type: CoverageType; limit_amount: number | null; expiration_date: string | null; additional_insured_listed: boolean; waiver_of_subrogation: boolean }[]>();
   const gapsMap = new Map<string, string[]>();
 
   if (certIds.length > 0) {
     const [covsRes, gapsRes] = await Promise.all([
       supabase
         .from('extracted_coverages')
-        .select('certificate_id, coverage_type, limit_amount, expiration_date')
+        .select('certificate_id, coverage_type, limit_amount, expiration_date, additional_insured_listed, waiver_of_subrogation')
         .in('certificate_id', certIds),
       supabase
         .from('compliance_results')
@@ -183,7 +191,7 @@ export async function getComplianceReportData(): Promise<ComplianceReportData> {
     // Group coverages by cert
     for (const c of covsRes.data ?? []) {
       const list = coveragesMap.get(c.certificate_id) ?? [];
-      list.push(c as { coverage_type: CoverageType; limit_amount: number | null; expiration_date: string | null });
+      list.push(c as { coverage_type: CoverageType; limit_amount: number | null; expiration_date: string | null; additional_insured_listed: boolean; waiver_of_subrogation: boolean });
       coveragesMap.set(c.certificate_id, list);
     }
 
@@ -215,6 +223,35 @@ export async function getComplianceReportData(): Promise<ComplianceReportData> {
     return formatDate(dates[0]);
   }
 
+  // Endorsement verification status for report
+  function getEndorsementStatus(
+    certId: string | undefined,
+    indicatedField: 'additional_insured_listed' | 'waiver_of_subrogation',
+    endorsementKeywords: string[],
+  ): string {
+    if (!certId) return '\u2014';
+    const covs = coveragesMap.get(certId) ?? [];
+    const indicated = covs.some((c) => c[indicatedField]);
+    if (!indicated) return '\u2014';
+
+    const endorsements = certEndorsementMap.get(certId) ?? [];
+    if (endorsements.length === 0) return 'Indicated';
+
+    const matched = endorsements.find(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (en: any) => en.found && endorsementKeywords.some((k) => (en.type as string).toLowerCase().includes(k.toLowerCase()))
+    );
+    return matched ? 'Verified' : 'Warning';
+  }
+
+  function getPrimaryNCStatus(certId: string | undefined): string {
+    if (!certId) return '\u2014';
+    const endorsements = certEndorsementMap.get(certId) ?? [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const matched = endorsements.find((en: any) => en.found && (en.type as string).toLowerCase().includes('primary'));
+    return matched ? 'Verified' : '\u2014';
+  }
+
   // Build report entities
   const reportEntities: ReportEntity[] = allEntities.map((e) => {
     const certId = entityCertMap.get(e.id);
@@ -230,6 +267,9 @@ export async function getComplianceReportData(): Promise<ComplianceReportData> {
       umbrellaLimit: getCoverageLimit(certId, 'umbrella_excess_liability'),
       expirationDate: getEarliestExpiration(certId),
       gaps: certId ? (gapsMap.get(certId) ?? []) : e.status === 'pending' ? ['No COI on file'] : [],
+      additionalInsuredStatus: getEndorsementStatus(certId, 'additional_insured_listed', ['CG 20 10', 'CG 20 37', 'CG 20 26', 'Additional Insured']),
+      waiverOfSubStatus: getEndorsementStatus(certId, 'waiver_of_subrogation', ['Waiver of Subrogation', 'CG 24 04']),
+      primaryNCStatus: getPrimaryNCStatus(certId),
     };
   });
 
@@ -291,6 +331,9 @@ export async function generateComplianceCSV(): Promise<string> {
     'Auto Limit',
     'Umbrella Limit',
     'Expiration Date',
+    'Addl Insured',
+    'Waiver of Sub',
+    'Primary & NC',
     'Gaps/Notes',
   ];
 
@@ -307,6 +350,9 @@ export async function generateComplianceCSV(): Promise<string> {
         entity.autoLimit,
         entity.umbrellaLimit,
         entity.expirationDate,
+        entity.additionalInsuredStatus,
+        entity.waiverOfSubStatus,
+        entity.primaryNCStatus,
         entity.gaps.join('; '),
       ]);
     }

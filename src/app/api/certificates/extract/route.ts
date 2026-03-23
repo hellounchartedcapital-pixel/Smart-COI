@@ -218,12 +218,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Update certificate status and store insured name for vendor name matching
+    // Update certificate status, insured name, and endorsement data
     await serviceClient
       .from('certificates')
       .update({
         processing_status: 'extracted',
         ...(result.insuredName ? { insured_name: result.insuredName } : {}),
+        endorsement_data: result.endorsements.length > 0 ? result.endorsements : null,
       })
       .eq('id', certificateId);
 
