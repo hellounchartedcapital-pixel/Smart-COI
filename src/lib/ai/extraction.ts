@@ -115,19 +115,25 @@ Return a JSON object with exactly this structure:
 
 Important instructions:
 - Extract ALL coverage sections found on the certificate
-- For General Liability, extract BOTH per occurrence and aggregate limits as separate limit entries
-- For Workers Compensation, use "statutory" as the limit type with amount 0
+- For General Liability, extract BOTH per occurrence AND aggregate limits as separate limit entries in the limits array. The ACORD 25 form has separate fields for "EACH OCCURRENCE" and "GENERAL AGGREGATE" — extract both with the correct limit types ("per_occurrence" and "aggregate").
+- For Workers Compensation, use "statutory" as the limit type with amount 0. IMPORTANT: Employers' Liability (E.L.) is a sub-section within the Workers' Compensation section on ACORD 25 forms. It has its own limits (E.L. EACH ACCIDENT, E.L. DISEASE - EA EMPLOYEE, E.L. DISEASE - POLICY LIMIT). Extract Employers' Liability as a SEPARATE coverage entry with coverage_type "employers_liability" and its per_accident limit.
 - If a field is unclear or illegible, still include it but set confidence to "low"
 - Look at ALL pages of the document for endorsements, additional insured schedules, and supplementary information
 - Extract exact entity names and addresses for certificate holder and all additional insured parties
 
-IMPORTANT: Additional insured entities are frequently listed in the "Description of Operations / Locations / Vehicles" section of the ACORD form, not just in structured fields. Look carefully at this section for language like:
-  - "[Entity Name] is included as Additional Insured"
-  - "Additional Insured: [Entity Name]"
-  - "[Entity Names] are included as Additional Insureds with respect to..."
-  - "Certificate holder and [Entity Name] are named as additional insured..."
-  - Any entity names listed alongside phrases like "additional insured", "named insured", "loss payee"
-Extract ALL entity names mentioned as additional insureds from this section and include them in the additional_insured_entities array. Also check for additional insured entities mentioned in the certificate holder box (sometimes multiple entities are listed together in that field).
+IMPORTANT — Additional Insured Detection:
+Additional insured status must be detected from MULTIPLE locations on the certificate:
+1. The "ADDL INSD" checkbox column — if marked "Y" for a coverage line, set additional_insured to true for that coverage
+2. The "Description of Operations / Locations / Vehicles" section — look for language like:
+   - "[Entity Name] is included as Additional Insured"
+   - "Additional Insured: [Entity Name]"
+   - "[Entity Names] are included as Additional Insureds with respect to..."
+   - "Certificate holder and [Entity Name] are named as additional insured..."
+   - Any entity names listed alongside phrases like "additional insured", "named insured", "loss payee"
+3. Attached endorsement pages — look for CG 20 10, CG 20 26, CG 20 37, or similar Additional Insured endorsement forms. These confirm additional insured status even if the checkbox is not clearly marked.
+4. The certificate holder box — sometimes additional insured entities are listed together with the certificate holder.
+
+Extract ALL entity names mentioned as additional insureds from ANY of these sources and include them in the additional_insured_entities array. If additional insured status is confirmed by any source (checkbox, description, or endorsement), set additional_insured to true on the relevant coverage.
 
 - Return ONLY the JSON object, no other text`;
 

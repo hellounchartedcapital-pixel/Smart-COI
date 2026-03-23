@@ -8,8 +8,7 @@ import { ComplianceBadge } from '@/components/properties/compliance-badge';
 import { COIHistory } from './coi-history';
 import { NotificationHistory } from './notification-history';
 import { EditVendorDialog } from './edit-vendor-dialog';
-import { SplitPanelView } from './split-panel-view';
-import { CompliancePanel } from './compliance-panel';
+import { CompactComplianceView } from './compact-compliance-view';
 import { ConfirmDialog } from '@/components/properties/confirm-dialog';
 import { GrantWaiverDialog, WaiverBadge, WaiverHistory } from './waiver-dialog';
 import {
@@ -22,6 +21,15 @@ import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
 import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
+import { PdfViewer } from './pdf-viewer';
+import {
+  Upload,
+  Send,
+  LinkIcon,
+  ShieldOff,
+  MoreHorizontal,
+  Pencil,
+} from 'lucide-react';
 import type { ComplianceWaiver } from '@/lib/actions/waivers';
 import type {
   Vendor,
@@ -79,6 +87,12 @@ export function VendorDetailClient({
   const [togglingNotif, setTogglingNotif] = useState(false);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
   const [generatingLink, setGeneratingLink] = useState(false);
+  const [showSecondaryActions, setShowSecondaryActions] = useState(false);
+
+  const latestCert = certificates
+    .slice()
+    .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
+  const certIdForPdf = latestCert?.file_path ? latestCert.id : null;
 
   async function handleSendFollowUp() {
     setSendingFollowUp(true);
@@ -179,232 +193,171 @@ export function VendorDetailClient({
         <span className="text-foreground font-medium">{vendor.company_name}</span>
       </div>
 
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              {vendor.company_name}
-            </h1>
-            <ComplianceBadge status={vendor.compliance_status} />
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-          Edit Vendor
-        </Button>
-      </div>
-
-      {/* Main content: two-column on desktop */}
-      <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-        {/* Left column: main content */}
-        <div className="space-y-6">
-          {/* Quick info row */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm">
-            {vendor.vendor_type && (
-              <span className="text-muted-foreground">
-                Type: <span className="text-foreground font-medium">{vendor.vendor_type}</span>
-              </span>
-            )}
-            <span className="text-muted-foreground">
-              Template:{' '}
-              {template ? (
-                <Link href={`/dashboard/templates/${template.id}`} className="text-brand-dark hover:underline font-medium">
-                  {template.name}
-                </Link>
-              ) : (
-                <span className="text-foreground">None assigned</span>
+      {/* Expired alert banner */}
+      {vendor.compliance_status === 'expired' && (() => {
+        const summary = summarizeExpiredCoverages(extractedCoverages, formatDate);
+        if (summary.expiredCount === 0) return null;
+        return (
+          <div className="flex items-start gap-3 rounded-lg border-2 border-red-300 bg-red-50 px-4 py-3">
+            <svg className="h-5 w-5 flex-shrink-0 text-red-600 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+            <div>
+              <p className="text-sm font-semibold text-red-800">
+                {summary.singleLine
+                  ? `This vendor\u2019s certificate has expired. ${summary.singleLine}.`
+                  : `This vendor\u2019s certificate has expired coverage (${summary.expiredCount} of ${summary.totalCount}). An updated certificate is required.`}
+              </p>
+              {!summary.allSameDate && summary.groupedLines.length > 0 && (
+                <p className="mt-1 text-sm text-red-700">
+                  {summary.groupedLines.map((g, i) => (
+                    <span key={i}>
+                      {i > 0 && ' · '}
+                      {g.types} — expired {g.date}
+                    </span>
+                  ))}
+                </p>
               )}
-            </span>
+            </div>
           </div>
+        );
+      })()}
 
-          {/* Expired alert banner — compact, consolidated */}
-          {vendor.compliance_status === 'expired' && (() => {
-            const summary = summarizeExpiredCoverages(extractedCoverages, formatDate);
-            if (summary.expiredCount === 0) return null;
-            return (
-              <div className="flex items-start gap-3 rounded-lg border-2 border-red-300 bg-red-50 px-4 py-3">
-                <svg className="h-5 w-5 flex-shrink-0 text-red-600 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="15" y1="9" x2="9" y2="15" />
-                  <line x1="9" y1="9" x2="15" y2="15" />
-                </svg>
-                <div>
-                  <p className="text-sm font-semibold text-red-800">
-                    {summary.singleLine
-                      ? `This vendor\u2019s certificate has expired. ${summary.singleLine}.`
-                      : `This vendor\u2019s certificate has expired coverage (${summary.expiredCount} of ${summary.totalCount}). An updated certificate is required.`}
-                  </p>
-                  {!summary.allSameDate && summary.groupedLines.length > 0 && (
-                    <p className="mt-1 text-sm text-red-700">
-                      {summary.groupedLines.map((g, i) => (
-                        <span key={i}>
-                          {i > 0 && ' · '}
-                          {g.types} — expired {g.date}
-                        </span>
-                      ))}
-                    </p>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
+      {/* Active waiver notice */}
+      {activeWaiver && (
+        <WaiverBadge waiver={activeWaiver} onRevoke={() => router.refresh()} />
+      )}
 
-          {/* Active waiver notice */}
-          {activeWaiver && (
-            <WaiverBadge waiver={activeWaiver} onRevoke={() => router.refresh()} />
-          )}
+      {/* Two-column layout: Left (PDF + history) | Right (info + actions + compliance) */}
+      <div className="grid gap-6 lg:grid-cols-[55fr_45fr]">
+        {/* LEFT COLUMN: PDF viewer + COI History + Notification History */}
+        <div className="space-y-4">
+          <PdfViewer certificateId={certIdForPdf} />
 
-          {/* Split-panel: PDF viewer + Compliance panel */}
-          {(() => {
-            const latestCert = certificates
-              .slice()
-              .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime())[0];
-            const certIdForPdf = latestCert?.file_path ? latestCert.id : null;
-
-            return (
-              <SplitPanelView certificateId={certIdForPdf}>
-                <CompliancePanel
-                  entityType="vendor"
-                  entityId={vendor.id}
-                  entityName={vendor.company_name}
-                  contactEmail={vendor.contact_email}
-                  contactName={vendor.contact_name}
-                  contactPhone={vendor.contact_phone}
-                  complianceStatus={vendor.compliance_status}
-                  certificates={certificates}
-                  extractedCoverages={extractedCoverages}
-                  complianceResults={complianceResults}
-                  entityResults={entityResults}
-                  propertyEntities={propertyEntities}
-                  templateRequirements={templateRequirements}
-                  notifications={notifications}
-                  hasCertificate={hasCertificate}
-                  onEditContact={() => setEditOpen(true)}
-                />
-              </SplitPanelView>
-            );
-          })()}
-
-          {/* COI History */}
           <COIHistory certificates={certificates} />
-
-          {/* Notification History */}
           <NotificationHistory notifications={notifications} />
-
-          {/* Waiver History */}
           <WaiverHistory waivers={waiverHistory} />
         </div>
 
-        {/* Right column: actions panel */}
-        <div className="space-y-3">
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <h3 className="text-sm font-semibold text-foreground">Actions</h3>
-            <div className="mt-3 space-y-2">
+        {/* RIGHT COLUMN: Name + badge, actions, coverage, certificate details */}
+        <div className="space-y-4">
+          {/* Header: Name + compliance badge */}
+          <div className="rounded-lg border border-slate-200 bg-white px-5 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <h1 className="text-xl font-bold tracking-tight text-foreground truncate">
+                  {vendor.company_name}
+                </h1>
+                <ComplianceBadge status={vendor.compliance_status} />
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                Edit Vendor
+              </Button>
+            </div>
+            {vendor.vendor_type && (
+              <p className="mt-1 text-sm text-muted-foreground">{vendor.vendor_type}</p>
+            )}
+          </div>
+
+          {/* Actions panel — compact row layout */}
+          <div className="rounded-lg border border-slate-200 bg-white px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
-                className="w-full"
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={() => router.push(`/dashboard/certificates/upload?vendorId=${vendor.id}`)}
               >
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
                 Upload COI
               </Button>
               <Button
                 variant="outline"
-                className="w-full"
+                size="sm"
                 onClick={handleSendFollowUp}
                 disabled={sendingFollowUp}
               >
+                <Send className="mr-1.5 h-3.5 w-3.5" />
                 {sendingFollowUp ? 'Sending...' : 'Send Follow-Up'}
               </Button>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleGeneratePortalLink}
-                disabled={generatingLink}
-              >
-                {generatingLink ? 'Generating...' : 'Generate Portal Link'}
-              </Button>
-              {!activeWaiver && vendor.compliance_status !== 'compliant' && vendor.compliance_status !== 'pending' && (
+              <div className="relative">
                 <Button
                   variant="outline"
-                  className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
-                  onClick={() => setWaiverOpen(true)}
+                  size="sm"
+                  onClick={() => setShowSecondaryActions(!showSecondaryActions)}
                 >
-                  Grant Waiver
+                  <MoreHorizontal className="h-3.5 w-3.5" />
                 </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-sm font-medium text-foreground">Notifications</h4>
-                <p className="text-xs text-muted-foreground">
-                  {vendor.notifications_paused ? 'Paused' : 'Active'}
-                </p>
+                {showSecondaryActions && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowSecondaryActions(false)} />
+                    <div className="absolute right-0 top-full z-20 mt-1 w-52 rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-slate-50"
+                        onClick={() => {
+                          setShowSecondaryActions(false);
+                          handleGeneratePortalLink();
+                        }}
+                        disabled={generatingLink}
+                      >
+                        <LinkIcon className="h-3.5 w-3.5 text-slate-500" />
+                        {generatingLink ? 'Generating...' : 'Generate Portal Link'}
+                      </button>
+                      {!activeWaiver && vendor.compliance_status !== 'compliant' && vendor.compliance_status !== 'pending' && (
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-sm text-amber-600 hover:bg-amber-50"
+                          onClick={() => {
+                            setShowSecondaryActions(false);
+                            setWaiverOpen(true);
+                          }}
+                        >
+                          <ShieldOff className="h-3.5 w-3.5" />
+                          Grant Waiver
+                        </button>
+                      )}
+                      <div className="my-1 border-t border-slate-100" />
+                      <div className="flex items-center justify-between px-3 py-2">
+                        <span className="text-sm text-foreground">Notifications</span>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={!vendor.notifications_paused}
+                          onClick={handleToggleNotifications}
+                          disabled={togglingNotif}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 ${
+                            !vendor.notifications_paused ? 'bg-emerald-500' : 'bg-slate-200'
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              !vendor.notifications_paused ? 'translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={!vendor.notifications_paused}
-                onClick={handleToggleNotifications}
-                disabled={togglingNotif}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 ${
-                  !vendor.notifications_paused ? 'bg-brand' : 'bg-slate-200'
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    !vendor.notifications_paused ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
             </div>
           </div>
 
-          <div className="rounded-lg border border-slate-200 bg-white p-4 space-y-2">
-            {vendor.archived_at ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                disabled={deleting}
-                onClick={async () => {
-                  setDeleting(true);
-                  try {
-                    const { restoreVendor } = await import('@/lib/actions/properties');
-                    await restoreVendor(vendor.id, vendor.property_id ?? '');
-                    toast.success('Vendor restored');
-                    router.refresh();
-                  } catch (err) {
-                    toast.error(err instanceof Error ? err.message : 'Failed to restore');
-                  } finally {
-                    setDeleting(false);
-                  }
-                }}
-              >
-                {deleting ? 'Restoring...' : 'Restore Vendor'}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  Archive Vendor
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                  onClick={() => setHardDeleteOpen(true)}
-                >
-                  Delete Vendor
-                </Button>
-              </>
-            )}
-          </div>
+          {/* Coverage Requirements + Certificate Details — flat, non-scrollable */}
+          <CompactComplianceView
+            entityType="vendor"
+            entityId={vendor.id}
+            hasCertificate={hasCertificate}
+            templateRequirements={templateRequirements}
+            complianceResults={complianceResults}
+            extractedCoverages={extractedCoverages}
+            entityResults={entityResults}
+            propertyEntities={propertyEntities}
+            latestCert={latestCert}
+          />
         </div>
       </div>
 
@@ -421,6 +374,8 @@ export function VendorDetailClient({
         templates={orgTemplates}
         open={editOpen}
         onOpenChange={setEditOpen}
+        onArchive={() => setDeleteOpen(true)}
+        onDelete={() => setHardDeleteOpen(true)}
       />
       <ConfirmDialog
         open={deleteOpen}
