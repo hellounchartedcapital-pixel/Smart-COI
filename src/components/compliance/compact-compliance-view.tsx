@@ -100,12 +100,15 @@ function getEndorsementVerification(
 function buildEndorsementItems(
   extractedCoverages: ExtractedCoverage[],
   endorsements: EndorsementRecord[] | null | undefined,
+  hasAdditionalInsuredEntityRows: boolean,
 ): EndorsementItem[] {
   const items: EndorsementItem[] = [];
 
-  // Check if any coverage has additional insured
+  // Only show standalone Additional Insured endorsement row if there are
+  // no property entity rows of type additional_insured (to avoid duplicates).
+  // When property entity rows exist, the endorsement status is overlaid on those rows.
   const hasAdditionalInsured = extractedCoverages.some((c) => c.additional_insured_listed);
-  if (hasAdditionalInsured) {
+  if (hasAdditionalInsured && !hasAdditionalInsuredEntityRows) {
     const { verification, matchedEndorsement } = getEndorsementVerification(
       endorsements,
       true,
@@ -162,6 +165,20 @@ function buildEndorsementItems(
   return items;
 }
 
+/** Get the endorsement verification status for Additional Insured, used to overlay on entity rows */
+function getAdditionalInsuredEndorsementStatus(
+  extractedCoverages: ExtractedCoverage[],
+  endorsements: EndorsementRecord[] | null | undefined,
+): { verification: EndorsementVerification; matchedEndorsement: EndorsementRecord | null } | null {
+  const hasAdditionalInsured = extractedCoverages.some((c) => c.additional_insured_listed);
+  if (!hasAdditionalInsured) return null;
+  return getEndorsementVerification(
+    endorsements,
+    true,
+    ['CG 20 10', 'CG 20 37', 'CG 20 26', 'Additional Insured'],
+  );
+}
+
 // ============================================================================
 // Main component
 // ============================================================================
@@ -200,9 +217,15 @@ export function CompactComplianceView({
     (c) => !requiredCoverageTypes.has(c.coverage_type)
   );
 
+  const hasAdditionalInsuredEntityRows = propertyEntities.some(
+    (pe) => pe.entity_type === 'additional_insured'
+  );
   const endorsementItems = hasCertificate
-    ? buildEndorsementItems(extractedCoverages, latestCert?.endorsement_data)
+    ? buildEndorsementItems(extractedCoverages, latestCert?.endorsement_data, hasAdditionalInsuredEntityRows)
     : [];
+  const aiEndorsementStatus = hasCertificate
+    ? getAdditionalInsuredEndorsementStatus(extractedCoverages, latestCert?.endorsement_data)
+    : null;
 
   if (!hasCertificate) {
     return (
@@ -234,8 +257,11 @@ export function CompactComplianceView({
               const result = complianceResults.find(
                 (r) => r.coverage_requirement_id === req.id
               );
+              // Match by coverage_type AND limit_type — same logic as compliance engine
               const coverage = extractedCoverages.find(
-                (c) => c.coverage_type === req.coverage_type
+                (c) =>
+                  c.coverage_type === req.coverage_type &&
+                  (req.limit_type == null || c.limit_type === req.limit_type)
               );
               const isMet = result?.status === 'met';
 
@@ -299,10 +325,24 @@ export function CompactComplianceView({
                 ? 'Certificate Holder'
                 : 'Additional Insured';
 
+              // For additional_insured entities, overlay endorsement verification
+              const showEndorsement = pe.entity_type === 'additional_insured' && isMet && aiEndorsementStatus;
+              const isVerified = showEndorsement && aiEndorsementStatus?.verification === 'verified';
+              const isWarning = showEndorsement && aiEndorsementStatus?.verification === 'warning';
+
               return (
                 <div key={pe.id} className="flex items-start gap-2.5 px-4 py-2.5">
                   {isMet ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    isVerified ? (
+                      <div className="relative shrink-0 mt-0.5">
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        <ShieldCheck className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 text-emerald-600" />
+                      </div>
+                    ) : isWarning ? (
+                      <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    )
                   ) : (
                     <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
                   )}
@@ -310,9 +350,14 @@ export function CompactComplianceView({
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-sm font-medium text-foreground">
                         {label}
-                        {isMet && isFuzzy && (
+                        {isMet && isFuzzy && !showEndorsement && (
                           <span className="ml-1.5 text-[10px] text-muted-foreground font-normal">
                             (fuzzy match)
+                          </span>
+                        )}
+                        {isVerified && (
+                          <span className="ml-1.5 inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                            Verified
                           </span>
                         )}
                       </span>
@@ -320,13 +365,28 @@ export function CompactComplianceView({
                         Required: {pe.entity_name}
                       </span>
                     </div>
-                    <span className={`text-xs ${isMet ? 'text-emerald-700' : 'text-red-600'}`}>
-                      {isMet ? 'Found on certificate' : 'Not found on certificate'}
-                    </span>
+                    {isMet ? (
+                      isVerified && aiEndorsementStatus?.matchedEndorsement ? (
+                        <span className="text-xs text-emerald-700">
+                          Verified — {aiEndorsementStatus.matchedEndorsement.form_number ?? aiEndorsementStatus.matchedEndorsement.type} endorsement attached
+                        </span>
+                      ) : isWarning ? (
+                        <span className="text-xs text-amber-700">
+                          Found on certificate — endorsement not attached
+                        </span>
+                      ) : (
+                        <span className="text-xs text-emerald-700">Found on certificate</span>
+                      )
+                    ) : (
+                      <span className="text-xs text-red-600">Not found on certificate</span>
+                    )}
                     {result?.match_details && (
                       <p className="text-[10px] text-muted-foreground italic">
                         {result.match_details}
                       </p>
+                    )}
+                    {isMet && showEndorsement && aiEndorsementStatus?.verification === 'indicated' && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">Upload endorsement pages for full verification</p>
                     )}
                   </div>
                 </div>
