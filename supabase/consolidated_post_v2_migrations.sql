@@ -143,3 +143,8 @@ CREATE INDEX IF NOT EXISTS idx_tenants_archived_at
 --   SELECT column_name FROM information_schema.columns
 --   WHERE table_name = 'vendors' ORDER BY ordinal_position;
 -- ============================================================================
+
+-- ============================================================================
+-- Add endorsement_data JSONB column to certificates
+-- ============================================================================
+ALTER TABLE certificates ADD COLUMN IF NOT EXISTS endorsement_data JSONB DEFAULT NULL;

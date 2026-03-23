@@ -77,6 +77,17 @@ export type NotificationType =
 
 export type NotificationStatus = 'scheduled' | 'sent' | 'failed' | 'cancelled';
 
+export type EndorsementVerification = 'indicated' | 'verified' | 'warning';
+
+export interface EndorsementRecord {
+  type: string;
+  form_number: string | null;
+  edition_date: string | null;
+  found: boolean;
+  named_parties: string[];
+  description: string | null;
+}
+
 export type ActivityAction =
   | 'coi_uploaded'
   | 'coi_processed'
@@ -246,6 +257,7 @@ export interface Certificate {
   upload_source: UploadSource;
   processing_status: ProcessingStatus;
   insured_name: string | null;
+  endorsement_data: EndorsementRecord[] | null;
   uploaded_at: string;
   reviewed_at: string | null;
   reviewed_by: string | null;

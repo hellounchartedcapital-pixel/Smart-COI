@@ -494,12 +494,13 @@ export async function reExtractCertificate(
     );
   }
 
-  // Update certificate status
+  // Update certificate status and endorsement data
   await serviceClient
     .from('certificates')
     .update({
       processing_status: 'extracted',
       ...(result.insuredName ? { insured_name: result.insuredName } : {}),
+      endorsement_data: result.endorsements.length > 0 ? result.endorsements : null,
     })
     .eq('id', certificateId);
 

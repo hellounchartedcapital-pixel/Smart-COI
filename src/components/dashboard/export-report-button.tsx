@@ -36,7 +36,14 @@ function generatePDFHtml(data: ComplianceReportData): string {
   const propertyRows = data.properties
     .filter((p) => p.entities.length > 0)
     .map((prop) => {
-      const entityRows = prop.entities.map((e) => `
+      const entityRows = prop.entities.map((e) => {
+        const endorsementColor = (status: string) => {
+          if (status === 'Verified') return '#059669';
+          if (status === 'Warning') return '#d97706';
+          if (status === 'Indicated') return '#475569';
+          return '#94a3b8';
+        };
+        return `
         <tr>
           <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${e.name}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${e.type === 'vendor' ? 'Vendor' : 'Tenant'}</td>
@@ -48,11 +55,13 @@ function generatePDFHtml(data: ComplianceReportData): string {
           <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${e.autoLimit}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${e.umbrellaLimit}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${e.expirationDate}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px;color:${endorsementColor(e.additionalInsuredStatus)};font-weight:500;">${e.additionalInsuredStatus}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px;color:${endorsementColor(e.waiverOfSubStatus)};font-weight:500;">${e.waiverOfSubStatus}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:12px;color:#dc2626;">
             ${e.gaps.length > 0 ? e.gaps.map((g) => `<div style="margin-bottom:2px;">• ${g}</div>`).join('') : '<span style="color:#059669;">—</span>'}
           </td>
         </tr>
-      `).join('');
+      `;}).join('');
 
       return `
         <div style="margin-bottom:24px;page-break-inside:avoid;">
@@ -71,6 +80,8 @@ function generatePDFHtml(data: ComplianceReportData): string {
                 <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Auto</th>
                 <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Umbrella</th>
                 <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Expiration</th>
+                <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Addl Ins</th>
+                <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Waiver</th>
                 <th style="padding:8px 12px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:2px solid #e2e8f0;">Gaps</th>
               </tr>
             </thead>

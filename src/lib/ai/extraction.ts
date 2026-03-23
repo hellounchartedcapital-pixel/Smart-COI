@@ -1,4 +1,4 @@
-import type { CoverageType, LimitType } from '@/types';
+import type { CoverageType, LimitType, EndorsementRecord } from '@/types';
 
 // ============================================================================
 // Types for the AI extraction response
@@ -28,11 +28,22 @@ interface AIEntity {
   confidence: 'high' | 'low';
 }
 
+interface AIEndorsement {
+  type: string;
+  form_number: string | null;
+  edition_date: string | null;
+  found: boolean;
+  named_parties: string[];
+  description: string | null;
+}
+
 interface AIExtractionResponse {
   coverages: AICoverage[];
   named_insured: string;
   certificate_holder: AIEntity;
   additional_insured_entities: AIEntity[];
+  endorsements: AIEndorsement[];
+  page_count: number;
 }
 
 // ============================================================================
@@ -65,6 +76,7 @@ export interface ExtractionResult {
   success: boolean;
   coverages: ExtractedCoverageRow[];
   entities: ExtractedEntityRow[];
+  endorsements: EndorsementRecord[];
   insuredName: string | null;
   error?: string;
   /** User-facing error message (friendly wording, no raw status codes) */
@@ -72,13 +84,14 @@ export interface ExtractionResult {
 }
 
 // ============================================================================
-// System prompt
+// System prompt — Two-pass extraction strategy
 // ============================================================================
 
-const SYSTEM_PROMPT = `You are an expert insurance document analyzer. Extract all coverage and entity information from this Certificate of Insurance (COI) document.
+const SYSTEM_PROMPT = `You are an expert insurance document analyzer. Extract all coverage and entity information from this Certificate of Insurance (COI) document using a two-pass approach.
 
 Return a JSON object with exactly this structure:
 {
+  "page_count": number,
   "coverages": [
     {
       "coverage_type": "general_liability" | "automobile_liability" | "workers_compensation" | "employers_liability" | "umbrella_excess_liability" | "professional_liability_eo" | "property_inland_marine" | "pollution_liability" | "liquor_liability" | "cyber_liability",
@@ -110,30 +123,82 @@ Return a JSON object with exactly this structure:
       "address": "string or empty",
       "confidence": "high" | "low"
     }
+  ],
+  "endorsements": [
+    {
+      "type": "CG 20 10" | "CG 20 37" | "Waiver of Subrogation" | "Primary and Non-Contributory" | "other",
+      "form_number": "string or null (e.g., 'CG 20 10 04 13')",
+      "edition_date": "string or null (e.g., '04 13')",
+      "found": true | false,
+      "named_parties": ["string"],
+      "description": "string or null"
+    }
   ]
 }
 
-Important instructions:
-- Extract ALL coverage sections found on the certificate
-- For General Liability, extract BOTH per occurrence AND aggregate limits as separate limit entries in the limits array. The ACORD 25 form has separate fields for "EACH OCCURRENCE" and "GENERAL AGGREGATE" — extract both with the correct limit types ("per_occurrence" and "aggregate").
-- For Workers Compensation, use "statutory" as the limit type with amount 0. IMPORTANT: Employers' Liability (E.L.) is a sub-section within the Workers' Compensation section on ACORD 25 forms. It has its own limits (E.L. EACH ACCIDENT, E.L. DISEASE - EA EMPLOYEE, E.L. DISEASE - POLICY LIMIT). Extract Employers' Liability as a SEPARATE coverage entry with coverage_type "employers_liability" and its per_accident limit.
-- If a field is unclear or illegible, still include it but set confidence to "low"
-- Look at ALL pages of the document for endorsements, additional insured schedules, and supplementary information
-- Extract exact entity names and addresses for certificate holder and all additional insured parties
+=== PASS 1 — ACORD 25 FORM (Page 1) ===
 
-IMPORTANT — Additional Insured Detection:
-Additional insured status must be detected from MULTIPLE locations on the certificate:
-1. The "ADDL INSD" checkbox column — if marked "Y" for a coverage line, set additional_insured to true for that coverage
-2. The "Description of Operations / Locations / Vehicles" section — look for language like:
-   - "[Entity Name] is included as Additional Insured"
-   - "Additional Insured: [Entity Name]"
-   - "[Entity Names] are included as Additional Insureds with respect to..."
-   - "Certificate holder and [Entity Name] are named as additional insured..."
-   - Any entity names listed alongside phrases like "additional insured", "named insured", "loss payee"
-3. Attached endorsement pages — look for CG 20 10, CG 20 26, CG 20 37, or similar Additional Insured endorsement forms. These confirm additional insured status even if the checkbox is not clearly marked.
-4. The certificate holder box — sometimes additional insured entities are listed together with the certificate holder.
+Extract all standard certificate fields from page 1 ONLY:
 
-Extract ALL entity names mentioned as additional insureds from ANY of these sources and include them in the additional_insured_entities array. If additional insured status is confirmed by any source (checkbox, description, or endorsement), set additional_insured to true on the relevant coverage.
+1. INSURED NAME — the named insured / policyholder from the top-left of the certificate
+2. PRODUCER / AGENCY — the producing agent/broker info
+3. ALL COVERAGES with their specific limits:
+
+   CRITICAL — GENERAL LIABILITY LIMITS:
+   The ACORD 25 form has SEPARATE fields for General Liability limits. These are DIFFERENT dollar amounts — do NOT copy the same value for both:
+   - "EACH OCCURRENCE" → extract as limit type "per_occurrence" (e.g., $1,000,000)
+   - "GENERAL AGGREGATE" → extract as limit type "aggregate" (often $2,000,000)
+   - "PRODUCTS - COMP/OP AGG" → extract as a second "aggregate" entry if different
+   - "DAMAGE TO RENTED PREMISES" → can be ignored unless relevant
+   - "MED EXP" → can be ignored unless relevant
+   - "PERSONAL & ADV INJURY" → can be ignored unless relevant
+   Read each field's dollar amount individually. The aggregate is typically 2x the per-occurrence limit but read the actual values.
+
+   AUTOMOBILE LIABILITY:
+   - "COMBINED SINGLE LIMIT" → extract as "combined_single_limit"
+   - Or individual limits if split (BODILY INJURY per person, per accident, PROPERTY DAMAGE)
+
+   UMBRELLA / EXCESS LIABILITY:
+   - "EACH OCCURRENCE" → "per_occurrence"
+   - "AGGREGATE" → "aggregate"
+
+   WORKERS COMPENSATION:
+   - WC STATUTORY LIMITS → use limit type "statutory" with amount 0
+   - E.L. EACH ACCIDENT → extract as SEPARATE coverage_type "employers_liability" with "per_accident" limit
+   - E.L. DISEASE - EA EMPLOYEE → "per_person" limit
+   - E.L. DISEASE - POLICY LIMIT → "aggregate" limit
+
+4. POLICY NUMBERS, EFFECTIVE DATES, EXPIRATION DATES for each coverage line
+5. ADDL INSD column — if marked "Y" for a coverage line, set additional_insured to true
+6. SUBR WVD column — if marked "Y" for a coverage line, set waiver_of_subrogation to true
+7. CERTIFICATE HOLDER — name and address from the bottom-left box
+8. DESCRIPTION OF OPERATIONS — look for additional insured language, waiver of subrogation mentions, and any entity names listed
+
+=== PASS 2 — ENDORSEMENT PAGES (Pages 2+) ===
+
+If the document has more than 1 page, scan remaining pages for endorsement documents. For each endorsement found, add an entry to the "endorsements" array.
+
+Look for these specific endorsements:
+- CG 20 10 (Additional Insured — Ongoing Operations): Record form number, edition date, and named insured(s) from the schedule
+- CG 20 37 (Additional Insured — Completed Operations): Same fields
+- CG 20 26 or similar Additional Insured endorsements: Record form number and details
+- Waiver of Subrogation endorsement (CG 24 04 or similar): Record form number and confirmation
+- Primary and Non-Contributory endorsement: Record form number and confirmation
+- Any other endorsement types: Record form number and brief description
+
+KEY RULES:
+- Dollar amounts from endorsement pages (policy terms, conditions, definitions) must NEVER override or replace the ACORD 25 limits from page 1. The limits array should ONLY contain values from the ACORD 25 form.
+- Endorsement pages are ONLY used to verify endorsement existence and extract endorsement-specific data (form numbers, named parties).
+- If the PDF is a single page, set "endorsements" to an empty array — do not penalize single-page uploads.
+- Set "page_count" to the total number of pages in the PDF.
+
+ADDITIONAL INSURED DETECTION (combine all sources):
+1. ADDL INSD checkbox column on ACORD 25 — if "Y", set additional_insured to true
+2. Description of Operations section — look for "additional insured", "named insured", "loss payee" language
+3. Endorsement pages (CG 20 10, CG 20 26, CG 20 37) — confirms additional insured status
+4. Certificate holder box — sometimes lists additional insured entities
+
+Extract ALL entity names mentioned as additional insureds from ANY source and include them in additional_insured_entities.
 
 - Return ONLY the JSON object, no other text`;
 
@@ -181,7 +246,7 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
   if (!apiKey) {
     console.error('[CRITICAL] ANTHROPIC_API_KEY is not configured');
     return {
-      success: false, coverages: [], entities: [], insuredName: null,
+      success: false, coverages: [], entities: [], endorsements: [], insuredName: null,
       error: 'ANTHROPIC_API_KEY is not configured',
       userMessage: 'Something went wrong. Please try again or contact support@smartcoi.io.',
     };
@@ -189,7 +254,7 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
 
   const requestBody = JSON.stringify({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 4096,
+    max_tokens: 8192,
     system: SYSTEM_PROMPT,
     messages: [
       {
@@ -205,7 +270,7 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
           },
           {
             type: 'text',
-            text: 'Extract all insurance data from this Certificate of Insurance.',
+            text: 'Extract all insurance data from this Certificate of Insurance using the two-pass approach. Pass 1: Extract all ACORD 25 data from page 1 with correct per-occurrence and aggregate limits. Pass 2: Scan endorsement pages (if any) for CG 20 10, CG 20 37, Waiver of Subrogation, and other endorsements.',
           },
         ],
       },
@@ -239,7 +304,7 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         return {
-          success: false, coverages: [], entities: [], insuredName: null,
+          success: false, coverages: [], entities: [], endorsements: [], insuredName: null,
           error: 'Could not parse structured data from AI response',
           userMessage: "We couldn't read this PDF. Please make sure it's a valid, non-corrupted PDF file.",
         };
@@ -250,7 +315,7 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
         parsed = JSON.parse(jsonMatch[0]);
       } catch {
         return {
-          success: false, coverages: [], entities: [], insuredName: null,
+          success: false, coverages: [], entities: [], endorsements: [], insuredName: null,
           error: 'AI returned malformed JSON',
           userMessage: "We couldn't read this PDF. Please make sure it's a valid, non-corrupted PDF file.",
         };
@@ -284,7 +349,7 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
 
   // All retries exhausted or non-retryable error
   return {
-    success: false, coverages: [], entities: [], insuredName: null,
+    success: false, coverages: [], entities: [], endorsements: [], insuredName: null,
     error: `AI extraction failed (status ${lastStatus})`,
     userMessage: getExtractionErrorMessage(lastStatus),
   };
@@ -362,10 +427,21 @@ function mapToDbRows(parsed: AIExtractionResponse): ExtractionResult {
     }
   }
 
+  // Map endorsements
+  const endorsements: EndorsementRecord[] = (parsed.endorsements ?? []).map((e) => ({
+    type: e.type,
+    form_number: e.form_number || null,
+    edition_date: e.edition_date || null,
+    found: e.found ?? true,
+    named_parties: e.named_parties ?? [],
+    description: e.description || null,
+  }));
+
   return {
     success: true,
     coverages,
     entities,
+    endorsements,
     insuredName: parsed.named_insured || null,
   };
 }
