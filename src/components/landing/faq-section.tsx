@@ -24,7 +24,7 @@ const FAQS = [
   },
   {
     q: 'How accurate is the AI extraction?',
-    a: "SmartCOI's AI is trained specifically on ACORD certificate formats and achieves 99%+ accuracy on standard fields including coverage types, policy limits, expiration dates, carrier names, and named insureds. Every extraction is visible for review, so you always have final say.",
+    a: "SmartCOI's AI is trained specifically on ACORD certificate formats and achieves 99%+ accuracy on standard fields including coverage types, policy limits, expiration dates, carrier names, named insureds, and endorsements (CG 20 10, CG 20 37, Waiver of Subrogation). Every extraction is visible for review, so you always have final say.",
   },
   {
     q: 'Can I import data from my current system?',

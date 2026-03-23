@@ -405,7 +405,7 @@ export default async function DashboardPage({
 
   const { data: profile } = await supabase
     .from('users')
-    .select('organization_id')
+    .select('organization_id, full_name')
     .eq('id', user.id)
     .single();
   if (!profile?.organization_id) redirect('/login');
@@ -413,6 +413,7 @@ export default async function DashboardPage({
   const data = await getDashboardData(profile.organization_id);
   const params = await searchParams;
   const showAssignBanner = params.assign_pending === '1';
+  const firstName = profile.full_name?.split(' ')[0] ?? null;
 
-  return <DashboardClient {...data} showAssignBanner={showAssignBanner} />;
+  return <DashboardClient {...data} showAssignBanner={showAssignBanner} firstName={firstName} />;
 }

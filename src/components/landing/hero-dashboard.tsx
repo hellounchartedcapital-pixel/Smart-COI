@@ -65,8 +65,6 @@ export function HeroDashboard() {
                 {/* Right sidebar */}
                 <div className="hidden space-y-3 lg:block">
                   <PortfolioOverviewCard />
-                  <ComplianceScoreCard />
-                  <ExpiringSoonCard />
                   <RecentActivityCard />
                 </div>
               </div>
@@ -267,6 +265,10 @@ function ActionQueue() {
         badgeDot="bg-amber-500"
         isLast
       />
+      {/* Show all link */}
+      <div className="border-t border-slate-100 px-4 py-2 text-center">
+        <span className="text-[9px] font-medium text-emerald-600">Show all 14 items</span>
+      </div>
     </div>
   );
 }
@@ -373,31 +375,6 @@ function PortfolioOverviewCard() {
   );
 }
 
-function ComplianceScoreCard() {
-  return (
-    <SidebarCard title="Compliance Score" icon={<ShieldSmIcon />}>
-      <div className="flex items-center gap-3">
-        <span className="text-xl font-bold text-emerald-600">87%</span>
-        <div className="flex-1">
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-emerald-500" style={{ width: '87%' }} />
-          </div>
-        </div>
-      </div>
-    </SidebarCard>
-  );
-}
-
-function ExpiringSoonCard() {
-  return (
-    <SidebarCard title="Expiring Soon" icon={<ClockSmIcon />} action="View All">
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-xl font-bold text-amber-600">3</span>
-        <span className="text-[9px] text-slate-400">in next 30 days</span>
-      </div>
-    </SidebarCard>
-  );
-}
 
 function RecentActivityCard() {
   return (
@@ -425,6 +402,9 @@ function RecentActivityCard() {
           isLast
         />
       </div>
+      <span className="mt-2 inline-flex items-center gap-0.5 text-[9px] font-medium text-emerald-600">
+        View all activity &rsaquo;
+      </span>
     </SidebarCard>
   );
 }
@@ -536,23 +516,6 @@ function BuildingSmIcon() {
   );
 }
 
-function ShieldSmIcon() {
-  return (
-    <svg className={cardIconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <polyline points="9,12 11,14 15,10" />
-    </svg>
-  );
-}
-
-function ClockSmIcon() {
-  return (
-    <svg className={cardIconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
 
 function TrendingSmIcon() {
   return (
