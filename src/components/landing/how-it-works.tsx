@@ -95,12 +95,12 @@ const steps = [
     icon: <IconCpu className="h-6 w-6" />,
     title: 'AI Extracts Data',
     shortTitle: 'Extract',
-    description: 'AI reads every certificate and pulls coverage types, policy limits, expiration dates, carrier names, and named insureds — automatically.',
+    description: 'AI reads every certificate — including multi-page PDFs — and pulls coverage types, policy limits, expiration dates, carrier names, named insureds, and endorsements like CG 20 10 and Waiver of Subrogation.',
     visual: (
       <div className="rounded-lg border border-slate-100 bg-white p-5">
         <div className="flex items-center gap-2 text-xs font-medium text-[#4CC78A] mb-4">
           <div className="h-2 w-2 rounded-full bg-[#73E2A7]" />
-          Extraction complete — 12 fields found
+          Extraction complete — 14 fields found
         </div>
         <div className="space-y-3">
           {[
@@ -110,6 +110,7 @@ const steps = [
             { field: 'Auto Liability', value: '$1,000,000 CSL' },
             { field: 'Expiration', value: '03/15/2027' },
             { field: 'Additional Insured', value: 'Westfield Tower LLC' },
+            { field: 'Endorsements', value: 'CG 20 10, Waiver of Subrogation' },
           ].map((item) => (
             <div key={item.field} className="flex items-start justify-between gap-4">
               <span className="text-xs font-medium text-slate-400 shrink-0 w-32">{item.field}</span>
@@ -153,7 +154,7 @@ const steps = [
     icon: <IconShieldCheck className="h-6 w-6" />,
     title: 'Automatic Compliance Check',
     shortTitle: 'Check',
-    description: 'SmartCOI checks every certificate against your specific requirements and flags gaps — coverage shortfalls, missing policies, and expired certificates.',
+    description: 'SmartCOI checks every certificate against your specific requirements and flags gaps — coverage shortfalls, missing policies, expired certificates, and missing endorsements.',
     visual: (
       <div className="rounded-lg border border-slate-100 bg-white p-5">
         <p className="text-xs font-semibold text-slate-900 mb-3">Compliance Results — Acme Cleaning</p>
@@ -163,6 +164,7 @@ const steps = [
             { coverage: 'Workers\' Comp', status: 'Gap — below minimum', statusColor: 'text-red-500', bgColor: 'bg-red-50' },
             { coverage: 'Commercial Auto', status: 'Met', statusColor: 'text-[#4CC78A]', bgColor: 'bg-[#73E2A7]/10' },
             { coverage: 'Additional Insured', status: 'Met', statusColor: 'text-[#4CC78A]', bgColor: 'bg-[#73E2A7]/10' },
+            { coverage: 'CG 20 10 Endorsement', status: 'Verified', statusColor: 'text-[#4CC78A]', bgColor: 'bg-[#73E2A7]/10' },
           ].map((item) => (
             <div key={item.coverage} className={cn('flex items-center justify-between rounded-lg px-4 py-2.5', item.bgColor)}>
               <span className="text-sm text-slate-700">{item.coverage}</span>

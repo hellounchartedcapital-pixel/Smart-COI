@@ -66,6 +66,7 @@ interface DashboardClientProps {
   vendorList: UploadDialogEntity[];
   tenantList: UploadDialogEntity[];
   showAssignBanner?: boolean;
+  firstName?: string | null;
 }
 
 // ============================================================================
@@ -165,6 +166,7 @@ export function DashboardClient({
   vendorList,
   tenantList,
   showAssignBanner,
+  firstName,
 }: DashboardClientProps) {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
@@ -224,7 +226,7 @@ export function DashboardClient({
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
-            Hello{stats.propertyCount > 0 ? '' : ' there'}
+            Hello{firstName ? `, ${firstName}` : stats.propertyCount > 0 ? '' : ' there'}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
             Here&apos;s what&apos;s going on with your portfolio today.

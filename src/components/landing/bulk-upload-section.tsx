@@ -15,7 +15,7 @@ const bullets = [
   },
   {
     title: 'AI extracts everything automatically',
-    description: 'Vendor names, coverage types, policy limits, expiration dates, and named insureds — extracted from every certificate.',
+    description: 'Vendor names, coverage types, policy limits, expiration dates, named insureds, and endorsements like CG 20 10 and Waiver of Subrogation — extracted from every certificate, even multi-page PDFs.',
   },
   {
     title: 'AI automatically links certificates to the right vendors',

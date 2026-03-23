@@ -76,7 +76,7 @@ const features = [
   {
     icon: <IconCpu className="h-6 w-6" />,
     title: 'AI-Powered Extraction',
-    description: 'AI reads every COI and extracts coverage types, limits, dates, carriers, and named insureds — no manual data entry.',
+    description: 'AI reads every COI and extracts coverage types, limits, dates, carriers, named insureds, and endorsements like CG 20 10 and Waiver of Subrogation — from multi-page PDFs.',
     href: '/ai-coi-extraction',
   },
   {
@@ -100,7 +100,7 @@ const features = [
   {
     icon: <IconBarChart className="h-6 w-6" />,
     title: 'Real-Time Dashboard',
-    description: 'See compliance health across every property at a glance. Track status, identify gaps, and prioritize follow-ups from one view.',
+    description: 'See compliance health across every property at a glance. Track status, identify coverage gaps with detailed descriptions, export compliance reports, and prioritize follow-ups from one view.',
     href: '/features/coi-tracking',
   },
 ];
