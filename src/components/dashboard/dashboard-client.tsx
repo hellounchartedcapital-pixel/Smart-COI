@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { formatTimeAgo, formatDate } from '@/lib/utils';
 import { UploadCOIDialog } from '@/components/dashboard/upload-coi-dialog';
 import { ExportReportButton } from '@/components/dashboard/export-report-button';
-import { ComplianceTrendChart } from '@/components/dashboard/compliance-trend-chart';
 import { DashboardTutorial, useTutorial } from '@/components/dashboard/dashboard-tutorial';
 import {
   ShieldCheck,
@@ -27,12 +26,10 @@ import {
   X,
   RefreshCw,
   Sparkles,
-  CalendarClock,
   Building2,
   Plus,
   ChevronRight,
   AlertCircle,
-  Clock,
   TrendingUp,
 } from 'lucide-react';
 import type {
@@ -65,7 +62,6 @@ interface DashboardClientProps {
   actionItems: ActionItem[];
   propertyOverviews: PropertyOverview[];
   activity: ActivityEntry[];
-  notificationsSentThisMonth: number;
   propertyList: UploadDialogProperty[];
   vendorList: UploadDialogEntity[];
   tenantList: UploadDialogEntity[];
@@ -165,7 +161,6 @@ export function DashboardClient({
   actionItems,
   propertyOverviews,
   activity,
-  notificationsSentThisMonth,
   propertyList,
   vendorList,
   tenantList,
@@ -189,38 +184,6 @@ export function DashboardClient({
         : stats.complianceRate >= 60
           ? 'text-amber-600'
           : 'text-red-600';
-
-  const thisMonthStats = useMemo(() => {
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    const monthStartTime = monthStart.getTime();
-
-    let coisUploaded = 0;
-    let vendorsAdded = 0;
-    let portalUploads = 0;
-
-    for (const entry of activity) {
-      if (new Date(entry.created_at).getTime() < monthStartTime) continue;
-      if (entry.action === 'coi_uploaded') coisUploaded++;
-      if (entry.action === 'vendor_created') vendorsAdded++;
-      if (entry.action === 'portal_upload_received') portalUploads++;
-    }
-
-    return { coisUploaded, vendorsAdded, portalUploads };
-  }, [activity]);
-
-  const upcomingExpirations = useMemo(() => {
-    return actionItems
-      .filter(
-        (item) =>
-          item.status === 'expiring_soon' &&
-          item.daysUntilExpiration != null &&
-          item.daysUntilExpiration <= 30
-      )
-      .sort((a, b) => (a.daysUntilExpiration ?? 0) - (b.daysUntilExpiration ?? 0))
-      .slice(0, 5);
-  }, [actionItems]);
 
   const handlePillClick = (status: keyof StatusDistribution) => {
     setPillFilter(pillFilter === status ? null : status);
@@ -361,7 +324,7 @@ export function DashboardClient({
           <PropertiesSection properties={propertyOverviews} />
         </div>
 
-        {/* Right sidebar: Summary cards + Activity + Stats + Expirations */}
+        {/* Right sidebar: Portfolio Overview + Activity */}
         <div className="space-y-6" data-tour="portfolio-snapshot">
           {/* Portfolio Overview Card */}
           <SummaryCard
@@ -375,61 +338,8 @@ export function DashboardClient({
             </div>
           </SummaryCard>
 
-          {/* Compliance Score Card */}
-          <SummaryCard
-            title="Compliance Score"
-            icon={ShieldCheck}
-          >
-            <div className="flex items-center gap-4">
-              <div className={`text-3xl font-bold tracking-tight ${rateColor}`}>
-                {stats.complianceRate != null ? `${stats.complianceRate}%` : '—'}
-              </div>
-              <div className="flex-1">
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    className="h-full rounded-full bg-emerald-500 transition-all"
-                    style={{ width: `${stats.complianceRate ?? 0}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </SummaryCard>
-
-          {/* Expiring Soon Card */}
-          <SummaryCard
-            title="Expiring Soon"
-            icon={Clock}
-            action={
-              stats.expiringSoonCount > 0
-                ? { label: 'View All', onClick: () => handlePillClick('expiring_soon') }
-                : undefined
-            }
-          >
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-amber-600">{stats.expiringSoonCount}</span>
-              <span className="text-sm text-slate-500">in next 30 days</span>
-            </div>
-          </SummaryCard>
-
-          {/* Compliance Trend */}
-          <ComplianceTrendChart />
-
           {/* Activity Feed */}
           <ActivitySidebar entries={activity} />
-
-          {/* Quick Stats */}
-          <QuickStatsCard
-            coisUploaded={thisMonthStats.coisUploaded}
-            remindersSent={notificationsSentThisMonth}
-            vendorsAdded={thisMonthStats.vendorsAdded}
-            portalUploads={thisMonthStats.portalUploads}
-          />
-
-          {/* Upcoming Expirations */}
-          <UpcomingExpirations
-            items={upcomingExpirations}
-            onFilterExpiring={() => setPillFilter('expiring_soon')}
-          />
         </div>
       </div>
     </div>
@@ -628,8 +538,8 @@ function ActionQueue({
   pillFilter: PillFilter;
 }) {
   const [showAll, setShowAll] = useState(false);
-  const displayItems = showAll ? items : items.slice(0, 10);
-  const hasMore = items.length > 10;
+  const displayItems = showAll ? items : items.slice(0, 5);
+  const hasMore = items.length > 5;
 
   return (
     <div className="rounded-2xl border border-slate-200/60 bg-white" data-tour="action-queue">
@@ -812,7 +722,7 @@ function ActionItemRow({ item, isLast, isFirst = false }: { item: ActionItem; is
 // ============================================================================
 
 function ActivitySidebar({ entries }: { entries: ActivityEntry[] }) {
-  const visibleEntries = entries.slice(0, 8);
+  const visibleEntries = entries.slice(0, 5);
 
   return (
     <div className="rounded-2xl border border-slate-200/60 bg-white p-5">
@@ -865,119 +775,3 @@ function ActivitySidebar({ entries }: { entries: ActivityEntry[] }) {
   );
 }
 
-// ============================================================================
-// Quick Stats Card — "This Month"
-// ============================================================================
-
-function QuickStatsCard({
-  coisUploaded,
-  remindersSent,
-  vendorsAdded,
-  portalUploads,
-}: {
-  coisUploaded: number;
-  remindersSent: number;
-  vendorsAdded: number;
-  portalUploads: number;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200/60 bg-white p-5">
-      <div className="flex items-center gap-2.5 mb-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50">
-          <Sparkles className="h-4 w-4 text-slate-500" />
-        </div>
-        <h3 className="text-sm font-semibold text-slate-900">This Month</h3>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <QuickStat icon={Upload} label="COIs Uploaded" value={coisUploaded} />
-        <QuickStat icon={Bell} label="Reminders Sent" value={remindersSent} />
-        <QuickStat icon={User} label="Vendors Added" value={vendorsAdded} />
-        <QuickStat icon={Building2} label="Portal Uploads" value={portalUploads} />
-      </div>
-    </div>
-  );
-}
-
-function QuickStat({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Upload;
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="rounded-xl bg-slate-50/80 p-3.5">
-      <div className="flex items-center gap-1.5">
-        <Icon className="h-3.5 w-3.5 text-slate-400" />
-        <span className="text-[10px] font-medium text-slate-500">{label}</span>
-      </div>
-      <p className="mt-1.5 text-xl font-bold text-slate-900">{value}</p>
-    </div>
-  );
-}
-
-// ============================================================================
-// Upcoming Expirations
-// ============================================================================
-
-function UpcomingExpirations({
-  items,
-  onFilterExpiring,
-}: {
-  items: ActionItem[];
-  onFilterExpiring: () => void;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200/60 bg-white p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50">
-            <CalendarClock className="h-4 w-4 text-amber-500" />
-          </div>
-          <h3 className="text-sm font-semibold text-slate-900">Expiring in 30 Days</h3>
-        </div>
-      </div>
-
-      {items.length === 0 ? (
-        <p className="text-xs text-slate-500">
-          No expirations in the next 30 days
-        </p>
-      ) : (
-        <>
-          <div className="space-y-1">
-            {items.map((item) => (
-              <Link
-                key={`${item.entityType}-${item.id}`}
-                href={`/dashboard/${item.entityType}s/${item.id}`}
-                className="block rounded-xl p-3 transition-colors hover:bg-slate-50"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="truncate text-xs font-medium text-slate-900" title={item.name}>
-                    {item.name.length > 40 ? item.name.slice(0, 40) + '...' : item.name}
-                  </p>
-                  <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-600">
-                    {item.daysUntilExpiration}d
-                  </span>
-                </div>
-                <p className="mt-0.5 text-[10px] text-slate-400">
-                  {item.propertyName && <>{item.propertyName} &middot; </>}
-                  {item.earliestExpiration && formatDate(item.earliestExpiration)}
-                </p>
-              </Link>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={onFilterExpiring}
-            className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
-          >
-            View all
-            <ChevronRight className="h-3 w-3" />
-          </button>
-        </>
-      )}
-    </div>
-  );
-}
