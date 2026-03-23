@@ -264,7 +264,20 @@ export default async function PropertiesPage() {
                       </p>
                     )}
 
-                    <div className="mt-4 border-t border-slate-100 pt-3">
+                    {/* Compliance percentage */}
+                    {(() => {
+                      const total = prop.vendor_count + prop.tenant_count;
+                      const withCert = total - prop.status_pending;
+                      const compRate = withCert > 0 ? Math.round((prop.status_compliant / withCert) * 100) : null;
+                      const rateColor = compRate == null ? 'text-slate-400' : compRate >= 80 ? 'text-emerald-600' : compRate >= 60 ? 'text-amber-600' : 'text-red-600';
+                      return compRate != null ? (
+                        <p className={`mt-2 text-lg font-bold ${rateColor}`}>
+                          {compRate}% <span className="text-xs font-normal text-slate-500">compliant</span>
+                        </p>
+                      ) : null;
+                    })()}
+
+                    <div className="mt-3 border-t border-slate-100 pt-3">
                       {(() => {
                         const total = prop.vendor_count + prop.tenant_count;
                         const segments = [
@@ -288,7 +301,28 @@ export default async function PropertiesPage() {
                           </div>
                         ) : null;
                       })()}
-                      <div className="space-y-1">
+                      {/* Status counts */}
+                      {(() => {
+                        const total = prop.vendor_count + prop.tenant_count;
+                        if (total === 0) return null;
+                        const counts = [
+                          { label: 'Compliant', count: prop.status_compliant, color: 'text-emerald-600' },
+                          { label: 'Expiring', count: prop.status_expiring, color: 'text-amber-600' },
+                          { label: 'Expired', count: prop.status_expired, color: 'text-red-600' },
+                          { label: 'Non-Compliant', count: prop.status_non_compliant, color: 'text-red-500' },
+                          { label: 'Pending', count: prop.status_pending, color: 'text-slate-500' },
+                        ].filter((c) => c.count > 0);
+                        return (
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
+                            {counts.map((c) => (
+                              <span key={c.label} className={`text-[11px] font-medium ${c.color}`}>
+                                {c.count} {c.label.toLowerCase()}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                      <div className="space-y-1 mt-2">
                         <ComplianceSummary
                           label="vendors"
                           total={prop.vendor_count}

@@ -52,7 +52,8 @@ function emailWrapper(body: string, fields: Pick<EmailMergeFields, 'organization
   </td></tr>
   <tr><td style="padding:24px;">${body}</td></tr>
   <tr><td style="padding:16px 24px;background:#f1f5f9;font-size:11px;color:#64748b;text-align:center;">
-    This is an automated message from SmartCOI. Please do not reply directly to this email.
+    Powered by <a href="https://smartcoi.io" style="color:#059669;text-decoration:none;font-weight:600;">SmartCOI</a> — Automated COI compliance tracking<br>
+    <span style="color:#94a3b8;">This is an automated message. Please do not reply directly to this email.</span>
   </td></tr>
 </table>
 </td></tr>
@@ -114,7 +115,7 @@ ${portalButton(fields.portal_link)}
 ${contactBlock(fields)}`;
 
   return {
-    subject: `Your Certificate of Insurance for ${fields.property_name} Expires Soon`,
+    subject: `Insurance certificate expiring — ${fields.property_name}`,
     html: emailWrapper(body, fields),
   };
 }
@@ -148,7 +149,7 @@ ${portalButton(fields.portal_link)}
 ${contactBlock(fields)}`;
 
   return {
-    subject: `Action Needed: Certificate of Insurance Update for ${fields.property_name}`,
+    subject: `Action needed: Insurance coverage gap — ${fields.property_name}`,
     html: emailWrapper(body, fields),
   };
 }
@@ -182,7 +183,7 @@ ${portalButton(fields.portal_link)}
 ${contactBlock(fields)}`;
 
   return {
-    subject: `Friendly Reminder: Updated Certificate Needed for ${fields.property_name}`,
+    subject: `Insurance certificate required — ${fields.property_name}`,
     html: emailWrapper(body, fields),
   };
 }
@@ -206,7 +207,7 @@ ${portalButton(fields.portal_link)}
 ${contactBlock(fields)}`;
 
   return {
-    subject: `Your Certificate of Insurance for ${fields.property_name} Has Expired`,
+    subject: `URGENT: Insurance certificate expired — ${fields.property_name}`,
     html: emailWrapper(body, fields),
   };
 }

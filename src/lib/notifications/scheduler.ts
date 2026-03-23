@@ -181,6 +181,21 @@ export async function checkAndScheduleNotifications(): Promise<number> {
           if (notifSet.has(key)) continue;
           notifSet.add(key);
 
+          // Generate or reuse portal link for vendor self-service upload
+          let portalLink = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/certificates/upload?${entity._type}Id=${entity.id}`;
+          const existingTokenCol = entity._type === 'vendor' ? 'vendor_id' : 'tenant_id';
+          const { data: existingToken } = await supabase
+            .from('upload_portal_tokens')
+            .select('token')
+            .eq(existingTokenCol, entity.id)
+            .eq('is_active', true)
+            .gt('expires_at', now.toISOString())
+            .limit(1)
+            .single();
+          if (existingToken) {
+            portalLink = `${process.env.NEXT_PUBLIC_APP_URL}/portal/${existingToken.token}`;
+          }
+
           const fields: EmailMergeFields = {
             entity_name: entity.company_name,
             contact_name: entity.contact_name ?? undefined,
@@ -188,7 +203,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
             property_name: propName,
             organization_name: orgName,
             gaps_summary: '',
-            portal_link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/certificates/upload?${entity._type}Id=${entity.id}`,
+            portal_link: portalLink,
             expiration_date: formatDate(earliestExp),
             days_until_expiration: Math.max(daysUntil, 0),
             pm_name: pm.name,
@@ -274,6 +289,21 @@ export async function checkAndScheduleNotifications(): Promise<number> {
             gaps.unshift(`Certificate expired on ${formatDate(earliestExp)}`);
           }
 
+          // Reuse or fall back to portal link
+          let gapPortalLink = `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/certificates/upload?${entity._type}Id=${entity.id}`;
+          const gapTokenCol = entity._type === 'vendor' ? 'vendor_id' : 'tenant_id';
+          const { data: gapToken } = await supabase
+            .from('upload_portal_tokens')
+            .select('token')
+            .eq(gapTokenCol, entity.id)
+            .eq('is_active', true)
+            .gt('expires_at', now.toISOString())
+            .limit(1)
+            .single();
+          if (gapToken) {
+            gapPortalLink = `${process.env.NEXT_PUBLIC_APP_URL}/portal/${gapToken.token}`;
+          }
+
           const fields: EmailMergeFields = {
             entity_name: entity.company_name,
             contact_name: entity.contact_name ?? undefined,
@@ -281,7 +311,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
             property_name: propName,
             organization_name: orgName,
             gaps_summary: formatGapsAsHtml(gaps),
-            portal_link: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/certificates/upload?${entity._type}Id=${entity.id}`,
+            portal_link: gapPortalLink,
             expiration_date: earliestExp ? formatDate(earliestExp) : 'N/A',
             days_until_expiration: 0,
             is_expired: isExpired,

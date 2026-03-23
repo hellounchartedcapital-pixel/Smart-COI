@@ -272,7 +272,7 @@ export function DashboardShell({
                     <li key={item.href}>
                       <Link
                         href={item.href}
-                        data-tutorial={item.tutorialId ?? undefined}
+                        data-tour={item.tutorialId ?? undefined}
                         className={cn(
                           'group relative flex h-10 items-center gap-3 rounded-lg text-[13px] font-medium transition-colors',
                           collapsed ? 'md:justify-center md:px-0' : 'px-3',

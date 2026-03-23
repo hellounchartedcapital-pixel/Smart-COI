@@ -11,6 +11,7 @@ import { EditVendorDialog } from './edit-vendor-dialog';
 import { SplitPanelView } from './split-panel-view';
 import { CompliancePanel } from './compliance-panel';
 import { ConfirmDialog } from '@/components/properties/confirm-dialog';
+import { GrantWaiverDialog, WaiverBadge, WaiverHistory } from './waiver-dialog';
 import {
   softDeleteVendor,
   toggleVendorNotifications,
@@ -21,6 +22,7 @@ import { formatDate } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
 import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
+import type { ComplianceWaiver } from '@/lib/actions/waivers';
 import type {
   Vendor,
   Property,
@@ -47,6 +49,8 @@ interface VendorDetailClientProps {
   notifications: Notification[];
   orgTemplates: RequirementTemplate[];
   hasCertificate: boolean;
+  activeWaiver?: ComplianceWaiver | null;
+  waiverHistory?: ComplianceWaiver[];
 }
 
 export function VendorDetailClient({
@@ -62,12 +66,15 @@ export function VendorDetailClient({
   notifications,
   orgTemplates,
   hasCertificate,
+  activeWaiver,
+  waiverHistory = [],
 }: VendorDetailClientProps) {
   const router = useRouter();
   const { showUpgradeModal } = useUpgradeModal();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [hardDeleteOpen, setHardDeleteOpen] = useState(false);
+  const [waiverOpen, setWaiverOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [togglingNotif, setTogglingNotif] = useState(false);
   const [sendingFollowUp, setSendingFollowUp] = useState(false);
@@ -242,6 +249,11 @@ export function VendorDetailClient({
             );
           })()}
 
+          {/* Active waiver notice */}
+          {activeWaiver && (
+            <WaiverBadge waiver={activeWaiver} onRevoke={() => router.refresh()} />
+          )}
+
           {/* Split-panel: PDF viewer + Compliance panel */}
           {(() => {
             const latestCert = certificates
@@ -278,6 +290,9 @@ export function VendorDetailClient({
 
           {/* Notification History */}
           <NotificationHistory notifications={notifications} />
+
+          {/* Waiver History */}
+          <WaiverHistory waivers={waiverHistory} />
         </div>
 
         {/* Right column: actions panel */}
@@ -307,6 +322,15 @@ export function VendorDetailClient({
               >
                 {generatingLink ? 'Generating...' : 'Generate Portal Link'}
               </Button>
+              {!activeWaiver && vendor.compliance_status !== 'compliant' && vendor.compliance_status !== 'pending' && (
+                <Button
+                  variant="outline"
+                  className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
+                  onClick={() => setWaiverOpen(true)}
+                >
+                  Grant Waiver
+                </Button>
+              )}
             </div>
           </div>
 
@@ -385,6 +409,13 @@ export function VendorDetailClient({
       </div>
 
       {/* Dialogs */}
+      <GrantWaiverDialog
+        open={waiverOpen}
+        onClose={() => setWaiverOpen(false)}
+        entityType="vendor"
+        entityId={vendor.id}
+        entityName={vendor.company_name}
+      />
       <EditVendorDialog
         vendor={vendor}
         templates={orgTemplates}
