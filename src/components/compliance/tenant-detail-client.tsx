@@ -284,8 +284,8 @@ export function TenantDetailClient({
 
         {/* RIGHT COLUMN: Name + badge, actions, coverage, certificate details */}
         <div className="space-y-4">
-          {/* Header: Name + compliance badge — sticky on desktop */}
-          <div className="rounded-lg border border-slate-200 bg-white px-5 py-4 lg:sticky lg:top-14 lg:z-10">
+          {/* Header: Name + compliance badge */}
+          <div className="rounded-lg border border-slate-200 bg-white px-5 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
                 <h1 className="text-xl font-bold tracking-tight text-foreground truncate">
