@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       requirements: result.requirements,
       additional_insured_name: result.additional_insured_name,
       certificate_holder_name: result.certificate_holder_name,
+      tenant_name: result.tenant_name,
       requires_primary_noncontributory: result.requires_primary_noncontributory,
     });
   } catch (err) {

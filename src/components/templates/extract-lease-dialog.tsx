@@ -57,7 +57,8 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
 
   // Upload step state
   const [file, setFile] = useState<File | null>(null);
-  const [templateName, setTemplateName] = useState('');
+  const defaultName = `Lease Requirements — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const [templateName, setTemplateName] = useState(defaultName);
   const [category, setCategory] = useState<TemplateCategory>('tenant');
 
   // Extraction state
@@ -73,7 +74,7 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
 
   function reset() {
     setFile(null);
-    setTemplateName('');
+    setTemplateName(defaultName);
     setCategory('tenant');
     setStep('upload');
     setExtracting(false);
@@ -164,6 +165,12 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
       setRequirements(editableReqs);
       setAdditionalInsuredName(data.additional_insured_name || '');
       setCertificateHolderName(data.certificate_holder_name || '');
+
+      // Auto-populate template name from tenant name if extracted
+      if (data.tenant_name) {
+        setTemplateName(`${data.tenant_name} Lease Requirements`);
+      }
+
       setStep('review');
     } catch (err) {
       console.error('Lease extraction error:', err);
@@ -221,8 +228,6 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
     }
   }, [requirements, templateName, category, showUpgradeModal, router]);
 
-  const defaultName = `Lease Requirements — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className={step === 'review' ? 'max-w-3xl max-h-[85vh] overflow-y-auto' : 'max-w-md'}>
@@ -278,7 +283,7 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
             <div className="space-y-2">
               <Label>Template name *</Label>
               <Input
-                value={templateName || defaultName}
+                value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 placeholder="e.g., Lease Requirements — Mar 24, 2026"
               />
@@ -302,10 +307,7 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
                 Cancel
               </Button>
               <Button
-                onClick={() => {
-                  if (!templateName.trim()) setTemplateName(defaultName);
-                  handleExtract();
-                }}
+                onClick={handleExtract}
                 disabled={!file || extracting}
               >
                 Extract Requirements
