@@ -1,6 +1,6 @@
 # SmartCOI
 
-*Last updated: March 16, 2026*
+*Last updated: March 24, 2026*
 
 SmartCOI — B2B SaaS platform automating Certificate of Insurance (COI) compliance tracking for commercial property managers. Automates COI collection, AI extraction, compliance verification, and vendor/tenant follow-up notifications.
 
@@ -14,7 +14,7 @@ Never use "Smart COI", "smartCOI", "smartcoi", or "SMARTCOI" in user-facing text
 
 - **Framework:** Next.js 15 (App Router), React 19, TypeScript 5.7
 - **Database & Auth:** Supabase (Postgres with RLS, Auth, Storage, Edge Functions, Google OAuth)
-- **AI:** Anthropic Claude API (Sonnet 4) for COI extraction
+- **AI:** Anthropic Claude API (Sonnet 4) for COI extraction and lease requirement extraction
 - **Billing:** Stripe (subscriptions, trials, webhooks)
 - **Email:** Resend for transactional notifications
 - **Hosting:** Vercel with Vercel Cron for scheduled jobs
@@ -44,14 +44,15 @@ Product is feature-complete and in final testing before launch.
 - Google OAuth login/signup (via Supabase, client ID configured)
 - Forgot password / reset password flow
 - Confirm password field on signup
-- Dashboard with portfolio health bar, compliance stats, action items, activity feed, quick stats, upcoming expirations
-- Dashboard two-column layout (65/35) — properties grid + Needs Your Attention on left, activity feed + quick stats + upcoming expirations on right
-- Needs Your Attention section with per-item Request COI and Upload COI buttons
-- Activity feed with relative timestamps and action-type icons
-- Quick Stats card showing monthly activity counts
-- Upcoming Expirations widget
+- Dashboard with portfolio health bar, compliance stats, action items, activity feed (simplified layout)
+- Dashboard two-column layout (65/35) — properties grid + Needs Your Attention on left, Portfolio Overview + Recent Activity on right
+- Personalized greeting: "Hello, [First Name]" (falls back to "Hello" or "Hello there")
+- Needs Your Attention section capped at 5 items with "Show all [X] items" expansion, per-item Request COI and Upload COI buttons
+- Recent Activity feed limited to 5 items with "View all activity >" link
+- Portfolio Overview card (Properties, Vendors, Tenants counts) on right sidebar
 - Single Upload COI button in dashboard header (no Bulk Upload button)
-- 5-step interactive dashboard tour with data-tutorial attributes
+- Export Report button (PDF via browser print, CSV download) for compliance reports
+- 6-step interactive dashboard tour with data-tour attributes, light tooltip style
 - Properties / vendors / tenants CRUD with compliance tracking
 - Certificate holder and additional insured fields on property creation
 - Vendor/tenant names clickable in property list
@@ -61,18 +62,30 @@ Product is feature-complete and in final testing before launch.
 - COI type selection (vendor vs tenant) during bulk upload
 - Contact capture during bulk upload (contact name, email pre-populated from extraction)
 - Auto-assignment of COIs to property created during onboarding
-- AI-powered data extraction (coverage types, limits, dates, named insureds, certificate holder, additional insured)
+- AI-powered data extraction (coverage types, limits, dates, named insureds, certificate holder, additional insured, endorsements)
+- Two-pass AI extraction: Pass 1 = ACORD 25 data (page 1), Pass 2 = endorsement verification (pages 2+)
+- Endorsement detection: CG 20 10, CG 20 37, Waiver of Subrogation, Primary & Non-Contributory
+- Three-state endorsement verification: Indicated / Verified / Warning
 - Automatic compliance calculation — COIs go directly from extraction to compliance check (no manual review step)
 - Fuzzy name matching in compliance engine for certificate holder and additional insured verification
 - `accept_cert_holder_in_additional_insured` toggle on properties table
 - Split-panel COI viewer (PDF left, compliance checklist right) with fuzzy matching indicator and auto follow-up status
 - Compliance templates (vendor & tenant) with configurable requirements
+- Lease-based requirement extraction: upload tenant lease PDF → AI extracts insurance requirements → review/edit → save as template
+- Templates show "Extracted from Lease" badge for lease-sourced templates
+- Recheck Compliance button (free, re-runs compliance against current template)
+- Re-extract Certificate button (uses AI credits, re-processes PDF)
+- Compliance report export (PDF and CSV)
+- Waiver/override tracking with reason, expiration, audit trail
+- Coverage gap details with specific shortfalls (e.g., "GL limit is $500K but requirement is $1M")
+- Vendor/tenant detail pages: two-column layout (PDF viewer left, compliance checklist right)
 - Self-service vendor/tenant portal (token-based, no auth required)
 - Automated notifications & follow-up emails (expiration warnings)
 - Stripe billing with three tiers and trial enforcement
 - Archive, delete, and bulk actions for vendors/tenants
 - SEO content pages and blog (MDX)
 - 57 programmatic pages under /insurance-requirements/
+- 11 blog posts (MDX) with inline CTAs and bottom-of-post CTAs
 - 6 competitor comparison pages (TrustLayer, Certificial, Billy, SmartCompliance, PINS, CertFocus)
 - 7 vertical landing pages under /for/
 - 2 alternatives pages under /alternatives/
@@ -85,7 +98,12 @@ Product is feature-complete and in final testing before launch.
 - Manual review workflow (removed — compliance is now fully automatic after extraction)
 - `review_confirmed` certificate status (removed)
 - `confirmCertificate()` or `quickConfirmCertificate()` actions (removed)
-- Lease PDF extraction
+- Compliance Score sidebar card (removed — redundant with health bar)
+- Expiring Soon sidebar card (removed — redundant with action queue)
+- Compliance Trend chart (removed from dashboard — can be added back in analytics)
+- Quick Stats / "This Month" card (removed from dashboard)
+- Upcoming Expirations sidebar widget (removed — redundant with action queue)
+- Duplicate & Customize button on template cards (removed)
 - Integrations with Procore, MRI, Yardi, AppFolio, or any third-party tools
 - Shared vendor network/database
 - Human/manual insurance review services
@@ -100,7 +118,15 @@ Product is feature-complete and in final testing before launch.
 
 ### Compliance Pipeline
 
-COIs follow this flow: **Upload → AI Extraction → Automatic Compliance Calculation**. There is no manual review step. After extraction completes, compliance results are computed automatically using the property's assigned requirement template. Fuzzy name matching (Levenshtein distance) is used for certificate holder and additional insured verification, with a configurable `accept_cert_holder_in_additional_insured` toggle per property.
+COIs follow this flow: **Upload → AI Extraction (two-pass) → Automatic Compliance Calculation**. There is no manual review step. After extraction completes, compliance results are computed automatically using the property's assigned requirement template. Fuzzy name matching (Levenshtein distance) is used for certificate holder and additional insured verification, with a configurable `accept_cert_holder_in_additional_insured` toggle per property.
+
+Two-pass AI extraction:
+1. **Pass 1 (ACORD 25):** Extracts coverage types, limits (per-occurrence + aggregate as separate entries), dates, carriers, named insureds, certificate holder, additional insured from page 1.
+2. **Pass 2 (Endorsements):** Scans pages 2+ for CG 20 10, CG 20 37, Waiver of Subrogation, Primary & Non-Contributory endorsements. Endorsement data stored in `certificates.endorsement_data` JSONB column.
+
+### Lease Requirement Extraction
+
+Lease PDFs can be uploaded to extract insurance requirements into compliance templates. Flow: **Upload Lease PDF → AI Extraction → Review/Edit Requirements → Save as Template**. Uses the same Anthropic API with a lease-specific prompt. Templates created this way have `source_type = 'lease_extraction'` and show an "Extracted from Lease" badge. Counts against extraction credits.
 
 ### Authentication
 
@@ -108,6 +134,7 @@ COIs follow this flow: **Upload → AI Extraction → Automatic Compliance Calcu
 - Google OAuth via Supabase Auth (client ID configured in Supabase dashboard)
 - Forgot password / reset password flow via Supabase Auth
 - Trial period (`trial_ends_at`) set correctly on org creation for both email and Google OAuth signups
+- Auth callback (`/api/auth/callback`) uses request-aware Supabase client to correctly propagate auth cookies on redirect responses (critical for OAuth and email confirmation flows)
 
 ## Project Structure
 
@@ -124,7 +151,7 @@ src/
 │   │   ├── comparisons/       # 6 competitor comparison pages
 │   │   ├── for/               # 7 vertical landing pages
 │   │   └── alternatives/      # 2 alternatives pages
-│   ├── api/                   # Route handlers (auth callback, webhooks, cron)
+│   ├── api/                   # Route handlers (auth callback, webhooks, cron, lease extraction)
 │   └── portal/[token]/        # Self-service vendor upload portal
 ├── components/
 │   ├── landing/               # Landing page components
@@ -137,7 +164,7 @@ src/
 ├── lib/
 │   ├── supabase/              # Supabase clients (client.ts, server.ts, service.ts)
 │   ├── actions/               # Server actions (auth, billing, certificates, notifications, properties, settings, templates)
-│   ├── ai/                    # AI extraction engine (extraction.ts)
+│   ├── ai/                    # AI extraction engine (extraction.ts, lease-extraction.ts)
 │   ├── notifications/         # Email templates and sender
 │   ├── compliance/            # Compliance checking logic (includes fuzzy name matching)
 │   ├── auth.ts                # Client-side signOut helper
@@ -162,11 +189,13 @@ No shared components between marketing and dashboard.
 
 All migrations are consolidated in `supabase/consolidated_post_v2_migrations.sql`. Run migrations against production via the Supabase SQL Editor. The file is idempotent and safe to re-run.
 
-17 tables with RLS scoped by `organization_id`: organizations, users, properties, property_entities, organization_default_entities, requirement_templates, template_coverage_requirements, vendors, tenants, certificates, extracted_coverages, extracted_entities, compliance_results, entity_compliance_results, notifications, upload_portal_tokens, activity_log.
+19 tables with RLS scoped by `organization_id`: organizations, users, properties, property_entities, organization_default_entities, requirement_templates, template_coverage_requirements, vendors, tenants, certificates, extracted_coverages, extracted_entities, compliance_results, entity_compliance_results, notifications, upload_portal_tokens, activity_log, compliance_waivers, compliance_snapshots.
 
 Notable columns:
 - `properties.accept_cert_holder_in_additional_insured` — boolean toggle for fuzzy matching flexibility
 - `properties.certificate_holder` / `properties.additional_insured` — entity name fields for compliance verification
+- `certificates.endorsement_data` — JSONB column for endorsement extraction results
+- `requirement_templates.source_type` — TEXT ('manual' | 'lease_extraction') indicating template origin
 
 ## Important Patterns
 
@@ -178,15 +207,33 @@ Notable columns:
 - **Session management** (`src/lib/session.ts`) uses a browser cookie (`smartcoi-session`) as a server-readable session marker (24h or 7d max-age) plus localStorage for inactivity tracking. `SessionGuard` component in the dashboard layout checks both.
 - **Compliance pipeline:** No manual review step. Extraction → automatic compliance calculation. Fuzzy name matching for certificate holder and additional insured.
 - **Bulk upload:** Batch processing with 5 concurrent files, exponential backoff retry (2s/4s/8s) on Anthropic API 529 errors.
-- **Google OAuth:** Handled via Supabase Auth callback. Trial period assigned on org creation for both email and OAuth signups.
+- **Google OAuth:** Handled via Supabase Auth callback at `/api/auth/callback`. Uses request-aware `createServerClient` (not `cookies()` from next/headers) to ensure auth tokens are set on the redirect response. Trial period assigned on org creation for both email and OAuth signups.
+- **Lease extraction:** API route at `/api/leases/extract`. Uses `src/lib/ai/lease-extraction.ts` with lease-specific prompt. Counts against extraction credits via `checkExtractionLimit()`.
 
 ## Conventions
 
 - Always flag manual steps (SQL migrations, env vars, Supabase dashboard settings, Stripe config) with ⚠️ ACTION REQUIRED at the end of every summary.
+- Always read CLAUDE.md before starting work.
+- Check existing code before making changes — update don't duplicate.
 - Blog posts are MDX files in `src/content/blog/` with frontmatter: `title`, `description`, `date`, `author` (use "SmartCOI Team").
-- All public pages must use absolute canonical URLs (`https://smartcoi.io/...`).
+- All public pages must use absolute canonical URLs (`https://smartcoi.io/...`). Domain is smartcoi.io (not .com).
 - `trailingSlash: false` in Next.js config.
 - Sessions expire after 24 hours (7 days with "Remember me").
+- Emerald-teal brand palette throughout dashboard and landing page.
+
+## Slash Commands
+
+- `/blog` — Blog post creation workflow (generates MDX with frontmatter)
+- `/audit` — Full consistency audit across the codebase
+
+## Outreach & Marketing Setup
+
+- **Instantly.ai:** contact@smartcoi.io connected, warmup running (started ~March 24, ready ~April 7)
+- **Apollo.io:** Lead list built — 38K property managers, filtered by title/industry/company size
+- **Email sequences:** 3 variations drafted (founder story, pain point, comparison angle), 3-email cadence each
+- **G2:** Profile live
+- **Capterra/GetApp/Software Advice:** Submitted, pending review
+- **Medium:** 2 articles published with backlinks to smartcoi.io
 
 ## Environment Variables
 
