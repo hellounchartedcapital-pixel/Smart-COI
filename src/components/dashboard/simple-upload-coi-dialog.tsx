@@ -28,7 +28,7 @@ interface SimpleUploadCOIDialogProps {
   properties: { id: string; name: string }[];
   vendors: { id: string; company_name: string; property_id: string | null }[];
   tenants: { id: string; company_name: string; property_id: string | null }[];
-  onOpenWizard?: (mode: 'vendor' | 'tenant', propertyId: string) => void;
+  onOpenWizard?: (mode: 'vendor' | 'tenant', propertyId: string, coiFile?: File) => void;
 }
 
 export function SimpleUploadCOIDialog({
@@ -51,6 +51,9 @@ export function SimpleUploadCOIDialog({
   const [entityType, setEntityType] = useState<'vendor' | 'tenant'>('vendor');
   const [selectedEntityId, setSelectedEntityId] = useState('');
 
+  // Entity path: 'choose' = pick existing vs new, 'existing' = searchable dropdown
+  const [entityPath, setEntityPath] = useState<'choose' | 'existing'>('choose');
+
   // Entity search
   const [entitySearch, setEntitySearch] = useState('');
 
@@ -60,6 +63,7 @@ export function SimpleUploadCOIDialog({
     setSelectedPropertyId('');
     setEntityType('vendor');
     setSelectedEntityId('');
+    setEntityPath('choose');
     setEntitySearch('');
   }
 
@@ -140,6 +144,7 @@ export function SimpleUploadCOIDialog({
   function handleEntityTypeChange(type: 'vendor' | 'tenant') {
     setEntityType(type);
     setSelectedEntityId('');
+    setEntityPath('choose');
     setEntitySearch('');
   }
 
@@ -152,8 +157,9 @@ export function SimpleUploadCOIDialog({
 
   function handleAddNew() {
     if (!effectivePropertyId || !onOpenWizard) return;
+    const coiToPass = file ?? undefined;
     handleOpenChange(false);
-    onOpenWizard(entityType, effectivePropertyId);
+    onOpenWizard(entityType, effectivePropertyId, coiToPass);
   }
 
   const canSubmit = file && selectedEntityId;
@@ -277,53 +283,84 @@ export function SimpleUploadCOIDialog({
                 </div>
               </div>
 
-              {/* Entity dropdown with search */}
+              {/* Entity selection: two-path choice or searchable dropdown */}
               <div className="space-y-1.5">
                 <Label className="text-xs">
                   {entityType === 'vendor' ? 'Vendor' : 'Tenant'}
                 </Label>
-                <Select
-                  value={selectedEntityId}
-                  onValueChange={setSelectedEntityId}
-                >
-                  <SelectTrigger className="text-sm">
-                    <SelectValue placeholder={`Select ${entityType}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Searchable input inside dropdown */}
-                    <div className="px-2 pb-2">
-                      <Input
-                        placeholder={`Search ${entityType}s...`}
-                        value={entitySearch}
-                        onChange={(e) => setEntitySearch(e.target.value)}
-                        className="h-8 text-sm"
-                        onClick={(e) => e.stopPropagation()}
-                        onKeyDown={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    {filteredEntities.length === 0 && (
-                      <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">
-                        No {entityType}s found
-                      </div>
-                    )}
-                    {filteredEntities.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.company_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
 
-                {/* "Add new" link — opens EntityCreationWizard */}
-                {effectivePropertyId && onOpenWizard && (
-                  <button
-                    type="button"
-                    onClick={handleAddNew}
-                    className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
-                  >
-                    <UserPlus className="h-3.5 w-3.5" />
-                    Don&apos;t see your {entityType}? Add new
-                  </button>
+                {entityPath === 'choose' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEntityPath('existing')}
+                      className="flex flex-col items-center gap-1.5 rounded-lg border-2 border-slate-200 p-3 text-center transition-colors hover:border-emerald-400 hover:bg-emerald-50/50"
+                    >
+                      <FileText className="h-5 w-5 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700">
+                        Existing {entityType === 'vendor' ? 'Vendor' : 'Tenant'}
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        {filteredByProperty.length} available
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddNew}
+                      disabled={!effectivePropertyId || !onOpenWizard}
+                      className="flex flex-col items-center gap-1.5 rounded-lg border-2 border-slate-200 p-3 text-center transition-colors hover:border-emerald-400 hover:bg-emerald-50/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <UserPlus className="h-5 w-5 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-700">
+                        New {entityType === 'vendor' ? 'Vendor' : 'Tenant'}
+                      </span>
+                      <span className="text-[11px] text-slate-400">
+                        Add &amp; upload
+                      </span>
+                    </button>
+                  </div>
+                )}
+
+                {entityPath === 'existing' && (
+                  <>
+                    <Select
+                      value={selectedEntityId}
+                      onValueChange={setSelectedEntityId}
+                    >
+                      <SelectTrigger className="text-sm">
+                        <SelectValue placeholder={`Select ${entityType}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <div className="px-2 pb-2">
+                          <Input
+                            placeholder={`Search ${entityType}s...`}
+                            value={entitySearch}
+                            onChange={(e) => setEntitySearch(e.target.value)}
+                            className="h-8 text-sm"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        {filteredEntities.length === 0 && (
+                          <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">
+                            No {entityType}s found
+                          </div>
+                        )}
+                        {filteredEntities.map((e) => (
+                          <SelectItem key={e.id} value={e.id}>
+                            {e.company_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <button
+                      type="button"
+                      onClick={() => { setEntityPath('choose'); setSelectedEntityId(''); }}
+                      className="text-xs text-slate-500 hover:text-slate-700"
+                    >
+                      Back
+                    </button>
+                  </>
                 )}
               </div>
 
