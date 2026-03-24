@@ -11,7 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatTimeAgo, formatDate } from '@/lib/utils';
-import { UploadCOIDialog } from '@/components/dashboard/upload-coi-dialog';
+import { SimpleUploadCOIDialog } from '@/components/dashboard/simple-upload-coi-dialog';
 import { ExportReportButton } from '@/components/dashboard/export-report-button';
 import { DashboardTutorial, useTutorial } from '@/components/dashboard/dashboard-tutorial';
 import {
@@ -244,7 +244,7 @@ export function DashboardClient({
         </div>
       </div>
 
-      <UploadCOIDialog
+      <SimpleUploadCOIDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         properties={propertyList}
