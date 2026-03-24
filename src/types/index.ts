@@ -174,6 +174,8 @@ export interface OrganizationDefaultEntity {
 }
 
 /** requirement_templates */
+export type TemplateSourceType = 'manual' | 'lease_extraction';
+
 export interface RequirementTemplate {
   id: string;
   organization_id: string | null;
@@ -182,6 +184,7 @@ export interface RequirementTemplate {
   category: TemplateCategory;
   risk_level: RiskLevel;
   is_system_default: boolean;
+  source_type: TemplateSourceType;
   created_at: string;
   updated_at: string;
   // Joined relation
