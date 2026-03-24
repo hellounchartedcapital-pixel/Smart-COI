@@ -171,7 +171,7 @@ export interface OrganizationDefaultEntity {
 }
 
 /** requirement_templates */
-export type TemplateSourceType = 'manual' | 'lease_extraction';
+export type TemplateSourceType = 'manual' | 'lease_extraction' | 'ai_recommended';
 
 export interface RequirementTemplate {
   id: string;
