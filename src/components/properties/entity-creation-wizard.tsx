@@ -254,6 +254,17 @@ export function EntityCreationWizard({
 
       const data = await response.json();
 
+      if (!response.ok) {
+        if (data.upgrade) {
+          showUpgradeModal(data.error);
+          setAiGenerating(false);
+          return;
+        }
+        setAiError(data.error || data.message || 'Recommendation failed');
+        setAiGenerating(false);
+        return;
+      }
+
       if (data.upgrade) {
         showUpgradeModal(data.error);
         setAiGenerating(false);
@@ -271,9 +282,9 @@ export function EntityCreationWizard({
         (c: any, i: number) => ({
           id: `ai-${i}`,
           included: true,
-          coverage_type: c.coverage_type,
+          coverage_type: c.coverage_name,
           limit_type: c.limit_type || 'per_occurrence',
-          minimum_limit: c.minimum_limit,
+          minimum_limit: c.recommended_limit,
           requires_additional_insured: c.requires_additional_insured ?? false,
           requires_waiver_of_subrogation: c.requires_waiver_of_subrogation ?? false,
           requires_primary_noncontributory: c.requires_primary_noncontributory ?? false,
