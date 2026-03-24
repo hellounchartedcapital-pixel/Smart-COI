@@ -77,7 +77,7 @@ export interface CreateTemplateWithRequirementsInput {
   description?: string;
   category: TemplateCategory;
   risk_level: RiskLevel;
-  source_type?: 'manual' | 'lease_extraction';
+  source_type?: 'manual' | 'lease_extraction' | 'ai_recommended';
   requirements: CoverageRequirementInput[];
 }
 
@@ -129,7 +129,7 @@ export async function createTemplateWithRequirements(
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     action: 'template_updated',
-    description: `Requirement template "${input.name}" created${input.source_type === 'lease_extraction' ? ' from lease extraction' : ''}`,
+    description: `Requirement template "${input.name}" created${input.source_type === 'lease_extraction' ? ' from lease extraction' : input.source_type === 'ai_recommended' ? ' from AI recommendation' : ''}`,
     performed_by: userId,
   });
 

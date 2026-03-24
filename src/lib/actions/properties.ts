@@ -801,6 +801,46 @@ export async function toggleTenantNotifications(tenantId: string, paused: boolea
 }
 
 // ---------------------------------------------------------------------------
+// Assign template to entity (lightweight — for nudge and wizard flows)
+// ---------------------------------------------------------------------------
+
+export async function assignTemplateToEntity(
+  entityId: string,
+  entityType: 'vendor' | 'tenant',
+  templateId: string
+) {
+  const { supabase, userId, orgId } = await getAuthContext();
+
+  const tableName = entityType === 'vendor' ? 'vendors' : 'tenants';
+  const { error } = await supabase
+    .from(tableName)
+    .update({ template_id: templateId })
+    .eq('id', entityId)
+    .eq('organization_id', orgId);
+
+  if (error) throw new Error(error.message);
+
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    [entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
+    action: 'status_changed',
+    description: `Requirements template assigned`,
+    performed_by: userId,
+  });
+
+  // Recalculate compliance with new template
+  try {
+    await runComplianceForEntity(entityId, entityType);
+  } catch (err) {
+    console.error(`[assignTemplateToEntity] Compliance recalculation failed:`, err);
+  }
+
+  revalidatePath(`/dashboard/${entityType}s/${entityId}`);
+  revalidatePath(`/dashboard/certificates`);
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
 // Compliance calculation for entities (works with extracted certificates)
 // ---------------------------------------------------------------------------
 

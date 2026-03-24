@@ -87,6 +87,11 @@ export function TemplatesListClient({
                       Extracted from Lease
                     </Badge>
                   )}
+                  {template.source_type === 'ai_recommended' && (
+                    <Badge variant="outline" className="text-[10px] bg-sky-50 text-sky-700 border-sky-200">
+                      AI Recommended
+                    </Badge>
+                  )}
                 </div>
                 {template.description && (
                   <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
