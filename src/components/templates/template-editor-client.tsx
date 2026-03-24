@@ -54,6 +54,7 @@ interface EditorRow {
   limit_type: LimitType | null;
   requires_additional_insured: boolean;
   requires_waiver_of_subrogation: boolean;
+  requires_primary_noncontributory: boolean;
 }
 
 function reqToRow(r: TemplateCoverageRequirement): EditorRow {
@@ -65,6 +66,7 @@ function reqToRow(r: TemplateCoverageRequirement): EditorRow {
     limit_type: r.limit_type,
     requires_additional_insured: r.requires_additional_insured,
     requires_waiver_of_subrogation: r.requires_waiver_of_subrogation,
+    requires_primary_noncontributory: r.requires_primary_noncontributory ?? false,
   };
 }
 
@@ -110,6 +112,7 @@ export function TemplateEditorClient({
         limit_type: 'per_occurrence',
         requires_additional_insured: false,
         requires_waiver_of_subrogation: false,
+        requires_primary_noncontributory: false,
       },
     ]);
   }
@@ -152,6 +155,7 @@ export function TemplateEditorClient({
           limit_type: r.limit_type,
           requires_additional_insured: r.requires_additional_insured,
           requires_waiver_of_subrogation: r.requires_waiver_of_subrogation,
+          requires_primary_noncontributory: r.requires_primary_noncontributory,
         })),
       });
       if (handleActionResult(result, 'Failed to save', showUpgradeModal)) return;
@@ -209,6 +213,7 @@ export function TemplateEditorClient({
         const extras: string[] = [];
         if (r.requires_additional_insured) extras.push('Additional Insured required');
         if (r.requires_waiver_of_subrogation) extras.push('Waiver of Subrogation required');
+        if (r.requires_primary_noncontributory) extras.push('Primary & Non-Contributory');
         if (extras.length > 0) text += ` (${extras.join(', ')})`;
         return text;
       });
@@ -506,6 +511,22 @@ export function TemplateEditorClient({
                       </div>
                       <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
                         Requires the vendor/tenant&apos;s insurer to waive the right to subrogate against your organization. Note: this is typically shown on a separate endorsement page.
+                      </p>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs">Primary &amp; Non-Cont.</Label>
+                        <ToggleSwitch
+                          checked={row.requires_primary_noncontributory}
+                          onChange={(v) =>
+                            updateRow(row._key, { requires_primary_noncontributory: v })
+                          }
+                          disabled={isReadOnly}
+                          label="Primary & Non-Contributory"
+                        />
+                      </div>
+                      <p className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
+                        Requires the vendor/tenant&apos;s policy to be primary and non-contributory to your organization&apos;s policies.
                       </p>
                     </div>
                   </div>

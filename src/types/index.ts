@@ -38,7 +38,9 @@ export type CoverageType =
   | 'property_inland_marine'
   | 'pollution_liability'
   | 'liquor_liability'
-  | 'cyber_liability';
+  | 'cyber_liability'
+  | 'fire_legal_liability'
+  | 'business_income';
 
 export type LimitType =
   | 'per_occurrence'
@@ -201,6 +203,7 @@ export interface TemplateCoverageRequirement {
   limit_type: LimitType | null;
   requires_additional_insured: boolean;
   requires_waiver_of_subrogation: boolean;
+  requires_primary_noncontributory: boolean;
   created_at: string;
 }
 

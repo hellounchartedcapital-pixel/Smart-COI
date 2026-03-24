@@ -115,6 +115,7 @@ export async function createTemplateWithRequirements(
       limit_type: r.limit_type,
       requires_additional_insured: r.requires_additional_insured,
       requires_waiver_of_subrogation: r.requires_waiver_of_subrogation,
+      requires_primary_noncontributory: r.requires_primary_noncontributory ?? false,
     }));
 
     const { error: reqError } = await supabase
@@ -148,6 +149,7 @@ export interface CoverageRequirementInput {
   limit_type: LimitType | null;
   requires_additional_insured: boolean;
   requires_waiver_of_subrogation: boolean;
+  requires_primary_noncontributory: boolean;
 }
 
 export interface UpdateTemplateInput {
@@ -203,6 +205,7 @@ export async function updateTemplate(
       limit_type: r.limit_type,
       requires_additional_insured: r.requires_additional_insured,
       requires_waiver_of_subrogation: r.requires_waiver_of_subrogation,
+      requires_primary_noncontributory: r.requires_primary_noncontributory ?? false,
     }));
 
     const { error: reqError } = await supabase
