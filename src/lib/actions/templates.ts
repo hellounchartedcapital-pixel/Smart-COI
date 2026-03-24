@@ -70,6 +70,74 @@ export async function createTemplate(input: CreateTemplateInput) {
 }
 
 // ---------------------------------------------------------------------------
+// Create template with coverage requirements (for lease extraction)
+// ---------------------------------------------------------------------------
+
+export interface CreateTemplateWithRequirementsInput {
+  name: string;
+  description?: string;
+  category: TemplateCategory;
+  risk_level: RiskLevel;
+  source_type?: 'manual' | 'lease_extraction';
+  requirements: CoverageRequirementInput[];
+}
+
+export async function createTemplateWithRequirements(
+  input: CreateTemplateWithRequirementsInput
+) {
+  const planCheck = await checkActivePlan('Subscribe to manage templates.');
+  if ('error' in planCheck) return { error: planCheck.error };
+  const { supabase, userId, orgId } = await getAuthContext();
+
+  const { data, error } = await supabase
+    .from('requirement_templates')
+    .insert({
+      organization_id: orgId,
+      name: input.name,
+      description: input.description || null,
+      category: input.category,
+      risk_level: input.risk_level,
+      is_system_default: false,
+      source_type: input.source_type || 'manual',
+    })
+    .select('id')
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  // Insert coverage requirements
+  if (input.requirements.length > 0) {
+    const rows = input.requirements.map((r) => ({
+      template_id: data.id,
+      coverage_type: r.coverage_type,
+      is_required: r.is_required,
+      minimum_limit: r.minimum_limit,
+      limit_type: r.limit_type,
+      requires_additional_insured: r.requires_additional_insured,
+      requires_waiver_of_subrogation: r.requires_waiver_of_subrogation,
+    }));
+
+    const { error: reqError } = await supabase
+      .from('template_coverage_requirements')
+      .insert(rows);
+
+    if (reqError) {
+      console.error('Failed to insert coverage requirements:', reqError);
+    }
+  }
+
+  await supabase.from('activity_log').insert({
+    organization_id: orgId,
+    action: 'template_updated',
+    description: `Requirement template "${input.name}" created${input.source_type === 'lease_extraction' ? ' from lease extraction' : ''}`,
+    performed_by: userId,
+  });
+
+  revalidatePath('/dashboard/templates');
+  return { id: data.id };
+}
+
+// ---------------------------------------------------------------------------
 // Update template + coverage requirements (with cascade recalc)
 // ---------------------------------------------------------------------------
 

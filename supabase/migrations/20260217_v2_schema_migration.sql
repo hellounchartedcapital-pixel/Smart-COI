@@ -290,6 +290,8 @@ ALTER TABLE requirement_templates ADD COLUMN IF NOT EXISTS category TEXT DEFAULT
 ALTER TABLE requirement_templates ADD COLUMN IF NOT EXISTS risk_level TEXT DEFAULT 'standard'
   CHECK (risk_level IN ('standard', 'high_risk', 'professional_services', 'restaurant', 'industrial'));
 ALTER TABLE requirement_templates ADD COLUMN IF NOT EXISTS is_system_default BOOLEAN DEFAULT false;
+ALTER TABLE requirement_templates ADD COLUMN IF NOT EXISTS source_type TEXT DEFAULT 'manual'
+  CHECK (source_type IN ('manual', 'lease_extraction'));
 
 -- Copy entity_type → category for existing rows
 UPDATE requirement_templates SET category = entity_type WHERE category IS NULL AND entity_type IS NOT NULL;
