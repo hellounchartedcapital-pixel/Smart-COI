@@ -38,8 +38,7 @@ import {
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronRight } from 'lucide-react';
 import { ComplianceBadge } from './compliance-badge';
 import { EditPropertyDialog } from './edit-property-dialog';
-import { AddVendorDialog } from './add-vendor-dialog';
-import { AddTenantDialog } from './add-tenant-dialog';
+import { EntityCreationWizard } from './entity-creation-wizard';
 import { ConfirmDialog } from './confirm-dialog';
 import {
   deleteProperty,
@@ -934,15 +933,19 @@ export function PropertyDetailClient({
         open={editOpen}
         onOpenChange={setEditOpen}
       />
-      <AddVendorDialog
+      <EntityCreationWizard
+        mode="vendor"
         propertyId={property.id}
+        propertyType={property.property_type}
         templates={templates}
         open={addVendorOpen}
         onOpenChange={setAddVendorOpen}
         onCreated={handleVendorCreated}
       />
-      <AddTenantDialog
+      <EntityCreationWizard
+        mode="tenant"
         propertyId={property.id}
+        propertyType={property.property_type}
         templates={templates}
         open={addTenantOpen}
         onOpenChange={setAddTenantOpen}
