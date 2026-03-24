@@ -19,11 +19,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createVendor, createTenant } from '@/lib/actions/properties';
 import { toast } from 'sonner';
-import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
-import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
-import { Upload, CheckCircle2, FileText, X } from 'lucide-react';
+import { Upload, CheckCircle2, FileText, X, UserPlus } from 'lucide-react';
 
 interface SimpleUploadCOIDialogProps {
   open: boolean;
@@ -31,6 +28,7 @@ interface SimpleUploadCOIDialogProps {
   properties: { id: string; name: string }[];
   vendors: { id: string; company_name: string; property_id: string | null }[];
   tenants: { id: string; company_name: string; property_id: string | null }[];
+  onOpenWizard?: (mode: 'vendor' | 'tenant', propertyId: string) => void;
 }
 
 export function SimpleUploadCOIDialog({
@@ -39,9 +37,9 @@ export function SimpleUploadCOIDialog({
   properties,
   vendors,
   tenants,
+  onOpenWizard,
 }: SimpleUploadCOIDialogProps) {
   const router = useRouter();
-  const { showUpgradeModal } = useUpgradeModal();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // File state
@@ -53,11 +51,6 @@ export function SimpleUploadCOIDialog({
   const [entityType, setEntityType] = useState<'vendor' | 'tenant'>('vendor');
   const [selectedEntityId, setSelectedEntityId] = useState('');
 
-  // Inline create new entity
-  const [showCreateNew, setShowCreateNew] = useState(false);
-  const [newCompanyName, setNewCompanyName] = useState('');
-  const [creating, setCreating] = useState(false);
-
   // Entity search
   const [entitySearch, setEntitySearch] = useState('');
 
@@ -67,9 +60,6 @@ export function SimpleUploadCOIDialog({
     setSelectedPropertyId('');
     setEntityType('vendor');
     setSelectedEntityId('');
-    setShowCreateNew(false);
-    setNewCompanyName('');
-    setCreating(false);
     setEntitySearch('');
   }
 
@@ -129,7 +119,6 @@ export function SimpleUploadCOIDialog({
     if (selectedFile) {
       validateAndSetFile(selectedFile);
     }
-    // Reset input so the same file can be re-selected
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -145,69 +134,13 @@ export function SimpleUploadCOIDialog({
   function handlePropertyChange(value: string) {
     setSelectedPropertyId(value);
     setSelectedEntityId('');
-    setShowCreateNew(false);
-    setNewCompanyName('');
     setEntitySearch('');
   }
 
   function handleEntityTypeChange(type: 'vendor' | 'tenant') {
     setEntityType(type);
     setSelectedEntityId('');
-    setShowCreateNew(false);
-    setNewCompanyName('');
     setEntitySearch('');
-  }
-
-  function handleEntityChange(value: string) {
-    if (value === '__create_new__') {
-      setSelectedEntityId('');
-      setShowCreateNew(true);
-      setNewCompanyName('');
-    } else {
-      setSelectedEntityId(value);
-      setShowCreateNew(false);
-      setNewCompanyName('');
-    }
-  }
-
-  async function handleCreateEntity() {
-    if (!effectivePropertyId || !newCompanyName.trim()) return;
-    setCreating(true);
-
-    try {
-      let entityId: string;
-      if (entityType === 'vendor') {
-        const result = await createVendor({
-          property_id: effectivePropertyId,
-          company_name: newCompanyName.trim(),
-        });
-        if (handleActionResult(result, 'Failed to create vendor', showUpgradeModal)) {
-          setCreating(false);
-          return;
-        }
-        entityId = (result as { id: string }).id;
-        toast.success(`Vendor "${newCompanyName.trim()}" created`);
-      } else {
-        const result = await createTenant({
-          property_id: effectivePropertyId,
-          company_name: newCompanyName.trim(),
-        });
-        if (handleActionResult(result, 'Failed to create tenant', showUpgradeModal)) {
-          setCreating(false);
-          return;
-        }
-        entityId = (result as { id: string }).id;
-        toast.success(`Tenant "${newCompanyName.trim()}" created`);
-      }
-
-      setSelectedEntityId(entityId);
-      setShowCreateNew(false);
-      setNewCompanyName('');
-    } catch (err) {
-      handleActionError(err, 'Failed to create entity', showUpgradeModal);
-    } finally {
-      setCreating(false);
-    }
   }
 
   function handleUploadAndCheck() {
@@ -215,6 +148,12 @@ export function SimpleUploadCOIDialog({
     const param = entityType === 'vendor' ? 'vendorId' : 'tenantId';
     router.push(`/dashboard/certificates/upload?${param}=${selectedEntityId}`);
     handleOpenChange(false);
+  }
+
+  function handleAddNew() {
+    if (!effectivePropertyId || !onOpenWizard) return;
+    handleOpenChange(false);
+    onOpenWizard(entityType, effectivePropertyId);
   }
 
   const canSubmit = file && selectedEntityId;
@@ -283,7 +222,7 @@ export function SimpleUploadCOIDialog({
           {/* Assignment controls — revealed after file is selected */}
           {file && (
             <>
-              {/* Property dropdown (auto-selected if only one) */}
+              {/* Property dropdown */}
               <div className="space-y-1.5">
                 <Label className="text-xs">Property</Label>
                 {properties.length === 1 ? (
@@ -338,105 +277,53 @@ export function SimpleUploadCOIDialog({
                 </div>
               </div>
 
-              {/* Entity dropdown with search and create new */}
+              {/* Entity dropdown with search */}
               <div className="space-y-1.5">
                 <Label className="text-xs">
                   {entityType === 'vendor' ? 'Vendor' : 'Tenant'}
                 </Label>
-                {!showCreateNew ? (
-                  <Select
-                    value={selectedEntityId}
-                    onValueChange={handleEntityChange}
-                  >
-                    <SelectTrigger className="text-sm">
-                      <SelectValue placeholder={`Select ${entityType}`} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {/* Searchable input inside dropdown */}
-                      <div className="px-2 pb-2">
-                        <Input
-                          placeholder={`Search ${entityType}s...`}
-                          value={entitySearch}
-                          onChange={(e) => setEntitySearch(e.target.value)}
-                          className="h-8 text-sm"
-                          onClick={(e) => e.stopPropagation()}
-                          onKeyDown={(e) => e.stopPropagation()}
-                        />
-                      </div>
-                      {filteredEntities.length === 0 && (
-                        <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">
-                          No {entityType}s found
-                        </div>
-                      )}
-                      {filteredEntities.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          {e.company_name}
-                        </SelectItem>
-                      ))}
-                      <div className="border-t border-slate-100 pt-1">
-                        <SelectItem
-                          value="__create_new__"
-                          className="font-medium text-emerald-600"
-                        >
-                          + Create New{' '}
-                          {entityType === 'vendor' ? 'Vendor' : 'Tenant'}
-                        </SelectItem>
-                      </div>
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  /* Inline create new entity form */
-                  <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">
-                    <p className="text-xs font-medium text-emerald-800">
-                      New {entityType === 'vendor' ? 'Vendor' : 'Tenant'}
-                    </p>
-                    <Input
-                      placeholder="Company name"
-                      value={newCompanyName}
-                      onChange={(e) => setNewCompanyName(e.target.value)}
-                      className="h-8 bg-white text-sm"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (
-                          e.key === 'Enter' &&
-                          newCompanyName.trim() &&
-                          effectivePropertyId
-                        ) {
-                          handleCreateEntity();
-                        }
-                      }}
-                    />
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={handleCreateEntity}
-                        disabled={
-                          !effectivePropertyId ||
-                          !newCompanyName.trim() ||
-                          creating
-                        }
-                        className="h-7 px-3 text-xs"
-                      >
-                        {creating ? 'Creating...' : 'Create'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setShowCreateNew(false);
-                          setNewCompanyName('');
-                        }}
-                        className="h-7 px-3 text-xs"
-                      >
-                        Cancel
-                      </Button>
+                <Select
+                  value={selectedEntityId}
+                  onValueChange={setSelectedEntityId}
+                >
+                  <SelectTrigger className="text-sm">
+                    <SelectValue placeholder={`Select ${entityType}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Searchable input inside dropdown */}
+                    <div className="px-2 pb-2">
+                      <Input
+                        placeholder={`Search ${entityType}s...`}
+                        value={entitySearch}
+                        onChange={(e) => setEntitySearch(e.target.value)}
+                        className="h-8 text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      />
                     </div>
-                    {!effectivePropertyId && (
-                      <p className="text-xs text-amber-600">
-                        Select a property first to create a new {entityType}.
-                      </p>
+                    {filteredEntities.length === 0 && (
+                      <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">
+                        No {entityType}s found
+                      </div>
                     )}
-                  </div>
+                    {filteredEntities.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.company_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* "Add new" link — opens EntityCreationWizard */}
+                {effectivePropertyId && onOpenWizard && (
+                  <button
+                    type="button"
+                    onClick={handleAddNew}
+                    className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    Don&apos;t see your {entityType}? Add new
+                  </button>
                 )}
               </div>
 

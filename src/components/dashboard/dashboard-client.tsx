@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatTimeAgo, formatDate } from '@/lib/utils';
 import { SimpleUploadCOIDialog } from '@/components/dashboard/simple-upload-coi-dialog';
+import { EntityCreationWizard } from '@/components/properties/entity-creation-wizard';
 import { ExportReportButton } from '@/components/dashboard/export-report-button';
 import { DashboardTutorial, useTutorial } from '@/components/dashboard/dashboard-tutorial';
 import {
@@ -39,7 +40,7 @@ import type {
   PropertyOverview,
   ActivityEntry,
 } from '@/app/(dashboard)/dashboard/page';
-import type { ActivityAction } from '@/types';
+import type { ActivityAction, RequirementTemplate } from '@/types';
 
 // ============================================================================
 // Props
@@ -54,6 +55,7 @@ interface UploadDialogEntity {
 interface UploadDialogProperty {
   id: string;
   name: string;
+  property_type: string;
 }
 
 interface DashboardClientProps {
@@ -65,6 +67,7 @@ interface DashboardClientProps {
   propertyList: UploadDialogProperty[];
   vendorList: UploadDialogEntity[];
   tenantList: UploadDialogEntity[];
+  templates: RequirementTemplate[];
   showAssignBanner?: boolean;
   firstName?: string | null;
 }
@@ -165,6 +168,7 @@ export function DashboardClient({
   propertyList,
   vendorList,
   tenantList,
+  templates,
   showAssignBanner,
   firstName,
 }: DashboardClientProps) {
@@ -172,6 +176,12 @@ export function DashboardClient({
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [pillFilter, setPillFilter] = useState<PillFilter>(null);
   const { showTutorial, startTutorial, closeTutorial } = useTutorial();
+
+  // Wizard state — opened from "Add new" link in upload dialog
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardMode, setWizardMode] = useState<'vendor' | 'tenant'>('vendor');
+  const [wizardPropertyId, setWizardPropertyId] = useState('');
+  const wizardPropertyType = propertyList.find((p) => p.id === wizardPropertyId)?.property_type;
 
   const filteredActionItems = useMemo(() => {
     if (!pillFilter) return actionItems;
@@ -250,6 +260,20 @@ export function DashboardClient({
         properties={propertyList}
         vendors={vendorList}
         tenants={tenantList}
+        onOpenWizard={(mode, propertyId) => {
+          setWizardMode(mode);
+          setWizardPropertyId(propertyId);
+          setWizardOpen(true);
+        }}
+      />
+
+      <EntityCreationWizard
+        mode={wizardMode}
+        propertyId={wizardPropertyId}
+        propertyType={wizardPropertyType}
+        templates={templates}
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
       />
 
       {/* ---- Two-column layout ---- */}
