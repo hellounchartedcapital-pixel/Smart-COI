@@ -13,6 +13,7 @@ import {
   Info,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { formatCoverageType, coverageTypeMatchScore } from '@/lib/coverage-utils';
 import type {
   Certificate,
   ComplianceResult,
@@ -23,24 +24,6 @@ import type {
   PropertyEntity,
   TemplateCoverageRequirement,
 } from '@/types';
-
-const COVERAGE_LABELS: Record<string, string> = {
-  general_liability: 'General Liability',
-  automobile_liability: 'Automobile Liability',
-  workers_compensation: 'Workers\' Compensation',
-  employers_liability: 'Employers\' Liability',
-  umbrella_excess_liability: 'Umbrella / Excess Liability',
-  professional_liability_eo: 'Professional Liability (E&O)',
-  property_inland_marine: 'Property / Inland Marine',
-  cyber_liability: 'Cyber Liability',
-  pollution_liability: 'Pollution Liability',
-  liquor_liability: 'Liquor Liability',
-  umbrella_excess: 'Umbrella / Excess',
-  professional_liability: 'Professional Liability',
-  property_insurance: 'Property Insurance',
-  builders_risk: 'Builders Risk',
-  other: 'Other',
-};
 
 function formatCurrency(amount: number | null | undefined): string {
   if (!amount) return '\u2014';
@@ -63,7 +46,7 @@ const LIMIT_TYPE_SUFFIXES: Record<string, string> = {
 };
 
 function getCoverageDisplayName(coverageType: string, limitType: string | null | undefined): string {
-  const base = COVERAGE_LABELS[coverageType] ?? coverageType;
+  const base = formatCoverageType(coverageType);
   const suffix = limitType ? LIMIT_TYPE_SUFFIXES[limitType] : null;
   return suffix ? `${base} (${suffix})` : base;
 }
@@ -259,9 +242,10 @@ export function CompactComplianceView({
     return new Date(c.expiration_date) < now;
   });
 
-  const requiredCoverageTypes = new Set(templateRequirements.map((r) => r.coverage_type));
   const additionalCoverages = extractedCoverages.filter(
-    (c) => !requiredCoverageTypes.has(c.coverage_type)
+    (c) => !templateRequirements.some(
+      (r) => coverageTypeMatchScore(r.coverage_type, c.coverage_type) >= 0.7
+    )
   );
 
   const hasAdditionalInsuredEntityRows = propertyEntities.some(
@@ -304,10 +288,10 @@ export function CompactComplianceView({
               const result = complianceResults.find(
                 (r) => r.coverage_requirement_id === req.id
               );
-              // Match by coverage_type AND limit_type — same logic as compliance engine
+              // Match by coverage_type (fuzzy) AND limit_type — same logic as compliance engine
               const coverage = extractedCoverages.find(
                 (c) =>
-                  c.coverage_type === req.coverage_type &&
+                  coverageTypeMatchScore(req.coverage_type, c.coverage_type) >= 0.7 &&
                   (req.limit_type == null || c.limit_type === req.limit_type)
               );
               const isMet = result?.status === 'met';
@@ -632,7 +616,7 @@ function AdditionalCoveragesSection({ coverages }: { coverages: ExtractedCoverag
           {coverages.map((c) => (
             <div key={c.id} className="flex items-center justify-between py-1">
               <span className="text-sm text-foreground">
-                {COVERAGE_LABELS[c.coverage_type] ?? c.coverage_type}
+                {formatCoverageType(c.coverage_type)}
               </span>
               <span className="text-xs text-muted-foreground">
                 {formatCurrency(c.limit_amount)}

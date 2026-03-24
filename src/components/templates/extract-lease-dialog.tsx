@@ -24,13 +24,13 @@ import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
 import { createTemplateWithRequirements } from '@/lib/actions/templates';
 import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
 import {
-  COVERAGE_LABELS,
+  getCoverageLabel,
   LIMIT_TYPE_LABELS,
-  ALL_COVERAGE_TYPES,
+  COMMON_COVERAGE_TYPES,
   ALL_LIMIT_TYPES,
   formatLimit,
 } from './template-labels';
-import type { CoverageType, LimitType, TemplateCategory } from '@/types';
+import type { LimitType, TemplateCategory } from '@/types';
 
 interface ExtractLeaseDialogProps {
   open: boolean;
@@ -40,7 +40,7 @@ interface ExtractLeaseDialogProps {
 interface EditableRequirement {
   id: string;
   included: boolean;
-  coverage_type: CoverageType;
+  coverage_type: string; // freetext coverage name
   limit_type: LimitType | null;
   minimum_limit: number | null;
   requires_additional_insured: boolean;
@@ -376,22 +376,14 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
                         onChange={(e) => updateRequirement(req.id, 'included', e.target.checked)}
                       />
 
-                      {/* Coverage type */}
-                      <Select
-                        value={req.coverage_type}
-                        onValueChange={(v) => updateRequirement(req.id, 'coverage_type', v)}
-                      >
-                        <SelectTrigger className="w-[200px] text-xs h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ALL_COVERAGE_TYPES.map((ct) => (
-                            <SelectItem key={ct} value={ct} className="text-xs">
-                              {COVERAGE_LABELS[ct]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {/* Coverage type — freetext with suggestions */}
+                      <Input
+                        className="w-[200px] text-xs h-8"
+                        value={getCoverageLabel(req.coverage_type)}
+                        onChange={(e) => updateRequirement(req.id, 'coverage_type', e.target.value)}
+                        list="lease-coverage-suggestions"
+                        placeholder="e.g., General Liability"
+                      />
 
                       {/* Limit type */}
                       <Select
@@ -472,6 +464,12 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
                 ))}
               </div>
             </div>
+
+            <datalist id="lease-coverage-suggestions">
+              {COMMON_COVERAGE_TYPES.map((ct) => (
+                <option key={ct} value={ct} />
+              ))}
+            </datalist>
 
             <div className="flex justify-between gap-2 pt-2">
               <Button

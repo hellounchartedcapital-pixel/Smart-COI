@@ -1,34 +1,62 @@
-import type { CoverageType, LimitType, RiskLevel } from '@/types';
+import type { LimitType, RiskLevel } from '@/types';
+import {
+  formatCoverageType,
+  formatCoverageTypeShort,
+  COMMON_COVERAGE_TYPES,
+} from '@/lib/coverage-utils';
 
-export const COVERAGE_LABELS: Record<CoverageType, string> = {
-  general_liability: 'General Liability',
-  automobile_liability: 'Automobile Liability',
-  workers_compensation: "Workers' Compensation",
-  employers_liability: "Employers' Liability",
-  umbrella_excess_liability: 'Umbrella / Excess Liability',
-  professional_liability_eo: 'Professional Liability (E&O)',
-  property_inland_marine: 'Property / Inland Marine',
-  pollution_liability: 'Pollution Liability',
-  liquor_liability: 'Liquor Liability',
-  cyber_liability: 'Cyber Liability',
-  fire_legal_liability: 'Fire Legal Liability',
-  business_income: 'Business Income / Extra Expense',
-};
+// Re-export coverage display utilities so existing imports keep working
+export { formatCoverageType, formatCoverageTypeShort, COMMON_COVERAGE_TYPES };
 
-export const COVERAGE_SHORT_LABELS: Record<CoverageType, string> = {
-  general_liability: 'GL',
-  automobile_liability: 'Auto',
-  workers_compensation: 'WC',
-  employers_liability: 'EL',
-  umbrella_excess_liability: 'Umbrella',
-  professional_liability_eo: 'E&O',
-  property_inland_marine: 'Property',
-  pollution_liability: 'Pollution',
-  liquor_liability: 'Liquor',
-  cyber_liability: 'Cyber',
-  fire_legal_liability: 'Fire Legal',
-  business_income: 'Biz Income',
-};
+/**
+ * Dynamic coverage label lookup.
+ * Accepts any coverage_type string and returns a display label.
+ * Backward-compatible: legacy snake_case values are mapped to their known labels.
+ *
+ * This replaces the old `COVERAGE_LABELS: Record<CoverageType, string>` map.
+ * Usage: `getCoverageLabel(req.coverage_type)` instead of `COVERAGE_LABELS[req.coverage_type]`
+ */
+export function getCoverageLabel(coverageType: string): string {
+  return formatCoverageType(coverageType);
+}
+
+/**
+ * Short label for compact views (e.g., "GL", "WC", "Auto").
+ */
+export function getCoverageShortLabel(coverageType: string): string {
+  return formatCoverageTypeShort(coverageType);
+}
+
+/**
+ * @deprecated Use getCoverageLabel() for new code. Kept as a Proxy for backward
+ * compatibility — any string key returns a display label via formatCoverageType.
+ */
+export const COVERAGE_LABELS: Record<string, string> = new Proxy(
+  {} as Record<string, string>,
+  {
+    get(_target, prop: string) {
+      return formatCoverageType(prop);
+    },
+    has() {
+      return true;
+    },
+  }
+);
+
+/**
+ * @deprecated Use getCoverageShortLabel() for new code.
+ */
+export const COVERAGE_SHORT_LABELS: Record<string, string> = new Proxy(
+  {} as Record<string, string>,
+  {
+    get(_target, prop: string) {
+      return formatCoverageTypeShort(prop);
+    },
+    has() {
+      return true;
+    },
+  }
+);
 
 export const LIMIT_TYPE_LABELS: Record<LimitType, string> = {
   per_occurrence: 'Per Occurrence',
@@ -55,20 +83,11 @@ export const RISK_LEVEL_COLORS: Record<RiskLevel, string> = {
   industrial: 'bg-orange-100 text-orange-800',
 };
 
-export const ALL_COVERAGE_TYPES: CoverageType[] = [
-  'general_liability',
-  'automobile_liability',
-  'workers_compensation',
-  'employers_liability',
-  'umbrella_excess_liability',
-  'professional_liability_eo',
-  'property_inland_marine',
-  'pollution_liability',
-  'liquor_liability',
-  'cyber_liability',
-  'fire_legal_liability',
-  'business_income',
-];
+/**
+ * @deprecated Use COMMON_COVERAGE_TYPES from coverage-utils.ts instead.
+ * Kept for backward compatibility — returns the common suggestion list.
+ */
+export const ALL_COVERAGE_TYPES: string[] = COMMON_COVERAGE_TYPES;
 
 export const ALL_LIMIT_TYPES: LimitType[] = [
   'per_occurrence',

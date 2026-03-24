@@ -2,7 +2,8 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import type { ComplianceStatus, CoverageType } from '@/types';
+import type { ComplianceStatus } from '@/types';
+import { normalizeCoverageType } from '@/lib/coverage-utils';
 
 // ============================================================================
 // Types
@@ -172,7 +173,7 @@ export async function getComplianceReportData(): Promise<ComplianceReportData> {
 
   // Fetch coverages, compliance results for all certs
   const certIds = [...new Set(entityCertMap.values())];
-  const coveragesMap = new Map<string, { coverage_type: CoverageType; limit_amount: number | null; expiration_date: string | null; additional_insured_listed: boolean; waiver_of_subrogation: boolean }[]>();
+  const coveragesMap = new Map<string, { coverage_type: string; limit_amount: number | null; expiration_date: string | null; additional_insured_listed: boolean; waiver_of_subrogation: boolean }[]>();
   const gapsMap = new Map<string, string[]>();
 
   if (certIds.length > 0) {
@@ -191,7 +192,7 @@ export async function getComplianceReportData(): Promise<ComplianceReportData> {
     // Group coverages by cert
     for (const c of covsRes.data ?? []) {
       const list = coveragesMap.get(c.certificate_id) ?? [];
-      list.push(c as { coverage_type: CoverageType; limit_amount: number | null; expiration_date: string | null; additional_insured_listed: boolean; waiver_of_subrogation: boolean });
+      list.push(c as { coverage_type: string; limit_amount: number | null; expiration_date: string | null; additional_insured_listed: boolean; waiver_of_subrogation: boolean });
       coveragesMap.set(c.certificate_id, list);
     }
 
@@ -205,11 +206,12 @@ export async function getComplianceReportData(): Promise<ComplianceReportData> {
     }
   }
 
-  // Helper to get a coverage limit for a specific type
-  function getCoverageLimit(certId: string | undefined, type: CoverageType): string {
+  // Helper to get a coverage limit for a specific type (fuzzy match)
+  function getCoverageLimit(certId: string | undefined, type: string): string {
     if (!certId) return '—';
     const covs = coveragesMap.get(certId) ?? [];
-    const match = covs.find((c) => c.coverage_type === type);
+    const typeNorm = normalizeCoverageType(type);
+    const match = covs.find((c) => normalizeCoverageType(c.coverage_type) === typeNorm);
     if (!match || match.limit_amount == null) return '—';
     return formatCurrency(match.limit_amount);
   }

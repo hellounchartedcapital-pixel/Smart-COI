@@ -6,28 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { formatCoverageType } from '@/lib/coverage-utils';
 import type {
   RequirementTemplate,
   TemplateCoverageRequirement,
-  CoverageType,
   LimitType,
 } from '@/types';
-
-// Human-readable labels
-const COVERAGE_LABELS: Record<CoverageType, string> = {
-  general_liability: 'General Liability',
-  automobile_liability: 'Auto Liability',
-  workers_compensation: "Workers' Comp",
-  employers_liability: "Employers' Liability",
-  umbrella_excess_liability: 'Umbrella / Excess',
-  professional_liability_eo: 'Professional Liability (E&O)',
-  property_inland_marine: 'Property / Inland Marine',
-  pollution_liability: 'Pollution Liability',
-  liquor_liability: 'Liquor Liability',
-  cyber_liability: 'Cyber Liability',
-  fire_legal_liability: 'Fire Legal Liability',
-  business_income: 'Business Income',
-};
 
 const LIMIT_LABELS: Record<LimitType, string> = {
   per_occurrence: '/ Occ',
@@ -55,29 +39,16 @@ function formatLimit(amount: number | null, limitType: LimitType | null): string
 }
 
 function summarizeCoverages(reqs: TemplateCoverageRequirement[]): string {
+  if (reqs.length === 0) return 'No coverages defined';
+  // Show up to 4 coverage summaries
   const parts: string[] = [];
-  // Group GL limits
-  const glReqs = reqs.filter((r) => r.coverage_type === 'general_liability');
-  if (glReqs.length > 0) {
-    const occ = glReqs.find((r) => r.limit_type === 'per_occurrence');
-    const agg = glReqs.find((r) => r.limit_type === 'aggregate');
-    if (occ && agg) {
-      parts.push(`GL: ${formatLimit(occ.minimum_limit, occ.limit_type)} / ${formatLimit(agg.minimum_limit, agg.limit_type)}`);
-    } else if (occ) {
-      parts.push(`GL: ${formatLimit(occ.minimum_limit, occ.limit_type)}`);
-    }
+  for (const r of reqs.slice(0, 4)) {
+    const label = formatCoverageType(r.coverage_type);
+    const short = label.length > 20 ? label.slice(0, 18) + '...' : label;
+    parts.push(`${short}: ${formatLimit(r.minimum_limit, r.limit_type)}`);
   }
-  // Auto
-  const auto = reqs.find((r) => r.coverage_type === 'automobile_liability');
-  if (auto) parts.push(`Auto: ${formatLimit(auto.minimum_limit, auto.limit_type)}`);
-  // WC
-  const wc = reqs.find((r) => r.coverage_type === 'workers_compensation');
-  if (wc) parts.push('WC: Statutory');
-  // Umbrella
-  const umb = reqs.find((r) => r.coverage_type === 'umbrella_excess_liability');
-  if (umb) parts.push(`Umbrella: ${formatLimit(umb.minimum_limit, umb.limit_type)}`);
-
-  return parts.join(', ') || 'No coverages defined';
+  if (reqs.length > 4) parts.push(`+${reqs.length - 4} more`);
+  return parts.join(', ');
 }
 
 export interface SelectedTemplate {
@@ -328,7 +299,7 @@ function TemplateCard({
             {reqs.map((req) => (
               <div key={req.id} className="flex items-center gap-2">
                 <Label className="w-28 shrink-0 text-xs text-slate-600">
-                  {COVERAGE_LABELS[req.coverage_type] || req.coverage_type}
+                  {formatCoverageType(req.coverage_type)}
                   {req.limit_type && (
                     <span className="ml-1 text-[10px] text-slate-400">
                       {LIMIT_LABELS[req.limit_type]}

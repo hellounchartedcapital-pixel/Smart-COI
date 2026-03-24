@@ -28,19 +28,14 @@ export type RiskLevel =
   | 'restaurant'
   | 'industrial';
 
-export type CoverageType =
-  | 'general_liability'
-  | 'automobile_liability'
-  | 'workers_compensation'
-  | 'employers_liability'
-  | 'umbrella_excess_liability'
-  | 'professional_liability_eo'
-  | 'property_inland_marine'
-  | 'pollution_liability'
-  | 'liquor_liability'
-  | 'cyber_liability'
-  | 'fire_legal_liability'
-  | 'business_income';
+/**
+ * Coverage type is now a freetext string — no longer restricted to a fixed enum.
+ * The AI extraction pipeline returns whatever coverage name it finds on the
+ * document, and the compliance engine uses fuzzy matching to pair requirements
+ * against extracted coverages. Legacy snake_case values (e.g. "general_liability")
+ * are normalized for display via `formatCoverageType()` in coverage-utils.ts.
+ */
+export type CoverageType = string;
 
 export type LimitType =
   | 'per_occurrence'

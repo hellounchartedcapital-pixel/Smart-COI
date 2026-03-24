@@ -25,19 +25,18 @@ import { toast } from 'sonner';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
 import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
 import {
-  COVERAGE_LABELS,
+  getCoverageLabel,
   LIMIT_TYPE_LABELS,
   RISK_LEVEL_LABELS,
   RISK_LEVEL_COLORS,
-  ALL_COVERAGE_TYPES,
   ALL_LIMIT_TYPES,
   ALL_RISK_LEVELS,
+  COMMON_COVERAGE_TYPES,
   formatLimit,
 } from './template-labels';
 import type {
   RequirementTemplate,
   TemplateCoverageRequirement,
-  CoverageType,
   LimitType,
   RiskLevel,
 } from '@/types';
@@ -48,7 +47,7 @@ import type {
 
 interface EditorRow {
   _key: string;
-  coverage_type: CoverageType;
+  coverage_type: string; // freetext coverage name
   is_required: boolean;
   minimum_limit: number | null;
   limit_type: LimitType | null;
@@ -106,7 +105,7 @@ export function TemplateEditorClient({
       ...prev,
       {
         _key: crypto.randomUUID(),
-        coverage_type: 'general_liability',
+        coverage_type: 'General Liability',
         is_required: true,
         minimum_limit: null,
         limit_type: 'per_occurrence',
@@ -204,7 +203,7 @@ export function TemplateEditorClient({
     const parts = rows
       .filter((r) => r.is_required)
       .map((r) => {
-        let text = COVERAGE_LABELS[r.coverage_type];
+        let text = getCoverageLabel(r.coverage_type);
         if (r.limit_type === 'statutory') {
           text += ' (Statutory)';
         } else if (r.minimum_limit != null && r.limit_type) {
@@ -224,7 +223,7 @@ export function TemplateEditorClient({
     if (optional.length > 0) {
       result +=
         ' Optional coverages checked if provided: ' +
-        optional.map((r) => COVERAGE_LABELS[r.coverage_type]).join(', ') +
+        optional.map((r) => getCoverageLabel(r.coverage_type)).join(', ') +
         '.';
     }
     return result;
@@ -392,27 +391,24 @@ export function TemplateEditorClient({
                 </span>
 
                 <div className="flex-1 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  {/* Coverage Type */}
+                  {/* Coverage Type — freetext with suggestions */}
                   <div className="space-y-1">
                     <Label className="text-xs">Coverage Type</Label>
-                    <Select
-                      value={row.coverage_type}
-                      onValueChange={(v) =>
-                        updateRow(row._key, { coverage_type: v as CoverageType })
+                    <Input
+                      className="h-8 text-xs"
+                      value={getCoverageLabel(row.coverage_type)}
+                      onChange={(e) =>
+                        updateRow(row._key, { coverage_type: e.target.value })
                       }
                       disabled={isReadOnly}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ALL_COVERAGE_TYPES.map((ct) => (
-                          <SelectItem key={ct} value={ct}>
-                            {COVERAGE_LABELS[ct]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      list="coverage-type-suggestions"
+                      placeholder="e.g., General Liability"
+                    />
+                    <datalist id="coverage-type-suggestions">
+                      {COMMON_COVERAGE_TYPES.map((ct) => (
+                        <option key={ct} value={ct} />
+                      ))}
+                    </datalist>
                   </div>
 
                   {/* Limit Type */}

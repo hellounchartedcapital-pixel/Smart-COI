@@ -8,28 +8,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
+import { formatCoverageType } from '@/lib/coverage-utils';
 import type {
   TemplateCoverageRequirement,
   ExtractedCoverage,
   ComplianceResult,
-  CoverageType,
   LimitType,
 } from '@/types';
-
-const COVERAGE_LABELS: Record<CoverageType, string> = {
-  general_liability: 'General Liability',
-  automobile_liability: 'Automobile Liability',
-  workers_compensation: "Workers' Compensation",
-  employers_liability: "Employers' Liability",
-  umbrella_excess_liability: 'Umbrella / Excess Liability',
-  professional_liability_eo: 'Professional Liability (E&O)',
-  property_inland_marine: 'Property / Inland Marine',
-  pollution_liability: 'Pollution Liability',
-  liquor_liability: 'Liquor Liability',
-  cyber_liability: 'Cyber Liability',
-  fire_legal_liability: 'Fire Legal Liability',
-  business_income: 'Business Income / Extra Expense',
-};
+import { coverageTypeMatchScore } from '@/lib/coverage-utils';
 
 const LIMIT_TYPE_LABELS: Record<LimitType, string> = {
   per_occurrence: 'Per Occurrence',
@@ -142,7 +128,7 @@ export function ComplianceBreakdown({
   // Count expired coverages (from extracted data that match requirements)
   const expiredCount = requirements.reduce((count, req) => {
     const extracted = extractedCoverages.find(
-      (e) => e.coverage_type === req.coverage_type && e.limit_type === req.limit_type
+      (e) => coverageTypeMatchScore(req.coverage_type, e.coverage_type) >= 0.7 && e.limit_type === req.limit_type
     );
     if (extracted && getExpirationStatus(extracted.expiration_date) === 'expired') {
       return count + 1;
@@ -224,7 +210,7 @@ export function ComplianceBreakdown({
                 // Find matching extracted coverage
                 const extracted = extractedCoverages.find(
                   (e) =>
-                    e.coverage_type === req.coverage_type &&
+                    coverageTypeMatchScore(req.coverage_type, e.coverage_type) >= 0.7 &&
                     e.limit_type === req.limit_type
                 );
 
@@ -238,7 +224,7 @@ export function ComplianceBreakdown({
                     </TableCell>
                     <TableCell>
                       <div className="font-medium text-sm">
-                        {COVERAGE_LABELS[req.coverage_type]}
+                        {formatCoverageType(req.coverage_type)}
                       </div>
                       {req.limit_type && (
                         <div className="text-xs text-muted-foreground">
