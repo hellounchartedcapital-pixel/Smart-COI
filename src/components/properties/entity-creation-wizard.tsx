@@ -62,6 +62,42 @@ const TENANT_TYPE_SUGGESTIONS = [
 ];
 
 // ---------------------------------------------------------------------------
+// AI Recommendation Dropdowns
+// ---------------------------------------------------------------------------
+
+const AI_PROPERTY_TYPES = [
+  'Multifamily',
+  'Office',
+  'Retail',
+  'Industrial / Warehouse',
+  'Mixed Use',
+  'Medical Office',
+  'Hospitality',
+  'Self Storage',
+  'Senior Living',
+  'Student Housing',
+  'Single Family Rental',
+];
+
+const UNIT_BASED_TYPES = new Set(['Multifamily', 'Senior Living', 'Student Housing', 'Self Storage']);
+
+const SF_SIZE_RANGES = [
+  'Under 10,000 SF',
+  '10,000–50,000 SF',
+  '50,000–100,000 SF',
+  '100,000–250,000 SF',
+  '250,000+ SF',
+];
+
+const UNIT_SIZE_RANGES = [
+  'Under 50 Units',
+  '50–100 Units',
+  '100–250 Units',
+  '250–500 Units',
+  '500+ Units',
+];
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -73,6 +109,8 @@ interface EntityCreationWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: (id: string, name: string) => void;
+  /** Pre-attached COI file from the upload dialog */
+  initialCoiFile?: File | null;
 }
 
 interface EditableRequirement {
@@ -102,6 +140,7 @@ export function EntityCreationWizard({
   open,
   onOpenChange,
   onCreated,
+  initialCoiFile,
 }: EntityCreationWizardProps) {
   const { showUpgradeModal } = useUpgradeModal();
   const leaseFileRef = useRef<HTMLInputElement>(null);
@@ -508,10 +547,14 @@ export function EntityCreationWizard({
     const entityId = await handleCreateEntity();
     if (!entityId) return;
     setCreatedEntityId(entityId);
+    // Pre-populate COI file from upload dialog if available
+    if (initialCoiFile && !coiFile) {
+      setCoiFile(initialCoiFile);
+    }
     toast.success(`${companyName.trim()} added successfully`);
     onCreated?.(entityId, companyName.trim());
     setStep(3);
-  }, [handleCreateEntity, companyName, onCreated]);
+  }, [handleCreateEntity, companyName, onCreated, initialCoiFile, coiFile]);
 
   // ---------------------------------------------------------------------------
   // Step 3: Inline COI upload + extraction
@@ -807,26 +850,7 @@ export function EntityCreationWizard({
                 />
               </div>
 
-              {mode === 'tenant' && (
-                <div className="space-y-2">
-                  <Label>Unit / Suite</Label>
-                  <Input
-                    value={unitSuite}
-                    onChange={(e) => setUnitSuite(e.target.value)}
-                    placeholder="Suite 400"
-                  />
-                </div>
-              )}
-
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Contact name</Label>
-                  <Input
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                    placeholder="John Smith"
-                  />
-                </div>
                 <div className="space-y-2">
                   <Label>Contact email</Label>
                   <Input
@@ -834,17 +858,6 @@ export function EntityCreationWizard({
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
                     placeholder="john@example.com"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Phone</Label>
-                  <Input
-                    value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
-                    placeholder="(555) 123-4567"
                   />
                 </div>
                 <div className="relative space-y-2">
@@ -895,6 +908,15 @@ export function EntityCreationWizard({
                   onClick={() => {
                     if (mode === 'vendor' && vendorType.trim()) {
                       setAiVendorType(vendorType.trim());
+                    }
+                    // Pre-select AI property type from property's type
+                    if (propertyType && !aiPropertyType) {
+                      const ptMap: Record<string, string> = {
+                        office: 'Office', retail: 'Retail', industrial: 'Industrial / Warehouse',
+                        mixed_use: 'Mixed Use', multifamily: 'Multifamily', other: '',
+                      };
+                      const mapped = ptMap[propertyType] ?? '';
+                      if (mapped) setAiPropertyType(mapped);
                     }
                     setStep(2);
                   }}
@@ -1013,20 +1035,30 @@ export function EntityCreationWizard({
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label>Property type (optional)</Label>
-                          <Input
-                            value={aiPropertyType}
-                            onChange={(e) => setAiPropertyType(e.target.value)}
-                            placeholder="e.g., Office, Multifamily"
-                          />
+                          <Label>Property type <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                          <Select value={aiPropertyType} onValueChange={(v) => { setAiPropertyType(v); setAiPropertyDetails(''); }}>
+                            <SelectTrigger className="text-sm">
+                              <SelectValue placeholder="Select property type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {AI_PROPERTY_TYPES.map((pt) => (
+                                <SelectItem key={pt} value={pt}>{pt}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Property details (optional)</Label>
-                          <Input
-                            value={aiPropertyDetails}
-                            onChange={(e) => setAiPropertyDetails(e.target.value)}
-                            placeholder="e.g., 50-unit complex"
-                          />
+                          <Label>Property size <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                          <Select value={aiPropertyDetails} onValueChange={setAiPropertyDetails}>
+                            <SelectTrigger className="text-sm">
+                              <SelectValue placeholder="Select size range" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(UNIT_BASED_TYPES.has(aiPropertyType) ? UNIT_SIZE_RANGES : SF_SIZE_RANGES).map((s) => (
+                                <SelectItem key={s} value={s}>{s}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                       {aiError && (
@@ -1298,7 +1330,28 @@ export function EntityCreationWizard({
               {/* File picker — only when idle and not yet done */}
               {uploadStep === 'idle' && (
                 <>
-                  {!coiFile ? (
+                  {coiFile ? (
+                    /* File already attached (from upload dialog or manual pick) */
+                    <div className="rounded-lg border border-slate-200 bg-white p-4">
+                      <div className="flex items-center gap-3">
+                        <FileText className="h-5 w-5 flex-shrink-0 text-red-500" />
+                        <div className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">{coiFile.name}</span>
+                          {initialCoiFile && coiFile === initialCoiFile && (
+                            <span className="text-xs text-emerald-600">From your upload — ready to process</span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setCoiFile(null); setCoiFileError(null); }}
+                          className="flex-shrink-0 rounded p-1 text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Drop zone for new file */
                     <div
                       className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 transition-colors hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer"
                       onClick={() => coiFileRef.current?.click()}
@@ -1311,7 +1364,7 @@ export function EntityCreationWizard({
                     >
                       <Upload className="h-8 w-8 text-slate-400" />
                       <p className="mt-2 text-sm font-medium text-slate-600">
-                        Drop a COI PDF here or click to select
+                        {companyName.trim() ? `Upload a COI for ${companyName.trim()}` : 'Drop a COI PDF here or click to select'}
                       </p>
                       <p className="mt-0.5 text-xs text-slate-400">
                         Optional — you can upload later
@@ -1326,18 +1379,6 @@ export function EntityCreationWizard({
                           if (f) handleCoiFileSelect(f);
                         }}
                       />
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
-                      <FileText className="h-5 w-5 flex-shrink-0 text-red-500" />
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium">{coiFile.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => { setCoiFile(null); setCoiFileError(null); }}
-                        className="flex-shrink-0 rounded p-1 text-slate-400 hover:text-slate-600"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
                     </div>
                   )}
 

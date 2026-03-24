@@ -181,6 +181,7 @@ export function DashboardClient({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardMode, setWizardMode] = useState<'vendor' | 'tenant'>('vendor');
   const [wizardPropertyId, setWizardPropertyId] = useState('');
+  const [wizardCoiFile, setWizardCoiFile] = useState<File | null>(null);
   const wizardPropertyType = propertyList.find((p) => p.id === wizardPropertyId)?.property_type;
 
   const filteredActionItems = useMemo(() => {
@@ -260,9 +261,10 @@ export function DashboardClient({
         properties={propertyList}
         vendors={vendorList}
         tenants={tenantList}
-        onOpenWizard={(mode, propertyId) => {
+        onOpenWizard={(mode, propertyId, coiFile) => {
           setWizardMode(mode);
           setWizardPropertyId(propertyId);
+          setWizardCoiFile(coiFile ?? null);
           setWizardOpen(true);
         }}
       />
@@ -274,6 +276,7 @@ export function DashboardClient({
         templates={templates}
         open={wizardOpen}
         onOpenChange={setWizardOpen}
+        initialCoiFile={wizardCoiFile}
       />
 
       {/* ---- Two-column layout ---- */}
