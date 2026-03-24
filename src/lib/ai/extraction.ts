@@ -1,4 +1,4 @@
-import type { CoverageType, LimitType, EndorsementRecord } from '@/types';
+import type { LimitType, EndorsementRecord } from '@/types';
 
 // ============================================================================
 // Types for the AI extraction response
@@ -10,7 +10,7 @@ interface AILimit {
 }
 
 interface AICoverage {
-  coverage_type: CoverageType;
+  coverage_type: string; // freetext coverage name (e.g., "Commercial General Liability")
   carrier_name: string;
   policy_number: string;
   limits: AILimit[];
@@ -51,7 +51,7 @@ interface AIExtractionResponse {
 // ============================================================================
 
 export interface ExtractedCoverageRow {
-  coverage_type: CoverageType;
+  coverage_type: string; // freetext coverage name
   carrier_name: string | null;
   policy_number: string | null;
   limit_amount: number | null;
@@ -94,7 +94,7 @@ Return a JSON object with exactly this structure:
   "page_count": number,
   "coverages": [
     {
-      "coverage_type": "general_liability" | "automobile_liability" | "workers_compensation" | "employers_liability" | "umbrella_excess_liability" | "professional_liability_eo" | "property_inland_marine" | "pollution_liability" | "liquor_liability" | "cyber_liability",
+      "coverage_type": "string — the coverage name exactly as it appears on the certificate, cleaned up to Title Case. Examples: 'Commercial General Liability', 'Automobile Liability', 'Workers\\' Compensation', 'Employers\\' Liability', 'Umbrella / Excess Liability', 'Professional Liability (E&O)', 'Property / Inland Marine', 'Cyber Liability', 'Pollution Liability', 'Fire Legal Liability', 'Business Income / Extra Expense', 'Builder\\'s Risk', 'Tenant\\'s Legal Liability', etc.",
       "carrier_name": "string",
       "policy_number": "string",
       "limits": [
@@ -197,6 +197,16 @@ KEY RULES:
 - Endorsement pages are ONLY used to verify endorsement existence and extract endorsement-specific data (form numbers, named parties).
 - If the PDF is a single page, set "endorsements" to an empty array — do not penalize single-page uploads.
 - Set "page_count" to the total number of pages in the PDF.
+
+COVERAGE TYPE NAMES:
+- Return the coverage name as it appears on the ACORD 25 form, cleaned up to Title Case.
+- Use the standard ACORD field labels: "Commercial General Liability", "Automobile Liability", "Workers' Compensation", "Umbrella / Excess Liability", "Professional Liability (E&O)", "Property / Inland Marine", etc.
+- Do NOT map to snake_case enum values. Return the human-readable name.
+- Normalize common abbreviations: "CGL" → "Commercial General Liability", "WC" → "Workers' Compensation", "Auto" → "Automobile Liability"
+- For Employers' Liability (the E.L. section under Workers' Comp), use "Employers' Liability" as a separate coverage_type.
+- If you encounter a coverage type not listed above, return it as-is in Title Case (e.g., "Builder's Risk", "Equipment Breakdown", "Crime / Fidelity").
+- Fire Damage Legal Liability / Damage to Rented Premises → "Fire Legal Liability"
+- Business Income / Business Interruption → "Business Income / Extra Expense"
 
 ADDITIONAL INSURED DETECTION (combine all sources):
 1. ADDL INSD checkbox column on ACORD 25 — if "Y", set additional_insured to true

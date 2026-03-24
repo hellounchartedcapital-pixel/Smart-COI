@@ -37,13 +37,13 @@ import {
   type EntityInput,
 } from '@/lib/compliance/calculate';
 import { saveAndRerunCompliance, type SavedCoverage, type SavedEntity } from '@/lib/actions/certificates';
+import { formatCoverageType, COMMON_COVERAGE_TYPES } from '@/lib/coverage-utils';
 import type {
   Certificate,
   ExtractedCoverage,
   ExtractedEntity,
   TemplateCoverageRequirement,
   PropertyEntity,
-  CoverageType,
   LimitType,
   EntityType,
 } from '@/types';
@@ -68,7 +68,7 @@ import {
 
 interface EditableCoverage {
   _key: string; // stable key for React
-  coverage_type: CoverageType;
+  coverage_type: string; // freetext coverage name
   carrier_name: string;
   policy_number: string;
   limit_amount: string; // string for input
@@ -93,10 +93,6 @@ interface EditableEntity {
 // ============================================================================
 // Constants
 // ============================================================================
-
-const COVERAGE_TYPE_OPTIONS: { value: CoverageType; label: string }[] = Object.entries(
-  COVERAGE_LABELS
-).map(([value, label]) => ({ value: value as CoverageType, label }));
 
 const LIMIT_TYPE_OPTIONS: { value: LimitType; label: string }[] = Object.entries(
   LIMIT_TYPE_LABELS
@@ -782,7 +778,7 @@ function ReviewInterface({
                           </TableCell>
                           <TableCell className="py-2">
                             <div className="text-xs font-medium">
-                              {COVERAGE_LABELS[req.coverage_type]}
+                              {formatCoverageType(req.coverage_type)}
                             </div>
                             {req.limit_type && (
                               <div className="text-[10px] text-muted-foreground">
@@ -946,27 +942,26 @@ function CoverageCard({
 
       {/* PRIMARY: Coverage Type, Limit, Expiration, Endorsements */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Coverage Type */}
+        {/* Coverage Type — freetext with suggestions */}
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Coverage Type</Label>
           {readOnly ? (
-            <p className="text-sm font-medium">{COVERAGE_LABELS[coverage.coverage_type]}</p>
+            <p className="text-sm font-medium">{formatCoverageType(coverage.coverage_type)}</p>
           ) : (
-            <Select
-              value={coverage.coverage_type}
-              onValueChange={(val) => onChange('coverage_type', val)}
-            >
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {COVERAGE_TYPE_OPTIONS.map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
+            <>
+              <Input
+                className="h-8 text-xs"
+                value={formatCoverageType(coverage.coverage_type)}
+                onChange={(e) => onChange('coverage_type', e.target.value)}
+                list="review-coverage-suggestions"
+                placeholder="e.g., General Liability"
+              />
+              <datalist id="review-coverage-suggestions">
+                {COMMON_COVERAGE_TYPES.map((ct) => (
+                  <option key={ct} value={ct} />
                 ))}
-              </SelectContent>
-            </Select>
+              </datalist>
+            </>
           )}
         </div>
 

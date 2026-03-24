@@ -6,7 +6,6 @@ import { checkActivePlan } from '@/lib/require-active-plan';
 import type {
   TemplateCategory,
   RiskLevel,
-  CoverageType,
   LimitType,
 } from '@/types';
 
@@ -143,7 +142,7 @@ export async function createTemplateWithRequirements(
 // ---------------------------------------------------------------------------
 
 export interface CoverageRequirementInput {
-  coverage_type: CoverageType;
+  coverage_type: string; // freetext coverage name
   is_required: boolean;
   minimum_limit: number | null;
   limit_type: LimitType | null;
@@ -334,11 +333,12 @@ async function recalculateComplianceForTemplate(
       gap_description: string | null;
     }[] = [];
 
+    const { coverageTypeMatchScore } = await import('@/lib/coverage-utils');
     for (const req of requirements) {
-      // Find matching extracted coverage
+      // Find matching extracted coverage (fuzzy coverage type match)
       const match = extracted.find(
         (e) =>
-          e.coverage_type === req.coverage_type &&
+          coverageTypeMatchScore(req.coverage_type, e.coverage_type) >= 0.7 &&
           e.limit_type === req.limit_type
       );
 

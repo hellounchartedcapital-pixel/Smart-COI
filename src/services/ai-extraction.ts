@@ -7,7 +7,6 @@ import type {
   LeaseExtractedData,
   LeaseExtractedCoverage,
   LeaseExtractedEntityRequirement,
-  CoverageType,
   LimitType,
 } from '@/types';
 
@@ -74,7 +73,7 @@ function mapRawToCOIResult(raw: Record<string, any>): COIExtractionResult {
   // General Liability
   if (raw.generalLiability?.amount != null) {
     coverages.push({
-      coverage_type: 'general_liability',
+      coverage_type: 'Commercial General Liability',
       carrier_name: raw.insuranceCompany ?? null,
       policy_number: null,
       limit_amount: raw.generalLiability.amount,
@@ -88,7 +87,7 @@ function mapRawToCOIResult(raw: Record<string, any>): COIExtractionResult {
     });
     if (raw.generalLiability.aggregate != null) {
       coverages.push({
-        coverage_type: 'general_liability',
+        coverage_type: 'Commercial General Liability',
         carrier_name: raw.insuranceCompany ?? null,
         policy_number: null,
         limit_amount: raw.generalLiability.aggregate,
@@ -106,7 +105,7 @@ function mapRawToCOIResult(raw: Record<string, any>): COIExtractionResult {
   // Auto Liability
   if (raw.autoLiability?.amount != null) {
     coverages.push({
-      coverage_type: 'automobile_liability',
+      coverage_type: 'Automobile Liability',
       carrier_name: raw.insuranceCompany ?? null,
       policy_number: null,
       limit_amount: raw.autoLiability.amount,
@@ -123,7 +122,7 @@ function mapRawToCOIResult(raw: Record<string, any>): COIExtractionResult {
   // Workers' Compensation
   if (raw.workersComp) {
     coverages.push({
-      coverage_type: 'workers_compensation',
+      coverage_type: "Workers' Compensation",
       carrier_name: raw.insuranceCompany ?? null,
       policy_number: null,
       limit_amount: null,
@@ -140,7 +139,7 @@ function mapRawToCOIResult(raw: Record<string, any>): COIExtractionResult {
   // Employers Liability
   if (raw.employersLiability?.amount != null) {
     coverages.push({
-      coverage_type: 'employers_liability',
+      coverage_type: "Employers' Liability",
       carrier_name: raw.insuranceCompany ?? null,
       policy_number: null,
       limit_amount: raw.employersLiability.amount,
@@ -206,15 +205,16 @@ function mapRawToCOIResult(raw: Record<string, any>): COIExtractionResult {
   };
 }
 
-function mapCoverageTypeName(name: string): CoverageType | null {
+function mapCoverageTypeName(name: string): string | null {
   const lower = name.toLowerCase();
-  if (lower.includes('umbrella') || lower.includes('excess')) return 'umbrella_excess_liability';
-  if (lower.includes('professional') || lower.includes('e&o')) return 'professional_liability_eo';
-  if (lower.includes('cyber')) return 'cyber_liability';
-  if (lower.includes('pollution')) return 'pollution_liability';
-  if (lower.includes('liquor')) return 'liquor_liability';
-  if (lower.includes('property') || lower.includes('inland marine')) return 'property_inland_marine';
-  return null;
+  if (lower.includes('umbrella') || lower.includes('excess')) return 'Umbrella / Excess Liability';
+  if (lower.includes('professional') || lower.includes('e&o')) return 'Professional Liability (E&O)';
+  if (lower.includes('cyber')) return 'Cyber Liability';
+  if (lower.includes('pollution')) return 'Pollution Liability';
+  if (lower.includes('liquor')) return 'Liquor Liability';
+  if (lower.includes('property') || lower.includes('inland marine')) return 'Property / Inland Marine';
+  // For unknown types, return the original name in title case
+  return name.replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 export async function extractLeaseRequirements(file: File): Promise<LeaseExtractionResult> {
@@ -279,7 +279,7 @@ function mapRawToLeaseResult(raw: Record<string, any>): LeaseExtractionResult {
   // Map flat extracted fields to coverage requirements
   if (v('general_liability_per_occurrence') != null) {
     coverageRequirements.push({
-      coverage_type: 'general_liability',
+      coverage_type: 'Commercial General Liability',
       is_required: true,
       minimum_limit: v('general_liability_per_occurrence'),
       limit_type: 'per_occurrence' as LimitType,
@@ -292,7 +292,7 @@ function mapRawToLeaseResult(raw: Record<string, any>): LeaseExtractionResult {
 
   if (v('general_liability_aggregate') != null) {
     coverageRequirements.push({
-      coverage_type: 'general_liability',
+      coverage_type: 'Commercial General Liability',
       is_required: true,
       minimum_limit: v('general_liability_aggregate'),
       limit_type: 'aggregate' as LimitType,
@@ -305,7 +305,7 @@ function mapRawToLeaseResult(raw: Record<string, any>): LeaseExtractionResult {
 
   if (v('auto_liability') != null) {
     coverageRequirements.push({
-      coverage_type: 'automobile_liability',
+      coverage_type: 'Automobile Liability',
       is_required: true,
       minimum_limit: v('auto_liability'),
       limit_type: 'combined_single_limit' as LimitType,
@@ -318,7 +318,7 @@ function mapRawToLeaseResult(raw: Record<string, any>): LeaseExtractionResult {
 
   if (v('workers_comp_required') === true) {
     coverageRequirements.push({
-      coverage_type: 'workers_compensation',
+      coverage_type: "Workers' Compensation",
       is_required: true,
       minimum_limit: null,
       limit_type: 'statutory' as LimitType,
@@ -331,7 +331,7 @@ function mapRawToLeaseResult(raw: Record<string, any>): LeaseExtractionResult {
 
   if (v('employers_liability') != null) {
     coverageRequirements.push({
-      coverage_type: 'employers_liability',
+      coverage_type: "Employers' Liability",
       is_required: true,
       minimum_limit: v('employers_liability'),
       limit_type: 'per_accident' as LimitType,
@@ -344,7 +344,7 @@ function mapRawToLeaseResult(raw: Record<string, any>): LeaseExtractionResult {
 
   if (v('umbrella_liability') != null) {
     coverageRequirements.push({
-      coverage_type: 'umbrella_excess_liability',
+      coverage_type: 'Umbrella / Excess Liability',
       is_required: true,
       minimum_limit: v('umbrella_liability'),
       limit_type: 'per_occurrence' as LimitType,
@@ -357,7 +357,7 @@ function mapRawToLeaseResult(raw: Record<string, any>): LeaseExtractionResult {
 
   if (v('liquor_liability') != null) {
     coverageRequirements.push({
-      coverage_type: 'liquor_liability',
+      coverage_type: 'Liquor Liability',
       is_required: true,
       minimum_limit: v('liquor_liability'),
       limit_type: 'per_occurrence' as LimitType,

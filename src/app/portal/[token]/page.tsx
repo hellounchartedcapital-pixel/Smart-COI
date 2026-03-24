@@ -1,7 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { formatCurrency } from '@/lib/utils';
-import { COVERAGE_LABELS, LIMIT_TYPE_LABELS } from '@/components/templates/template-labels';
-import type { CoverageType, LimitType } from '@/types';
+import { getCoverageLabel, LIMIT_TYPE_LABELS } from '@/components/templates/template-labels';
+import type { LimitType } from '@/types';
 import { PortalUploadClient } from './portal-upload-client';
 
 interface PortalPageProps {
@@ -10,7 +10,7 @@ interface PortalPageProps {
 
 interface CoverageRequirement {
   id: string;
-  coverage_type: CoverageType;
+  coverage_type: string;
   is_required: boolean;
   minimum_limit: number | null;
   limit_type: LimitType | null;
@@ -264,7 +264,7 @@ export default async function PortalPage({ params }: PortalPageProps) {
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                     <span className="text-sm text-slate-700">
-                      <span className="font-medium">{COVERAGE_LABELS[req.coverage_type]}</span>
+                      <span className="font-medium">{getCoverageLabel(req.coverage_type)}</span>
                       {req.minimum_limit != null && req.limit_type && (
                         <>: minimum {formatCurrency(req.minimum_limit)} {LIMIT_TYPE_LABELS[req.limit_type].toLowerCase()}</>
                       )}

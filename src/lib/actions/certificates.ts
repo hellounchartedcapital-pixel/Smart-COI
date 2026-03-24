@@ -10,7 +10,7 @@ import {
   type RequirementInput,
   type PropertyEntityInput,
 } from '@/lib/compliance/calculate';
-import type { CoverageType, LimitType, EntityType } from '@/types';
+import type { LimitType, EntityType } from '@/types';
 
 // ============================================================================
 // Helpers
@@ -39,7 +39,7 @@ async function getAuthContext() {
 
 export interface SavedCoverage {
   id?: string; // existing row id (omit for new rows)
-  coverage_type: CoverageType;
+  coverage_type: string; // freetext coverage name
   carrier_name: string | null;
   policy_number: string | null;
   limit_amount: number | null;

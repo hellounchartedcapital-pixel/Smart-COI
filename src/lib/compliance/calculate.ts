@@ -7,8 +7,8 @@
 // ============================================================================
 
 import { formatCurrency } from '@/lib/utils';
+import { formatCoverageType, coverageTypeMatchScore } from '@/lib/coverage-utils';
 import type {
-  CoverageType,
   LimitType,
   ComplianceStatus,
   ComplianceResultStatus,
@@ -21,7 +21,7 @@ import type {
 
 export interface CoverageInput {
   id?: string; // existing extracted_coverage id (if saved)
-  coverage_type: CoverageType;
+  coverage_type: string; // freetext coverage name
   carrier_name: string | null;
   policy_number: string | null;
   limit_amount: number | null;
@@ -41,7 +41,7 @@ export interface EntityInput {
 
 export interface RequirementInput {
   id: string; // template_coverage_requirements.id
-  coverage_type: CoverageType;
+  coverage_type: string; // freetext coverage name
   is_required: boolean;
   minimum_limit: number | null;
   limit_type: LimitType | null;
@@ -80,20 +80,21 @@ export interface ComplianceCalculationResult {
 // Display helpers
 // ============================================================================
 
-const COVERAGE_LABELS: Record<CoverageType, string> = {
-  general_liability: 'General Liability',
-  automobile_liability: 'Automobile Liability',
-  workers_compensation: "Workers' Compensation",
-  employers_liability: "Employers' Liability",
-  umbrella_excess_liability: 'Umbrella / Excess Liability',
-  professional_liability_eo: 'Professional Liability (E&O)',
-  property_inland_marine: 'Property / Inland Marine',
-  pollution_liability: 'Pollution Liability',
-  liquor_liability: 'Liquor Liability',
-  cyber_liability: 'Cyber Liability',
-  fire_legal_liability: 'Fire Legal Liability',
-  business_income: 'Business Income / Extra Expense',
-};
+/**
+ * Dynamic coverage label lookup — works with any coverage_type string.
+ * Backward-compatible: legacy snake_case values are normalized to Title Case.
+ */
+const COVERAGE_LABELS: Record<string, string> = new Proxy(
+  {} as Record<string, string>,
+  {
+    get(_target, prop: string) {
+      return formatCoverageType(prop);
+    },
+    has() {
+      return true;
+    },
+  }
+);
 
 const LIMIT_TYPE_LABELS: Record<LimitType, string> = {
   per_occurrence: 'Per Occurrence',
@@ -143,9 +144,7 @@ export function summarizeExpiredCoverages(
   for (const c of expired) {
     const date = c.expiration_date!;
     if (!byDate.has(date)) byDate.set(date, new Set());
-    const label =
-      (COVERAGE_LABELS as Record<string, string>)[c.coverage_type] ??
-      c.coverage_type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+    const label = formatCoverageType(c.coverage_type);
     byDate.get(date)!.add(label);
   }
 
@@ -172,8 +171,8 @@ export function summarizeExpiredCoverages(
   return { allSameDate: false, singleLine: null, groupedLines, expiredCount: expired.length, totalCount: coverages.length };
 }
 
-function fmtCov(type: CoverageType, limitType: LimitType | null): string {
-  const base = COVERAGE_LABELS[type] ?? type;
+function fmtCov(type: string, limitType: LimitType | null): string {
+  const base = formatCoverageType(type);
   if (limitType && limitType !== 'statutory') {
     return `${base} (${LIMIT_TYPE_LABELS[limitType] ?? limitType})`;
   }
@@ -309,12 +308,12 @@ export function calculateCompliance(
 
   // ---- Coverage requirements ----
   for (const req of requirements) {
-    // Find matching extracted coverage by type AND limit_type
-    const match = coverages.find(
-      (c) =>
-        c.coverage_type === req.coverage_type &&
-        (req.limit_type == null || c.limit_type === req.limit_type)
-    );
+    // Find matching extracted coverage using fuzzy coverage type matching + limit_type
+    const match = coverages.find((c) => {
+      const typeScore = coverageTypeMatchScore(req.coverage_type, c.coverage_type);
+      if (typeScore < 0.7) return false;
+      return req.limit_type == null || c.limit_type === req.limit_type;
+    });
 
     if (!match) {
       if (req.is_required) {
