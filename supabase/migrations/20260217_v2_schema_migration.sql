@@ -293,6 +293,36 @@ ALTER TABLE requirement_templates ADD COLUMN IF NOT EXISTS is_system_default BOO
 ALTER TABLE requirement_templates ADD COLUMN IF NOT EXISTS source_type TEXT DEFAULT 'manual'
   CHECK (source_type IN ('manual', 'lease_extraction'));
 
+-- Add requires_primary_noncontributory column to template_coverage_requirements
+ALTER TABLE template_coverage_requirements ADD COLUMN IF NOT EXISTS requires_primary_noncontributory BOOLEAN NOT NULL DEFAULT false;
+
+-- Expand coverage_type CHECK constraints to include fire_legal_liability and business_income
+-- (template_coverage_requirements)
+DO $$ BEGIN
+  ALTER TABLE template_coverage_requirements DROP CONSTRAINT IF EXISTS template_coverage_requirements_coverage_type_check;
+  ALTER TABLE template_coverage_requirements ADD CONSTRAINT template_coverage_requirements_coverage_type_check
+    CHECK (coverage_type IN (
+      'general_liability', 'automobile_liability', 'workers_compensation',
+      'employers_liability', 'umbrella_excess_liability', 'professional_liability_eo',
+      'property_inland_marine', 'pollution_liability', 'liquor_liability', 'cyber_liability',
+      'fire_legal_liability', 'business_income'
+    ));
+EXCEPTION WHEN others THEN NULL;
+END $$;
+
+-- (extracted_coverages)
+DO $$ BEGIN
+  ALTER TABLE extracted_coverages DROP CONSTRAINT IF EXISTS extracted_coverages_coverage_type_check;
+  ALTER TABLE extracted_coverages ADD CONSTRAINT extracted_coverages_coverage_type_check
+    CHECK (coverage_type IN (
+      'general_liability', 'automobile_liability', 'workers_compensation',
+      'employers_liability', 'umbrella_excess_liability', 'professional_liability_eo',
+      'property_inland_marine', 'pollution_liability', 'liquor_liability', 'cyber_liability',
+      'fire_legal_liability', 'business_income'
+    ));
+EXCEPTION WHEN others THEN NULL;
+END $$;
+
 -- Copy entity_type → category for existing rows
 UPDATE requirement_templates SET category = entity_type WHERE category IS NULL AND entity_type IS NOT NULL;
 

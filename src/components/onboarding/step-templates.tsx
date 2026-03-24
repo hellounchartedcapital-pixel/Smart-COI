@@ -25,6 +25,8 @@ const COVERAGE_LABELS: Record<CoverageType, string> = {
   pollution_liability: 'Pollution Liability',
   liquor_liability: 'Liquor Liability',
   cyber_liability: 'Cyber Liability',
+  fire_legal_liability: 'Fire Legal Liability',
+  business_income: 'Business Income',
 };
 
 const LIMIT_LABELS: Record<LimitType, string> = {

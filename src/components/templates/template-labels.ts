@@ -11,6 +11,8 @@ export const COVERAGE_LABELS: Record<CoverageType, string> = {
   pollution_liability: 'Pollution Liability',
   liquor_liability: 'Liquor Liability',
   cyber_liability: 'Cyber Liability',
+  fire_legal_liability: 'Fire Legal Liability',
+  business_income: 'Business Income / Extra Expense',
 };
 
 export const COVERAGE_SHORT_LABELS: Record<CoverageType, string> = {
@@ -24,6 +26,8 @@ export const COVERAGE_SHORT_LABELS: Record<CoverageType, string> = {
   pollution_liability: 'Pollution',
   liquor_liability: 'Liquor',
   cyber_liability: 'Cyber',
+  fire_legal_liability: 'Fire Legal',
+  business_income: 'Biz Income',
 };
 
 export const LIMIT_TYPE_LABELS: Record<LimitType, string> = {
@@ -62,6 +66,8 @@ export const ALL_COVERAGE_TYPES: CoverageType[] = [
   'pollution_liability',
   'liquor_liability',
   'cyber_liability',
+  'fire_legal_liability',
+  'business_income',
 ];
 
 export const ALL_LIMIT_TYPES: LimitType[] = [

@@ -45,6 +45,7 @@ interface EditableRequirement {
   minimum_limit: number | null;
   requires_additional_insured: boolean;
   requires_waiver_of_subrogation: boolean;
+  requires_primary_noncontributory: boolean;
 }
 
 type Step = 'upload' | 'extracting' | 'review';
@@ -156,6 +157,7 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
           minimum_limit: r.minimum_limit,
           requires_additional_insured: r.requires_additional_insured ?? false,
           requires_waiver_of_subrogation: r.requires_waiver_of_subrogation ?? false,
+          requires_primary_noncontributory: r.requires_primary_noncontributory ?? false,
         })
       );
 
@@ -200,6 +202,7 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
           limit_type: r.limit_type,
           requires_additional_insured: r.requires_additional_insured,
           requires_waiver_of_subrogation: r.requires_waiver_of_subrogation,
+          requires_primary_noncontributory: r.requires_primary_noncontributory,
         })),
       });
 
@@ -452,6 +455,17 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
                           }
                         />
                         Waiver of Subrogation
+                      </label>
+                      <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          className="h-3 w-3 rounded border-slate-300 accent-emerald-600"
+                          checked={req.requires_primary_noncontributory}
+                          onChange={(e) =>
+                            updateRequirement(req.id, 'requires_primary_noncontributory', e.target.checked)
+                          }
+                        />
+                        Primary &amp; Non-Contributory
                       </label>
                     </div>
                   </div>
