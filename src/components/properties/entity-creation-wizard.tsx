@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -30,8 +29,11 @@ import {
   COMMON_COVERAGE_TYPES,
   ALL_LIMIT_TYPES,
 } from '@/components/templates/template-labels';
+import { createClient } from '@/lib/supabase/client';
+import { validatePDFFile, computeFileHash } from '@/lib/utils/file-validation';
+import { isPlanInactiveError, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import type { RequirementTemplate, LimitType } from '@/types';
-import { Upload, FileText, X, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, X, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -101,7 +103,6 @@ export function EntityCreationWizard({
   onOpenChange,
   onCreated,
 }: EntityCreationWizardProps) {
-  const router = useRouter();
   const { showUpgradeModal } = useUpgradeModal();
   const leaseFileRef = useRef<HTMLInputElement>(null);
   const coiFileRef = useRef<HTMLInputElement>(null);
@@ -139,9 +140,16 @@ export function EntityCreationWizard({
   const [leaseError, setLeaseError] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
-  // State — Step 3 (COI Upload)
+  // State — Step 3 (COI Upload — inline)
   // ---------------------------------------------------------------------------
   const [coiFile, setCoiFile] = useState<File | null>(null);
+  const [coiFileError, setCoiFileError] = useState<string | null>(null);
+  const [uploadStep, setUploadStep] = useState<'idle' | 'uploading' | 'creating_record' | 'extracting' | 'done' | 'failed'>('idle');
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [lastCertificateId, setLastCertificateId] = useState<string | null>(null);
+
+  // Entity created in Step 2→3 transition — needed for upload
+  const [createdEntityId, setCreatedEntityId] = useState<string | null>(null);
 
   // ---------------------------------------------------------------------------
   // State — Wizard
@@ -195,6 +203,11 @@ export function EntityCreationWizard({
     setLeaseRequirements([]);
     setLeaseError(null);
     setCoiFile(null);
+    setCoiFileError(null);
+    setUploadStep('idle');
+    setUploadError(null);
+    setLastCertificateId(null);
+    setCreatedEntityId(null);
     setStep(1);
     setSaving(false);
     setShowDiscardConfirm(false);
@@ -348,10 +361,11 @@ export function EntityCreationWizard({
   }
 
   // ---------------------------------------------------------------------------
-  // Final submission
+  // Create entity + template (shared by "Create" button and Step 2→3 advance)
+  // Returns the entityId on success, or null on failure.
   // ---------------------------------------------------------------------------
-  const handleCreate = useCallback(async () => {
-    if (!companyName.trim()) return;
+  const handleCreateEntity = useCallback(async (): Promise<string | null> => {
+    if (!companyName.trim()) return null;
     setSaving(true);
 
     try {
@@ -379,7 +393,7 @@ export function EntityCreationWizard({
           });
           if (handleActionResult(tplResult, 'Failed to create template', showUpgradeModal)) {
             setSaving(false);
-            return;
+            return null;
           }
           templateId = tplResult.id;
         }
@@ -406,7 +420,7 @@ export function EntityCreationWizard({
           });
           if (handleActionResult(tplResult, 'Failed to create template', showUpgradeModal)) {
             setSaving(false);
-            return;
+            return null;
           }
           templateId = tplResult.id;
         }
@@ -427,7 +441,7 @@ export function EntityCreationWizard({
         });
         if (handleActionResult(result, 'Failed to add vendor', showUpgradeModal)) {
           setSaving(false);
-          return;
+          return null;
         }
         entityId = result.id;
       } else {
@@ -443,24 +457,15 @@ export function EntityCreationWizard({
         });
         if (handleActionResult(result, 'Failed to add tenant', showUpgradeModal)) {
           setSaving(false);
-          return;
+          return null;
         }
         entityId = result.id;
       }
 
-      toast.success(`${companyName.trim()} added successfully`);
-      const name = companyName.trim();
-      reset();
-      onOpenChange(false);
-      onCreated?.(entityId, name);
-
-      // If a COI file was selected, navigate to the upload page
-      if (coiFile) {
-        const param = mode === 'vendor' ? 'vendorId' : 'tenantId';
-        router.push(`/dashboard/certificates/upload?${param}=${entityId}`);
-      }
+      return entityId;
     } catch (err) {
       handleActionError(err, `Failed to add ${mode}`, showUpgradeModal);
+      return null;
     } finally {
       setSaving(false);
     }
@@ -469,9 +474,166 @@ export function EntityCreationWizard({
     vendorType, tenantType, unitSuite,
     templateOption, selectedTemplateId,
     aiRequirements, leaseRequirements,
-    mode, propertyId, coiFile,
-    showUpgradeModal, onOpenChange, onCreated, router,
+    mode, propertyId, showUpgradeModal,
   ]);
+
+  // ---------------------------------------------------------------------------
+  // "Create [Entity]" — skip Step 3, finish immediately
+  // ---------------------------------------------------------------------------
+  const handleCreateAndClose = useCallback(async () => {
+    const entityId = await handleCreateEntity();
+    if (!entityId) return;
+    toast.success(`${companyName.trim()} added successfully`);
+    const name = companyName.trim();
+    reset();
+    onOpenChange(false);
+    onCreated?.(entityId, name);
+  }, [handleCreateEntity, companyName, onOpenChange, onCreated]);
+
+  // ---------------------------------------------------------------------------
+  // Advance from Step 2 → Step 3: create entity first, then show upload UI
+  // ---------------------------------------------------------------------------
+  const handleAdvanceToStep3 = useCallback(async () => {
+    const entityId = await handleCreateEntity();
+    if (!entityId) return;
+    setCreatedEntityId(entityId);
+    toast.success(`${companyName.trim()} added successfully`);
+    onCreated?.(entityId, companyName.trim());
+    setStep(3);
+  }, [handleCreateEntity, companyName, onCreated]);
+
+  // ---------------------------------------------------------------------------
+  // Step 3: Inline COI upload + extraction
+  // ---------------------------------------------------------------------------
+  const handleCoiFileSelect = useCallback(async (f: File) => {
+    setCoiFileError(null);
+    const validation = await validatePDFFile(f);
+    if (!validation.valid) {
+      setCoiFileError(validation.error!);
+      return;
+    }
+    setCoiFile(f);
+  }, []);
+
+  const handleUploadCOI = useCallback(async () => {
+    if (!coiFile || !createdEntityId) return;
+    setUploadError(null);
+
+    const supabase = createClient();
+
+    try {
+      // Get auth context
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: profile } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single();
+      if (!profile?.organization_id) throw new Error('No organization');
+
+      const orgId = profile.organization_id;
+
+      // Step 1 — Upload to storage
+      setUploadStep('uploading');
+      const fileHash = await computeFileHash(coiFile);
+      const storagePath = `${mode}/${createdEntityId}/${Date.now()}_${coiFile.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('coi-documents')
+        .upload(storagePath, coiFile, { upsert: false });
+
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+      // Step 2 — Create certificate record
+      setUploadStep('creating_record');
+      const { data: cert, error: certError } = await supabase
+        .from('certificates')
+        .insert({
+          organization_id: orgId,
+          vendor_id: mode === 'vendor' ? createdEntityId : null,
+          tenant_id: mode === 'tenant' ? createdEntityId : null,
+          file_path: storagePath,
+          file_hash: fileHash,
+          upload_source: 'pm_upload',
+          processing_status: 'processing',
+        })
+        .select('id')
+        .single();
+
+      if (certError || !cert) throw new Error(`Failed to create certificate record: ${certError?.message}`);
+      setLastCertificateId(cert.id);
+
+      await supabase.from('activity_log').insert({
+        organization_id: orgId,
+        certificate_id: cert.id,
+        vendor_id: mode === 'vendor' ? createdEntityId : null,
+        tenant_id: mode === 'tenant' ? createdEntityId : null,
+        action: 'coi_uploaded',
+        description: `COI uploaded for ${mode} "${companyName.trim()}"`,
+        performed_by: user.id,
+      });
+
+      // Step 3 — AI extraction
+      setUploadStep('extracting');
+      const extractRes = await fetch('/api/certificates/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ certificateId: cert.id }),
+      });
+
+      if (!extractRes.ok) {
+        const body = await extractRes.json().catch(() => ({}));
+        throw new Error(
+          body.error ??
+            "We couldn't process this certificate. Please try uploading a clearer copy."
+        );
+      }
+
+      // Done
+      setUploadStep('done');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "We couldn't process this certificate.";
+      if (isPlanInactiveError(message)) {
+        showUpgradeModal(message.replace(PLAN_INACTIVE_TAG, '').trim());
+        setUploadStep('idle');
+        return;
+      }
+      setUploadStep('failed');
+      setUploadError(message);
+    }
+  }, [coiFile, createdEntityId, mode, companyName, showUpgradeModal]);
+
+  const handleRetryExtraction = useCallback(async () => {
+    if (!lastCertificateId) return;
+    setUploadError(null);
+    setUploadStep('extracting');
+
+    try {
+      const extractRes = await fetch('/api/certificates/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ certificateId: lastCertificateId }),
+      });
+
+      if (!extractRes.ok) {
+        const body = await extractRes.json().catch(() => ({}));
+        throw new Error(body.error ?? 'AI extraction failed. Please try again.');
+      }
+
+      setUploadStep('done');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'AI extraction failed.';
+      if (isPlanInactiveError(message)) {
+        showUpgradeModal(message.replace(PLAN_INACTIVE_TAG, '').trim());
+        setUploadStep('idle');
+        return;
+      }
+      setUploadStep('failed');
+      setUploadError(message);
+    }
+  }, [lastCertificateId, showUpgradeModal]);
 
   // ---------------------------------------------------------------------------
   // Render: Requirements review table (shared by AI and Lease)
@@ -992,114 +1154,207 @@ export function EntityCreationWizard({
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={handleCreate}
+                    onClick={handleCreateAndClose}
                     disabled={saving}
                   >
                     {saving ? 'Creating...' : `Create ${entityLabel}`}
                   </Button>
                   <Button
                     type="button"
-                    onClick={() => setStep(3)}
+                    onClick={handleAdvanceToStep3}
                     disabled={saving || aiGenerating || leaseExtracting}
                   >
-                    Next
-                    <ChevronRight className="ml-1 h-4 w-4" />
+                    {saving ? 'Creating...' : 'Next'}
+                    {!saving && <ChevronRight className="ml-1 h-4 w-4" />}
                   </Button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ── Step 3: Upload COI (Optional) ── */}
+          {/* ── Step 3: Upload COI (Optional — entity already created) ── */}
           {step === 3 && (
             <div className="space-y-4">
-              <div
-                className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 transition-colors hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer"
-                onClick={() => coiFileRef.current?.click()}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const f = e.dataTransfer.files?.[0];
-                  if (f && f.type === 'application/pdf') setCoiFile(f);
-                }}
-              >
-                <Upload className="h-8 w-8 text-slate-400" />
-                {coiFile ? (
-                  <div className="mt-2 flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-emerald-600" />
-                    <p className="text-sm font-medium text-emerald-700">{coiFile.name}</p>
-                    <button
-                      type="button"
-                      className="text-slate-400 hover:text-slate-600"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCoiFile(null);
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <p className="mt-2 text-sm font-medium text-slate-600">
-                      Drop a COI PDF here or click to select
-                    </p>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      Optional — you can upload later
-                    </p>
-                  </>
-                )}
-                <input
-                  ref={coiFileRef}
-                  type="file"
-                  accept="application/pdf"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f && f.type === 'application/pdf') setCoiFile(f);
-                  }}
-                />
+              {/* Success banner — entity created */}
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <p className="text-sm font-medium text-emerald-800">
+                    {companyName.trim()} created successfully
+                  </p>
+                </div>
+                <p className="mt-1 text-xs text-emerald-600">
+                  You can now upload a COI, or skip and upload later.
+                </p>
               </div>
 
-              {coiFile && (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-                  <p className="text-sm text-emerald-700">
-                    After creation, you will be redirected to upload and extract this COI.
+              {/* Upload done state */}
+              {uploadStep === 'done' && (
+                <div className="flex flex-col items-center rounded-lg border border-emerald-200 bg-emerald-50/50 py-8">
+                  <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+                  <p className="mt-3 text-sm font-semibold text-slate-900">
+                    COI uploaded and compliance check complete
                   </p>
+                  <div className="mt-4 flex gap-2">
+                    {lastCertificateId && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const name = companyName.trim();
+                          reset();
+                          onOpenChange(false);
+                          window.location.href = `/dashboard/certificates/${lastCertificateId}/review`;
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        reset();
+                        onOpenChange(false);
+                      }}
+                    >
+                      Done
+                    </Button>
+                  </div>
                 </div>
               )}
 
-              <div className="flex justify-between gap-2 pt-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setStep(2)}
-                  disabled={saving}
-                >
-                  <ChevronLeft className="mr-1 h-4 w-4" />
-                  Back
-                </Button>
-                <div className="flex gap-2">
-                  {!coiFile && (
+              {/* Processing indicator */}
+              {uploadStep !== 'idle' && uploadStep !== 'done' && uploadStep !== 'failed' && (
+                <div className="space-y-3 rounded-lg border bg-slate-50 p-4">
+                  {(['uploading', 'creating_record', 'extracting'] as const).map((s, idx) => {
+                    const labels = {
+                      uploading: 'Uploading document…',
+                      creating_record: 'Creating certificate record…',
+                      extracting: 'Analyzing certificate…',
+                    };
+                    const stepOrder = ['uploading', 'creating_record', 'extracting'];
+                    const currentIdx = stepOrder.indexOf(uploadStep);
+                    const isComplete = idx < currentIdx;
+                    const isCurrent = idx === currentIdx;
+
+                    return (
+                      <div key={s} className="flex items-center gap-2 text-sm">
+                        {isComplete ? (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        ) : isCurrent ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                        ) : (
+                          <div className="h-4 w-4 rounded-full border border-slate-300" />
+                        )}
+                        <span className={isComplete ? 'text-muted-foreground line-through' : isCurrent ? 'font-medium' : 'text-muted-foreground'}>
+                          {labels[s]}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Error state */}
+              {uploadStep === 'failed' && uploadError && (
+                <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+                  <div className="flex-1 space-y-2">
+                    <p className="text-sm text-red-700">{uploadError}</p>
+                    <div className="flex gap-2">
+                      {lastCertificateId ? (
+                        <Button size="sm" variant="outline" onClick={handleRetryExtraction}>
+                          Retry
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setUploadStep('idle');
+                            setUploadError(null);
+                            setCoiFile(null);
+                          }}
+                        >
+                          Try Again
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* File picker — only when idle and not yet done */}
+              {uploadStep === 'idle' && (
+                <>
+                  {!coiFile ? (
+                    <div
+                      className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 transition-colors hover:border-emerald-300 hover:bg-emerald-50/30 cursor-pointer"
+                      onClick={() => coiFileRef.current?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const f = e.dataTransfer.files?.[0];
+                        if (f) handleCoiFileSelect(f);
+                      }}
+                    >
+                      <Upload className="h-8 w-8 text-slate-400" />
+                      <p className="mt-2 text-sm font-medium text-slate-600">
+                        Drop a COI PDF here or click to select
+                      </p>
+                      <p className="mt-0.5 text-xs text-slate-400">
+                        Optional — you can upload later
+                      </p>
+                      <input
+                        ref={coiFileRef}
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleCoiFileSelect(f);
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+                      <FileText className="h-5 w-5 flex-shrink-0 text-red-500" />
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">{coiFile.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => { setCoiFile(null); setCoiFileError(null); }}
+                        className="flex-shrink-0 rounded p-1 text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {coiFileError && (
+                    <p className="text-sm text-red-600">{coiFileError}</p>
+                  )}
+
+                  <div className="flex justify-end gap-2 pt-2">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={handleCreate}
-                      disabled={saving}
+                      onClick={() => {
+                        reset();
+                        onOpenChange(false);
+                      }}
                     >
-                      {saving ? 'Creating...' : 'Skip & Create'}
+                      Skip
                     </Button>
-                  )}
-                  <Button
-                    type="button"
-                    onClick={handleCreate}
-                    disabled={saving}
-                  >
-                    {saving ? 'Creating...' : coiFile ? `Create & Upload` : `Create ${entityLabel}`}
-                  </Button>
-                </div>
-              </div>
+                    <Button
+                      type="button"
+                      onClick={handleUploadCOI}
+                      disabled={!coiFile}
+                    >
+                      Upload &amp; Check Compliance
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </DialogContent>

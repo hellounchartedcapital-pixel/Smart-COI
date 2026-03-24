@@ -71,7 +71,7 @@ async function getDashboardData(orgId: string) {
   const supabase = await createClient();
 
   // Parallel-fetch everything we need
-  const [propertiesRes, vendorsRes, tenantsRes, activityRes, orgRes] = await Promise.all([
+  const [propertiesRes, vendorsRes, tenantsRes, activityRes, orgRes, templatesRes] = await Promise.all([
     supabase
       .from('properties')
       .select('id, name, property_type')
@@ -100,11 +100,17 @@ async function getDashboardData(orgId: string) {
       .select('plan, trial_ends_at')
       .eq('id', orgId)
       .single(),
+    supabase
+      .from('requirement_templates')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('name'),
   ]);
 
   const properties = propertiesRes.data ?? [];
   const vendors = vendorsRes.data ?? [];
   const tenants = tenantsRes.data ?? [];
+  const templates = templatesRes.data ?? [];
   const activity = (activityRes.data ?? []) as ActivityEntry[];
 
   // ---- Unified entity list ----
@@ -364,7 +370,7 @@ async function getDashboardData(orgId: string) {
   });
 
   // For the upload dialog, provide flat property/vendor/tenant lists
-  const propertyList = properties.map((p) => ({ id: p.id, name: p.name }));
+  const propertyList = properties.map((p) => ({ id: p.id, name: p.name, property_type: p.property_type ?? 'other' }));
   const vendorList = vendors.map((v) => ({
     id: v.id,
     company_name: v.company_name,
@@ -385,6 +391,7 @@ async function getDashboardData(orgId: string) {
     propertyList,
     vendorList,
     tenantList,
+    templates,
   };
 }
 
