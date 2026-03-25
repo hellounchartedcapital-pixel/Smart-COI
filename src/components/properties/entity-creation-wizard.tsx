@@ -32,7 +32,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash } from '@/lib/utils/file-validation';
 import { isPlanInactiveError, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, toTitleCase } from '@/lib/utils';
 import type { RequirementTemplate, LimitType } from '@/types';
 import { Upload, FileText, X, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
@@ -429,7 +429,7 @@ export function EntityCreationWizard({
         const included = aiRequirements.filter((r) => r.included);
         if (included.length > 0) {
           const tplResult = await createTemplateWithRequirements({
-            name: `${companyName.trim()} — ${vendorType.trim() || 'Vendor'} Requirements`,
+            name: `${toTitleCase(companyName.trim())} — ${toTitleCase(vendorType.trim() || 'Vendor')} Requirements`,
             description: `AI-recommended template for ${vendorType.trim() || 'vendor'}`,
             category: 'vendor',
             risk_level: 'standard',
@@ -456,7 +456,7 @@ export function EntityCreationWizard({
         const included = leaseRequirements.filter((r) => r.included);
         if (included.length > 0) {
           const tplResult = await createTemplateWithRequirements({
-            name: `${companyName.trim()} — Lease Requirements`,
+            name: `${toTitleCase(companyName.trim())} — Lease Requirements`,
             description: 'Extracted from uploaded lease document',
             category: 'tenant',
             risk_level: 'standard',
@@ -723,7 +723,7 @@ export function EntityCreationWizard({
                   onChange={(e) => updateRequirement(setReqs, req.id, 'included', e.target.checked)}
                 />
                 <Input
-                  className="w-[180px] text-xs h-8"
+                  className="flex-1 min-w-[160px] text-xs h-8"
                   value={getCoverageLabel(req.coverage_type)}
                   onChange={(e) => updateRequirement(setReqs, req.id, 'coverage_type', e.target.value)}
                   list={datalistId}
@@ -770,48 +770,42 @@ export function EntityCreationWizard({
                   <span className="w-[110px] text-xs text-muted-foreground px-2">Statutory</span>
                 )}
                 {req.reasoning && (
-                  <span
-                    className="text-xs text-emerald-600 cursor-help"
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 hover:bg-emerald-100 transition-colors cursor-help"
                     title={req.reasoning}
                   >
+                    <AlertTriangle className="h-3 w-3" />
                     Why?
-                  </span>
+                  </button>
                 )}
               </div>
-              <div className="mt-2 flex gap-4 pl-7">
-                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    className="h-3 w-3 rounded border-slate-300 accent-emerald-600"
-                    checked={req.requires_additional_insured}
-                    onChange={(e) =>
-                      updateRequirement(setReqs, req.id, 'requires_additional_insured', e.target.checked)
-                    }
-                  />
-                  Additional Insured
-                </label>
-                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    className="h-3 w-3 rounded border-slate-300 accent-emerald-600"
-                    checked={req.requires_waiver_of_subrogation}
-                    onChange={(e) =>
-                      updateRequirement(setReqs, req.id, 'requires_waiver_of_subrogation', e.target.checked)
-                    }
-                  />
-                  Waiver of Subrogation
-                </label>
-                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    className="h-3 w-3 rounded border-slate-300 accent-emerald-600"
-                    checked={req.requires_primary_noncontributory}
-                    onChange={(e) =>
-                      updateRequirement(setReqs, req.id, 'requires_primary_noncontributory', e.target.checked)
-                    }
-                  />
-                  Primary &amp; Non-Contributory
-                </label>
+              {/* Endorsement chips — only show enabled ones as toggleable chips */}
+              <div className="mt-2 flex gap-1.5 pl-7 flex-wrap">
+                {(['requires_additional_insured', 'requires_waiver_of_subrogation', 'requires_primary_noncontributory'] as const).map((field) => {
+                  const labels: Record<string, { short: string; full: string }> = {
+                    requires_additional_insured: { short: 'AI', full: 'Additional Insured' },
+                    requires_waiver_of_subrogation: { short: 'WoS', full: 'Waiver of Subrogation' },
+                    requires_primary_noncontributory: { short: 'P&NC', full: 'Primary & Non-Contributory' },
+                  };
+                  const { short, full } = labels[field];
+                  const isActive = req[field];
+                  return (
+                    <button
+                      key={field}
+                      type="button"
+                      title={full}
+                      onClick={() => updateRequirement(setReqs, req.id, field, !isActive)}
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                        isActive
+                          ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300'
+                          : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                      }`}
+                    >
+                      {short}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}

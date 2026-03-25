@@ -516,41 +516,32 @@ export function TemplateAssignmentNudge({
                 )}
               </div>
 
-              {/* Toggles row */}
-              <div className="mt-2 flex gap-4 pl-7">
-                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    className="h-3 w-3 rounded border-slate-300 accent-emerald-600"
-                    checked={req.requires_additional_insured}
-                    onChange={(e) =>
-                      updateFn(req.id, 'requires_additional_insured', e.target.checked)
-                    }
-                  />
-                  Additional Insured
-                </label>
-                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    className="h-3 w-3 rounded border-slate-300 accent-emerald-600"
-                    checked={req.requires_waiver_of_subrogation}
-                    onChange={(e) =>
-                      updateFn(req.id, 'requires_waiver_of_subrogation', e.target.checked)
-                    }
-                  />
-                  Waiver of Subrogation
-                </label>
-                <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    className="h-3 w-3 rounded border-slate-300 accent-emerald-600"
-                    checked={req.requires_primary_noncontributory}
-                    onChange={(e) =>
-                      updateFn(req.id, 'requires_primary_noncontributory', e.target.checked)
-                    }
-                  />
-                  Primary &amp; Non-Contributory
-                </label>
+              {/* Endorsement chips */}
+              <div className="mt-2 flex gap-1.5 pl-7 flex-wrap">
+                {(['requires_additional_insured', 'requires_waiver_of_subrogation', 'requires_primary_noncontributory'] as const).map((field) => {
+                  const labels: Record<string, { short: string; full: string }> = {
+                    requires_additional_insured: { short: 'AI', full: 'Additional Insured' },
+                    requires_waiver_of_subrogation: { short: 'WoS', full: 'Waiver of Subrogation' },
+                    requires_primary_noncontributory: { short: 'P&NC', full: 'Primary & Non-Contributory' },
+                  };
+                  const { short, full } = labels[field];
+                  const isActive = req[field];
+                  return (
+                    <button
+                      key={field}
+                      type="button"
+                      title={full}
+                      onClick={() => updateFn(req.id, field, !isActive)}
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                        isActive
+                          ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300'
+                          : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                      }`}
+                    >
+                      {short}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}

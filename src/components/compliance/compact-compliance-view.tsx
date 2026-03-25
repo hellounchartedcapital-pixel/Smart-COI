@@ -311,21 +311,27 @@ export function CompactComplianceView({
                           <InfoTooltip text={getCoverageTooltip(req.coverage_type, req.limit_type)!} />
                         )}
                       </span>
-                      <span className="text-xs text-muted-foreground shrink-0">
-                        Required: {formatCurrency(req.minimum_limit)}
-                        {req.limit_type && ` ${formatLimitType(req.limit_type)}`}
+                      <span className="shrink-0 inline-flex items-baseline gap-1.5 text-xs">
+                        {coverage ? (
+                          <>
+                            <span className={isMet ? 'text-emerald-700 font-medium' : 'text-red-600 font-medium'}>
+                              {formatCurrency(coverage.limit_amount)}
+                            </span>
+                            <span className="text-muted-foreground">/</span>
+                            <span className="text-muted-foreground">
+                              {formatCurrency(req.minimum_limit)} req
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            {formatCurrency(req.minimum_limit)} req
+                          </span>
+                        )}
                       </span>
                     </div>
-                    <div className="mt-0.5">
-                      {coverage ? (
-                        <span className={`text-xs ${isMet ? 'text-emerald-700' : 'text-red-600'}`}>
-                          Found: {formatCurrency(coverage.limit_amount)}
-                          {coverage.limit_type ? ` ${formatLimitType(coverage.limit_type)}` : ''}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-red-600">Not found on certificate</span>
-                      )}
-                    </div>
+                    {!coverage && (
+                      <p className="mt-0.5 text-xs text-red-600">Not found on certificate</p>
+                    )}
                     {result?.gap_description && (
                       <p className="mt-0.5 text-xs text-amber-700">
                         {result.gap_description}
