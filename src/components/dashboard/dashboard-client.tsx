@@ -27,7 +27,6 @@ import {
   X,
   RefreshCw,
   Sparkles,
-  Building2,
   Plus,
   ChevronRight,
   AlertCircle,
@@ -353,21 +352,8 @@ export function DashboardClient({
           <PropertiesSection properties={propertyOverviews} />
         </div>
 
-        {/* Right sidebar: Portfolio Overview + Activity */}
+        {/* Right sidebar: Activity */}
         <div className="space-y-6" data-tour="portfolio-snapshot">
-          {/* Portfolio Overview Card */}
-          <SummaryCard
-            title="Portfolio Overview"
-            icon={Building2}
-          >
-            <div className="grid grid-cols-3 gap-4">
-              <SummaryStatBlock label="Properties" value={stats.propertyCount} />
-              <SummaryStatBlock label="Vendors" value={stats.vendorCount} />
-              <SummaryStatBlock label="Tenants" value={stats.tenantCount} />
-            </div>
-          </SummaryCard>
-
-          {/* Activity Feed */}
           <ActivitySidebar entries={activity} />
         </div>
       </div>
@@ -378,50 +364,6 @@ export function DashboardClient({
 // ============================================================================
 // Summary Card wrapper (right sidebar)
 // ============================================================================
-
-function SummaryCard({
-  title,
-  icon: Icon,
-  action,
-  children,
-}: {
-  title: string;
-  icon: typeof Building2;
-  action?: { label: string; onClick: () => void };
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-2xl border border-slate-200/60 bg-white p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50">
-            <Icon className="h-4 w-4 text-slate-500" />
-          </div>
-          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
-        </div>
-        {action && (
-          <button
-            onClick={action.onClick}
-            className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
-          >
-            {action.label}
-            <ChevronRight className="h-3 w-3" />
-          </button>
-        )}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function SummaryStatBlock({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="text-center">
-      <p className="text-2xl font-bold text-slate-900">{value}</p>
-      <p className="mt-0.5 text-[11px] text-slate-500">{label}</p>
-    </div>
-  );
-}
 
 // ============================================================================
 // Properties Grid
@@ -758,7 +700,7 @@ function ActionItemRow({ item, isLast, isFirst = false }: { item: ActionItem; is
 // ============================================================================
 
 function ActivitySidebar({ entries }: { entries: ActivityEntry[] }) {
-  const visibleEntries = entries.slice(0, 5);
+  const visibleEntries = entries.slice(0, 8);
 
   return (
     <div className="rounded-2xl border border-slate-200/60 bg-white p-5">

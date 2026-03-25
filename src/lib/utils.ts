@@ -92,3 +92,24 @@ export function getInitials(name: string): string {
     .join('')
     .toUpperCase();
 }
+
+const UPPERCASE_WORDS = new Set([
+  'LLC', 'INC', 'HVAC', 'DBA', 'LP', 'LLP', 'PC', 'PA', 'MD', 'DDS',
+  'CO', 'CORP', 'LTD', 'PLC', 'USA', 'US', 'II', 'III', 'IV',
+]);
+
+/**
+ * Title-case a name: capitalize first letter of each word,
+ * preserve common abbreviations (LLC, HVAC, INC, etc.) in uppercase.
+ */
+export function toTitleCase(str: string): string {
+  return str
+    .split(' ')
+    .map((word) => {
+      const upper = word.toUpperCase();
+      if (UPPERCASE_WORDS.has(upper)) return upper;
+      if (word.length === 0) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
+}

@@ -31,11 +31,14 @@ import {
   ALL_LIMIT_TYPES,
   formatLimit,
 } from './template-labels';
+import { AlertTriangle } from 'lucide-react';
 import type { LimitType, TemplateCategory } from '@/types';
 
 interface ExtractLeaseDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Tenant/entity name for auto-generating template name */
+  entityName?: string;
 }
 
 interface EditableRequirement {
@@ -51,7 +54,7 @@ interface EditableRequirement {
 
 type Step = 'upload' | 'extracting' | 'review';
 
-export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogProps) {
+export function ExtractLeaseDialog({ open, onOpenChange, entityName }: ExtractLeaseDialogProps) {
   const router = useRouter();
   const { showUpgradeModal } = useUpgradeModal();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -222,7 +225,9 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
     }
   }, [requirements, templateName, category, showUpgradeModal, router]);
 
-  const defaultName = `Lease Requirements — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const defaultName = entityName?.trim()
+    ? `${entityName.trim()} — Lease Requirements`
+    : `Lease Requirements — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -331,6 +336,9 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
         {/* ── Review Step ── */}
         {step === 'review' && (
           <div className="space-y-5">
+            <p className="text-xs text-muted-foreground bg-slate-50 rounded-lg px-3 py-2">
+              Review the extracted requirements below. You can adjust values before saving.
+            </p>
             {/* Entity fields */}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
@@ -419,9 +427,14 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
                               )
                             }
                           />
-                          {req.minimum_limit != null && (
+                          {req.minimum_limit != null ? (
                             <span className="text-[10px] text-muted-foreground mt-0.5 block">
                               {formatCurrency(req.minimum_limit)}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-amber-600 mt-0.5 block inline-flex items-center gap-0.5">
+                              <AlertTriangle className="h-2.5 w-2.5" />
+                              review
                             </span>
                           )}
                         </div>
@@ -432,41 +445,32 @@ export function ExtractLeaseDialog({ open, onOpenChange }: ExtractLeaseDialogPro
                       )}
                     </div>
 
-                    {/* Toggles row */}
-                    <div className="mt-2 flex gap-4 pl-7">
-                      <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          className="h-3 w-3 rounded border-slate-300 accent-emerald-600"
-                          checked={req.requires_additional_insured}
-                          onChange={(e) =>
-                            updateRequirement(req.id, 'requires_additional_insured', e.target.checked)
-                          }
-                        />
-                        Additional Insured
-                      </label>
-                      <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          className="h-3 w-3 rounded border-slate-300 accent-emerald-600"
-                          checked={req.requires_waiver_of_subrogation}
-                          onChange={(e) =>
-                            updateRequirement(req.id, 'requires_waiver_of_subrogation', e.target.checked)
-                          }
-                        />
-                        Waiver of Subrogation
-                      </label>
-                      <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          className="h-3 w-3 rounded border-slate-300 accent-emerald-600"
-                          checked={req.requires_primary_noncontributory}
-                          onChange={(e) =>
-                            updateRequirement(req.id, 'requires_primary_noncontributory', e.target.checked)
-                          }
-                        />
-                        Primary &amp; Non-Contributory
-                      </label>
+                    {/* Endorsement chips */}
+                    <div className="mt-2 flex gap-1.5 pl-7 flex-wrap">
+                      {(['requires_additional_insured', 'requires_waiver_of_subrogation', 'requires_primary_noncontributory'] as const).map((field) => {
+                        const labels: Record<string, { short: string; full: string }> = {
+                          requires_additional_insured: { short: 'AI', full: 'Additional Insured' },
+                          requires_waiver_of_subrogation: { short: 'WoS', full: 'Waiver of Subrogation' },
+                          requires_primary_noncontributory: { short: 'P&NC', full: 'Primary & Non-Contributory' },
+                        };
+                        const { short, full } = labels[field];
+                        const isActive = req[field];
+                        return (
+                          <button
+                            key={field}
+                            type="button"
+                            title={full}
+                            onClick={() => updateRequirement(req.id, field, !isActive)}
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                              isActive
+                                ? 'bg-emerald-100 text-emerald-800 ring-1 ring-emerald-300'
+                                : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                            }`}
+                          >
+                            {short}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

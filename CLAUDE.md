@@ -119,6 +119,14 @@ Product is feature-complete and in final testing before launch.
 - **Consistent action queue buttons:** "Request COI" button now always shown for all action items (not just those with emails). Clicking without a contact email shows a toast: "No contact email on file. Edit this vendor to add one."
 - **Auto-select single property:** Legacy upload-coi-dialog now auto-selects and shows static property name when only one property exists (SimpleUploadCOIDialog already had this)
 
+#### P1 Polish Pass (Mar 2026)
+
+- **Coverage comparison layout:** Vendor/tenant detail pages now show found vs required limits side by side ("$2,000,000 / $1,000,000 req") instead of at opposite ends of the row (compact-compliance-view.tsx)
+- **Wizard coverage row cleanup:** Endorsement checkboxes replaced with compact toggleable chips (AI, WoS, P&NC) in entity-creation-wizard, extract-lease-dialog, and template-assignment-nudge. Coverage type inputs use `flex-1` for full width. "Why?" button uses emerald pill style with icon.
+- **Lease extraction dialog:** Auto-generates template name from entity name if available (e.g., "Golds Gym — Lease Requirements"). Added review guidance note. Ambiguous/null limits show yellow "(review)" warning. `entityName` prop added to `ExtractLeaseDialog`.
+- **Dashboard sidebar:** Removed redundant Portfolio Overview card (data already in compliance health bar). Activity feed increased from 5 to 8 items. Removed unused `SummaryCard`, `SummaryStatBlock` components, `Building2` import.
+- **Title case utility:** Added `toTitleCase()` to `lib/utils.ts` (preserves LLC, HVAC, INC, etc.). Applied to AI-recommended and lease extraction template names in entity-creation-wizard.
+
 ### Known Issues
 
 - Anthropic API 529 errors during bulk upload (retry logic with exponential backoff in place)
