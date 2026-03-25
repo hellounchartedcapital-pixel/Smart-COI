@@ -14,6 +14,20 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+/**
+ * Format a coverage limit for display. Handles numbers, strings, and nulls.
+ * Numeric values → "$1,000,000". Non-numeric strings (e.g. "Statutory") → pass through.
+ */
+export function formatDisplayLimit(value: number | string | null | undefined): string {
+  if (value == null) return '—';
+  if (typeof value === 'string') {
+    const num = Number(value);
+    if (!isNaN(num) && value.trim() !== '') return formatCurrency(num);
+    return value; // pass through non-numeric strings like "Statutory"
+  }
+  return formatCurrency(value);
+}
+
 export function formatDate(dateString: string): string {
   const date = new Date(dateString + 'T00:00:00');
   return new Intl.DateTimeFormat('en-US', {

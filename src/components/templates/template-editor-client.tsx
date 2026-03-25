@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -446,21 +447,28 @@ export function TemplateEditorClient({
                         Statutory
                       </div>
                     ) : (
-                      <Input
-                        type="number"
-                        className="h-8 text-xs"
-                        value={row.minimum_limit ?? ''}
-                        onChange={(e) =>
-                          updateRow(row._key, {
-                            minimum_limit:
-                              e.target.value === '' ? null : Number(e.target.value),
-                          })
-                        }
-                        disabled={isReadOnly}
-                        step={100000}
-                        min={0}
-                        placeholder="$0"
-                      />
+                      <div>
+                        <Input
+                          type="number"
+                          className="h-8 text-xs"
+                          value={row.minimum_limit ?? ''}
+                          onChange={(e) =>
+                            updateRow(row._key, {
+                              minimum_limit:
+                                e.target.value === '' ? null : Number(e.target.value),
+                            })
+                          }
+                          disabled={isReadOnly}
+                          step={100000}
+                          min={0}
+                          placeholder="$0"
+                        />
+                        {row.minimum_limit != null && (
+                          <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                            {formatCurrency(row.minimum_limit)}
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
 

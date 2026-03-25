@@ -689,7 +689,8 @@ function ActionItemRow({ item, isLast, isFirst = false }: { item: ActionItem; is
       description = item.status;
   }
 
-  const showRequestCOI = item.status !== 'pending' && item.contactEmail;
+  const hasEmail = !!item.contactEmail;
+  const showRequestCOI = item.status !== 'pending';
   const displayName = item.name.length > 40 ? item.name.slice(0, 40) + '...' : item.name;
 
   return (
@@ -726,7 +727,13 @@ function ActionItemRow({ item, isLast, isFirst = false }: { item: ActionItem; is
             variant="ghost"
             className="h-8 px-2.5 text-xs text-slate-600 hover:text-slate-900"
             disabled={sending}
-            onClick={handleRequestCOI}
+            onClick={() => {
+              if (hasEmail) {
+                handleRequestCOI();
+              } else {
+                toast.info(`No contact email on file. Edit this ${item.entityType} to add one.`);
+              }
+            }}
           >
             <Mail className="mr-1.5 h-3.5 w-3.5" />
             {sending ? '...' : 'Request COI'}

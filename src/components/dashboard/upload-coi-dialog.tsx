@@ -85,12 +85,16 @@ export function UploadCOIDialog({
     onOpenChange(v);
   }
 
+  // Auto-select property if only one exists
+  const effectivePropertyId = properties.length === 1 ? properties[0].id : selectedPropertyId;
+  const effectiveNewPropertyId = properties.length === 1 ? properties[0].id : newPropertyId;
+
   // Filtered entities based on selected property
-  const filteredVendors = selectedPropertyId
-    ? vendors.filter((v) => v.property_id === selectedPropertyId)
+  const filteredVendors = effectivePropertyId
+    ? vendors.filter((v) => v.property_id === effectivePropertyId)
     : vendors;
-  const filteredTenants = selectedPropertyId
-    ? tenants.filter((t) => t.property_id === selectedPropertyId)
+  const filteredTenants = effectivePropertyId
+    ? tenants.filter((t) => t.property_id === effectivePropertyId)
     : tenants;
   const entityList = entityType === 'vendor' ? filteredVendors : filteredTenants;
 
@@ -102,14 +106,14 @@ export function UploadCOIDialog({
   }
 
   async function handleNewSubmit() {
-    if (!newPropertyId || !newName.trim()) return;
+    if (!effectiveNewPropertyId || !newName.trim()) return;
     setSaving(true);
 
     try {
       let entityId: string;
       if (newEntityType === 'vendor') {
         const result = await createVendor({
-          property_id: newPropertyId,
+          property_id: effectiveNewPropertyId,
           company_name: newName.trim(),
           contact_email: newEmail.trim() || undefined,
         });
@@ -121,7 +125,7 @@ export function UploadCOIDialog({
         toast.success(`Vendor "${newName.trim()}" created`);
       } else {
         const result = await createTenant({
-          property_id: newPropertyId,
+          property_id: effectiveNewPropertyId,
           company_name: newName.trim(),
           contact_email: newEmail.trim() || undefined,
         });
@@ -201,16 +205,22 @@ export function UploadCOIDialog({
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Property (optional)</Label>
-              <Select value={selectedPropertyId} onValueChange={(v) => { setSelectedPropertyId(v); setSelectedEntityId(''); }}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="All properties" />
-                </SelectTrigger>
-                <SelectContent>
-                  {properties.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {properties.length === 1 ? (
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-foreground">
+                  {properties[0].name}
+                </div>
+              ) : (
+                <Select value={selectedPropertyId} onValueChange={(v) => { setSelectedPropertyId(v); setSelectedEntityId(''); }}>
+                  <SelectTrigger className="text-sm">
+                    <SelectValue placeholder="All properties" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -259,16 +269,22 @@ export function UploadCOIDialog({
           <div className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Property</Label>
-              <Select value={newPropertyId} onValueChange={setNewPropertyId}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Select property" />
-                </SelectTrigger>
-                <SelectContent>
-                  {properties.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {properties.length === 1 ? (
+                <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-foreground">
+                  {properties[0].name}
+                </div>
+              ) : (
+                <Select value={newPropertyId} onValueChange={setNewPropertyId}>
+                  <SelectTrigger className="text-sm">
+                    <SelectValue placeholder="Select property" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -307,7 +323,7 @@ export function UploadCOIDialog({
               <Button variant="outline" onClick={() => setMode('choose')}>Back</Button>
               <Button
                 onClick={handleNewSubmit}
-                disabled={!newPropertyId || !newName.trim() || saving}
+                disabled={!effectiveNewPropertyId || !newName.trim() || saving}
               >
                 {saving ? 'Creating...' : 'Create & Upload COI'}
               </Button>

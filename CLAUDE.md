@@ -109,6 +109,16 @@ Product is feature-complete and in final testing before launch.
 - Human/manual insurance review services
 - Enterprise tier or custom pricing
 
+### Recent Changes
+
+#### P0 Critical Fixes (Mar 2026)
+
+- **Vendor/tenant name overflow:** Breadcrumb names truncated to 40 chars, h1 headers truncated with CSS ellipsis + title tooltip for full name on hover (vendor-detail-client.tsx, tenant-detail-client.tsx)
+- **Currency formatting:** Added `formatDisplayLimit()` utility in `lib/utils.ts`. All coverage limit number inputs now show formatted dollar amount hint below (e.g., "$1,000,000") in entity-creation-wizard, template-editor, extract-lease-dialog, template-assignment-nudge, and onboarding step-templates
+- **Email validation:** Contact email in Add Vendor/Tenant wizard (Step 1) now validated with regex on blur. Invalid emails show inline error and prevent advancing to Step 2. Empty email is still allowed (optional field)
+- **Consistent action queue buttons:** "Request COI" button now always shown for all action items (not just those with emails). Clicking without a contact email shows a toast: "No contact email on file. Edit this vendor to add one."
+- **Auto-select single property:** Legacy upload-coi-dialog now auto-selects and shows static property name when only one property exists (SimpleUploadCOIDialog already had this)
+
 ### Known Issues
 
 - Anthropic API 529 errors during bulk upload (retry logic with exponential backoff in place)
