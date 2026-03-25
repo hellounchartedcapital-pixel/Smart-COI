@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { formatCoverageType } from '@/lib/coverage-utils';
+import { formatCurrency } from '@/lib/utils';
 import type {
   RequirementTemplate,
   TemplateCoverageRequirement,
@@ -309,14 +310,21 @@ function TemplateCard({
                 {req.limit_type === 'statutory' ? (
                   <span className="text-xs text-slate-500">Statutory</span>
                 ) : (
-                  <Input
-                    type="number"
-                    className="h-8 text-xs"
-                    value={req.minimum_limit ?? ''}
-                    onChange={(e) => onUpdateLimit(req.id, e.target.value)}
-                    step={100000}
-                    min={0}
-                  />
+                  <div>
+                    <Input
+                      type="number"
+                      className="h-8 text-xs"
+                      value={req.minimum_limit ?? ''}
+                      onChange={(e) => onUpdateLimit(req.id, e.target.value)}
+                      step={100000}
+                      min={0}
+                    />
+                    {req.minimum_limit != null && (
+                      <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                        {formatCurrency(req.minimum_limit)}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

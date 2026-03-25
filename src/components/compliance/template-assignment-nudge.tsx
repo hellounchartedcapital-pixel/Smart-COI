@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle, Sparkles, FileText, List, Loader2 } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -478,19 +479,26 @@ export function TemplateAssignmentNudge({
 
                 {/* Limit amount */}
                 {req.limit_type !== 'statutory' ? (
-                  <Input
-                    type="number"
-                    className="w-[120px] text-xs h-8"
-                    placeholder="Amount"
-                    value={req.minimum_limit ?? ''}
-                    onChange={(e) =>
-                      updateFn(
-                        req.id,
-                        'minimum_limit',
-                        e.target.value ? Number(e.target.value) : null
-                      )
-                    }
-                  />
+                  <div className="w-[120px]">
+                    <Input
+                      type="number"
+                      className="w-full text-xs h-8"
+                      placeholder="Amount"
+                      value={req.minimum_limit ?? ''}
+                      onChange={(e) =>
+                        updateFn(
+                          req.id,
+                          'minimum_limit',
+                          e.target.value ? Number(e.target.value) : null
+                        )
+                      }
+                    />
+                    {req.minimum_limit != null && (
+                      <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                        {formatCurrency(req.minimum_limit)}
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <span className="w-[120px] text-xs text-muted-foreground px-2">
                     Statutory

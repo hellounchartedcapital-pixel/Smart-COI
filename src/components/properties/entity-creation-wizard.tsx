@@ -32,6 +32,7 @@ import {
 import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash } from '@/lib/utils/file-validation';
 import { isPlanInactiveError, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
+import { formatCurrency } from '@/lib/utils';
 import type { RequirementTemplate, LimitType } from '@/types';
 import { Upload, FileText, X, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
@@ -153,6 +154,7 @@ export function EntityCreationWizard({
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [vendorType, setVendorType] = useState('');
   const [tenantType, setTenantType] = useState('');
   const [unitSuite, setUnitSuite] = useState('');
@@ -225,6 +227,7 @@ export function EntityCreationWizard({
     setContactName('');
     setContactEmail('');
     setContactPhone('');
+    setEmailError('');
     setVendorType('');
     setTenantType('');
     setUnitSuite('');
@@ -742,20 +745,27 @@ export function EntityCreationWizard({
                   </SelectContent>
                 </Select>
                 {req.limit_type !== 'statutory' ? (
-                  <Input
-                    type="number"
-                    className="w-[110px] text-xs h-8"
-                    placeholder="Amount"
-                    value={req.minimum_limit ?? ''}
-                    onChange={(e) =>
-                      updateRequirement(
-                        setReqs,
-                        req.id,
-                        'minimum_limit',
-                        e.target.value ? Number(e.target.value) : null
-                      )
-                    }
-                  />
+                  <div className="w-[110px]">
+                    <Input
+                      type="number"
+                      className="w-full text-xs h-8"
+                      placeholder="Amount"
+                      value={req.minimum_limit ?? ''}
+                      onChange={(e) =>
+                        updateRequirement(
+                          setReqs,
+                          req.id,
+                          'minimum_limit',
+                          e.target.value ? Number(e.target.value) : null
+                        )
+                      }
+                    />
+                    {req.minimum_limit != null && (
+                      <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                        {formatCurrency(req.minimum_limit)}
+                      </span>
+                    )}
+                  </div>
                 ) : (
                   <span className="w-[110px] text-xs text-muted-foreground px-2">Statutory</span>
                 )}
@@ -818,7 +828,8 @@ export function EntityCreationWizard({
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
-  const canAdvanceStep1 = companyName.trim().length > 0;
+  const isEmailValid = contactEmail.trim() === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim());
+  const canAdvanceStep1 = companyName.trim().length > 0 && isEmailValid;
   const isWideDialog = step === 2 && (
     (templateOption === 'ai' && aiRequirements.length > 0) ||
     (templateOption === 'lease' && leaseRequirements.length > 0)
@@ -856,9 +867,24 @@ export function EntityCreationWizard({
                   <Input
                     type="email"
                     value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
+                    onChange={(e) => {
+                      setContactEmail(e.target.value);
+                      if (emailError) setEmailError('');
+                    }}
+                    onBlur={() => {
+                      const trimmed = contactEmail.trim();
+                      if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+                        setEmailError('Please enter a valid email address');
+                      } else {
+                        setEmailError('');
+                      }
+                    }}
                     placeholder="john@example.com"
+                    className={emailError ? 'border-red-400' : ''}
                   />
+                  {emailError && (
+                    <p className="text-xs text-red-600">{emailError}</p>
+                  )}
                 </div>
                 <div className="relative space-y-2">
                   <Label>{mode === 'vendor' ? 'Vendor type' : 'Tenant type'}</Label>

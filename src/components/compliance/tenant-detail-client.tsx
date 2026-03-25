@@ -231,7 +231,7 @@ export function TenantDetailClient({
         )}
         <span className="text-foreground">Tenants</span>
         <span>/</span>
-        <span className="text-foreground font-medium">{tenant.company_name}</span>
+        <span className="text-foreground font-medium max-w-[40ch] truncate inline-block align-bottom" title={tenant.company_name}>{tenant.company_name}</span>
       </div>
 
       {/* Expired alert banner */}
@@ -288,7 +288,7 @@ export function TenantDetailClient({
           <div className="rounded-lg border border-slate-200 bg-white px-5 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 min-w-0">
-                <h1 className="text-xl font-bold tracking-tight text-foreground truncate">
+                <h1 className="text-xl font-bold tracking-tight text-foreground truncate max-w-full overflow-hidden text-ellipsis whitespace-nowrap" title={tenant.company_name}>
                   {tenant.company_name}
                 </h1>
                 <ComplianceBadge status={tenant.compliance_status} />
