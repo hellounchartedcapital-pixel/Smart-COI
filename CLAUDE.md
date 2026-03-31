@@ -111,13 +111,18 @@ Product is feature-complete and in final testing before launch.
 
 ### Recent Changes
 
+#### QA Warning Fixes (Apr 2026)
+
+- **Immediate portal upload email:** Portal extract route now sends an email to the PM immediately via Resend when a vendor/tenant uploads a COI through the self-service portal (portal/[token]/extract/route.ts). Cron-based notifications remain unchanged.
+- **Persist entity names on templates:** Added `additional_insured_name` and `certificate_holder_name` columns to `requirement_templates` table (migration: 20260401_add_template_entity_names.sql). Lease extraction dialog now passes entity names through to `createTemplateWithRequirements()`. Template editor displays and saves entity names for lease-extracted templates. Updated `RequirementTemplate` type, `CreateTemplateWithRequirementsInput`, and `UpdateTemplateInput` interfaces.
+
 #### QA Audit (Apr 2026)
 
 Full end-to-end audit of 7 critical user flows. **All 7 flows PASS** — no blocking bugs found. Warnings documented for Tony to triage:
 - **WARN:** No explicit timeout on AI extraction `fetch()` call (extraction.ts) — relies on Node defaults
 - **WARN:** Stripe webhook handles `invoice.payment_succeeded` but not `invoice.paid` — functionally equivalent but not best practice
-- **WARN:** Portal upload creates notification record in DB but doesn't trigger immediate email send — relies on cron scheduler
-- **WARN:** Additional Insured / Certificate Holder entity names from lease extraction are displayed in review but not persisted to template (only boolean flags saved per requirement)
+- ~~**WARN:** Portal upload creates notification record in DB but doesn't trigger immediate email send — relies on cron scheduler~~ **FIXED**
+- ~~**WARN:** Additional Insured / Certificate Holder entity names from lease extraction are displayed in review but not persisted to template (only boolean flags saved per requirement)~~ **FIXED**
 - **WARN:** Trial banner won't auto-refresh if trial expires while dashboard is open (server-side blocking works correctly)
 
 #### Landing Page Dashboard Preview Update (Apr 2026)

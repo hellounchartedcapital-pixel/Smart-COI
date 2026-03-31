@@ -148,3 +148,10 @@ CREATE INDEX IF NOT EXISTS idx_tenants_archived_at
 -- Add endorsement_data JSONB column to certificates
 -- ============================================================================
 ALTER TABLE certificates ADD COLUMN IF NOT EXISTS endorsement_data JSONB DEFAULT NULL;
+
+-- ============================================================================
+-- Add entity name columns to requirement_templates (for lease extraction)
+-- ============================================================================
+ALTER TABLE requirement_templates
+  ADD COLUMN IF NOT EXISTS additional_insured_name TEXT DEFAULT NULL,
+  ADD COLUMN IF NOT EXISTS certificate_holder_name TEXT DEFAULT NULL;

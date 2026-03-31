@@ -78,6 +78,8 @@ export interface CreateTemplateWithRequirementsInput {
   category: TemplateCategory;
   risk_level: RiskLevel;
   source_type?: 'manual' | 'lease_extraction' | 'ai_recommended';
+  additional_insured_name?: string;
+  certificate_holder_name?: string;
   requirements: CoverageRequirementInput[];
 }
 
@@ -98,6 +100,8 @@ export async function createTemplateWithRequirements(
       risk_level: input.risk_level,
       is_system_default: false,
       source_type: input.source_type || 'manual',
+      additional_insured_name: input.additional_insured_name || null,
+      certificate_holder_name: input.certificate_holder_name || null,
     })
     .select('id')
     .single();
@@ -155,6 +159,8 @@ export interface UpdateTemplateInput {
   name: string;
   description?: string;
   risk_level: RiskLevel;
+  additional_insured_name?: string;
+  certificate_holder_name?: string;
   requirements: CoverageRequirementInput[];
 }
 
@@ -178,13 +184,20 @@ export async function updateTemplate(
   if (tpl.organization_id !== orgId) throw new Error('Not authorized');
 
   // Update template metadata
+  const updateData: Record<string, unknown> = {
+    name: input.name,
+    description: input.description || null,
+    risk_level: input.risk_level,
+  };
+  if (input.additional_insured_name !== undefined) {
+    updateData.additional_insured_name = input.additional_insured_name || null;
+  }
+  if (input.certificate_holder_name !== undefined) {
+    updateData.certificate_holder_name = input.certificate_holder_name || null;
+  }
   const { error: updateError } = await supabase
     .from('requirement_templates')
-    .update({
-      name: input.name,
-      description: input.description || null,
-      risk_level: input.risk_level,
-    })
+    .update(updateData)
     .eq('id', templateId);
 
   if (updateError) throw new Error(updateError.message);
