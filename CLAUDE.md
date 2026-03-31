@@ -111,6 +111,15 @@ Product is feature-complete and in final testing before launch.
 
 ### Recent Changes
 
+#### QA Audit (Apr 2026)
+
+Full end-to-end audit of 7 critical user flows. **All 7 flows PASS** — no blocking bugs found. Warnings documented for Tony to triage:
+- **WARN:** No explicit timeout on AI extraction `fetch()` call (extraction.ts) — relies on Node defaults
+- **WARN:** Stripe webhook handles `invoice.payment_succeeded` but not `invoice.paid` — functionally equivalent but not best practice
+- **WARN:** Portal upload creates notification record in DB but doesn't trigger immediate email send — relies on cron scheduler
+- **WARN:** Additional Insured / Certificate Holder entity names from lease extraction are displayed in review but not persisted to template (only boolean flags saved per requirement)
+- **WARN:** Trial banner won't auto-refresh if trial expires while dashboard is open (server-side blocking works correctly)
+
 #### Landing Page Dashboard Preview Update (Apr 2026)
 
 - **Removed Portfolio Overview card** from landing page mock sidebar (matches actual dashboard after P1 changes)
