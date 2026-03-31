@@ -93,6 +93,8 @@ export function TemplateEditorClient({
   const [name, setName] = useState(template.name);
   const [description, setDescription] = useState(template.description ?? '');
   const [riskLevel, setRiskLevel] = useState<RiskLevel>(template.risk_level);
+  const [additionalInsuredName, setAdditionalInsuredName] = useState(template.additional_insured_name ?? '');
+  const [certificateHolderName, setCertificateHolderName] = useState(template.certificate_holder_name ?? '');
   const [rows, setRows] = useState<EditorRow[]>(requirements.map(reqToRow));
   const [saving, setSaving] = useState(false);
   const [cascadeOpen, setCascadeOpen] = useState(false);
@@ -148,6 +150,8 @@ export function TemplateEditorClient({
         name: name.trim(),
         description: description.trim() || undefined,
         risk_level: riskLevel,
+        additional_insured_name: additionalInsuredName.trim() || undefined,
+        certificate_holder_name: certificateHolderName.trim() || undefined,
         requirements: rows.map((r) => ({
           coverage_type: r.coverage_type,
           is_required: r.is_required,
@@ -314,6 +318,31 @@ export function TemplateEditorClient({
               />
             </div>
           </div>
+          {/* Entity name fields — shown for lease-extracted and AI-recommended templates */}
+          {(additionalInsuredName || certificateHolderName || template.source_type === 'lease_extraction') && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-xs">Additional Insured</Label>
+                <Input
+                  value={additionalInsuredName}
+                  onChange={(e) => setAdditionalInsuredName(e.target.value)}
+                  disabled={isReadOnly}
+                  placeholder="Entity name (optional)"
+                  className="text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Certificate Holder</Label>
+                <Input
+                  value={certificateHolderName}
+                  onChange={(e) => setCertificateHolderName(e.target.value)}
+                  disabled={isReadOnly}
+                  placeholder="Entity name (optional)"
+                  className="text-sm"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-4">

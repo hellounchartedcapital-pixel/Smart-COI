@@ -199,6 +199,8 @@ export function ExtractLeaseDialog({ open, onOpenChange, entityName }: ExtractLe
         category,
         risk_level: 'standard',
         source_type: 'lease_extraction',
+        additional_insured_name: additionalInsuredName.trim() || undefined,
+        certificate_holder_name: certificateHolderName.trim() || undefined,
         requirements: included.map((r) => ({
           coverage_type: r.coverage_type,
           is_required: true,

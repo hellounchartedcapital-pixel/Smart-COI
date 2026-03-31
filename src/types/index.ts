@@ -182,6 +182,8 @@ export interface RequirementTemplate {
   risk_level: RiskLevel;
   is_system_default: boolean;
   source_type: TemplateSourceType;
+  additional_insured_name: string | null;
+  certificate_holder_name: string | null;
   created_at: string;
   updated_at: string;
   // Joined relation

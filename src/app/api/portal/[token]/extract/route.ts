@@ -4,6 +4,7 @@ import { extractCOIFromPDF } from '@/lib/ai/extraction';
 import { checkExtractionLimit } from '@/lib/plan-limits';
 import { getActivePlanStatus } from '@/lib/plan-status';
 import { runAutoCompliance } from '@/lib/actions/certificates';
+import { sendNotificationEmail } from '@/lib/notifications/email-sender';
 
 const MAX_EXTRACTIONS_PER_HOUR = 5;
 
@@ -275,6 +276,34 @@ export async function POST(
         .limit(1);
 
       if (orgUsers && orgUsers.length > 0) {
+        const emailSubject = `New COI uploaded by ${entityInfo.company_name} via self-service portal`;
+        const reviewUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.smartcoi.io'}/dashboard/certificates/${certificate_id}/review`;
+        const emailHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;">
+<tr><td align="center">
+<table width="100%" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+  <tr><td style="background:#059669;padding:20px 24px;">
+    <span style="color:#ffffff;font-size:18px;font-weight:700;">SmartCOI</span>
+  </td></tr>
+  <tr><td style="padding:24px;">
+    <p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 16px;">A new certificate of insurance has been uploaded by <strong>${entityInfo.company_name}</strong> through your self-service portal.</p>
+    <p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 16px;">Please review it at your earliest convenience.</p>
+    <table cellpadding="0" cellspacing="0" style="margin:24px 0;">
+    <tr><td style="background:#059669;border-radius:6px;padding:12px 24px;">
+      <a href="${reviewUrl}" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Review Certificate</a>
+    </td></tr>
+    </table>
+  </td></tr>
+  <tr><td style="padding:16px 24px;background:#f1f5f9;font-size:11px;color:#64748b;text-align:center;">
+    Powered by <a href="https://smartcoi.io" style="color:#059669;text-decoration:none;font-weight:600;">SmartCOI</a>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`;
+
         await supabase.from('notifications').insert({
           organization_id: entityInfo.organization_id,
           [entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
@@ -282,10 +311,20 @@ export async function POST(
           scheduled_date: new Date().toISOString(),
           sent_date: new Date().toISOString(),
           status: 'sent',
-          email_subject: `New COI uploaded by ${entityInfo.company_name} via self-service portal`,
-          email_body: `${entityInfo.company_name} has uploaded a new Certificate of Insurance through the self-service portal. Please review it at your earliest convenience.`,
+          email_subject: emailSubject,
+          email_body: emailHtml,
           portal_link: `/dashboard/certificates/${certificate_id}/review`,
         });
+
+        // Send immediate email to PM
+        const pmEmail = orgUsers[0].email;
+        if (pmEmail) {
+          try {
+            await sendNotificationEmail(pmEmail, emailSubject, emailHtml);
+          } catch (emailErr) {
+            console.error('[portal/extract] Failed to send PM notification email:', emailErr);
+          }
+        }
       }
     }
 
