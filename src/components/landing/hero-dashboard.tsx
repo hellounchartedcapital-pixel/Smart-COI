@@ -64,7 +64,6 @@ export function HeroDashboard() {
 
                 {/* Right sidebar */}
                 <div className="hidden space-y-3 lg:block">
-                  <PortfolioOverviewCard />
                   <RecentActivityCard />
                 </div>
               </div>
@@ -354,27 +353,6 @@ function SidebarCard({ title, icon, children, action }: { title: string; icon: R
   );
 }
 
-function PortfolioOverviewCard() {
-  return (
-    <SidebarCard title="Portfolio Overview" icon={<BuildingSmIcon />}>
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div>
-          <p className="text-lg font-bold text-slate-900">3</p>
-          <p className="text-[8px] text-slate-500">Properties</p>
-        </div>
-        <div>
-          <p className="text-lg font-bold text-slate-900">31</p>
-          <p className="text-[8px] text-slate-500">Vendors</p>
-        </div>
-        <div>
-          <p className="text-lg font-bold text-slate-900">8</p>
-          <p className="text-[8px] text-slate-500">Tenants</p>
-        </div>
-      </div>
-    </SidebarCard>
-  );
-}
-
 
 function RecentActivityCard() {
   return (
@@ -399,6 +377,26 @@ function RecentActivityCard() {
           icon={<PlusTinyIcon />}
           text="Vendor Atlas Fire Protection added"
           time="1d ago"
+        />
+        <ActivityRow
+          icon={<ShieldTinyIcon />}
+          text="COI processed — 8 coverages extracted"
+          time="1d ago"
+        />
+        <ActivityRow
+          icon={<BellTinyIcon />}
+          text="Follow-up sent to Greenline Landscaping"
+          time="2d ago"
+        />
+        <ActivityRow
+          icon={<ShieldTinyIcon />}
+          text="Template assigned: Standard Vendor"
+          time="2d ago"
+        />
+        <ActivityRow
+          icon={<PlusTinyIcon />}
+          text="New property Harbor View Plaza added"
+          time="3d ago"
           isLast
         />
       </div>
@@ -505,16 +503,6 @@ function CreditCardIcon() {
 }
 
 /* ── Card header icons ── */
-
-function BuildingSmIcon() {
-  return (
-    <svg className={cardIconCls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="2" width="16" height="20" rx="2" />
-      <path d="M9 22v-4h6v4" />
-      <path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01" />
-    </svg>
-  );
-}
 
 
 function TrendingSmIcon() {

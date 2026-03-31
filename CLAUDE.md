@@ -111,6 +111,13 @@ Product is feature-complete and in final testing before launch.
 
 ### Recent Changes
 
+#### Landing Page Dashboard Preview Update (Apr 2026)
+
+- **Removed Portfolio Overview card** from landing page mock sidebar (matches actual dashboard after P1 changes)
+- **Updated Recent Activity** from 4 to 8 sample items with realistic entries (matches actual dashboard's 8-item feed)
+- **Removed unused components:** `PortfolioOverviewCard`, `BuildingSmIcon` from hero-dashboard.tsx
+- Action buttons and currency formatting verified as already consistent — no changes needed
+
 #### P0 Critical Fixes (Mar 2026)
 
 - **Vendor/tenant name overflow:** Breadcrumb names truncated to 40 chars, h1 headers truncated with CSS ellipsis + title tooltip for full name on hover (vendor-detail-client.tsx, tenant-detail-client.tsx)
