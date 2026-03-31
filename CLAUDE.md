@@ -1,6 +1,6 @@
 # SmartCOI
 
-*Last updated: March 24, 2026*
+*Last updated: March 31, 2026*
 
 SmartCOI — B2B SaaS platform automating Certificate of Insurance (COI) compliance tracking for commercial property managers. Automates COI collection, AI extraction, compliance verification, and vendor/tenant follow-up notifications.
 
@@ -36,7 +36,7 @@ Never deviate from these numbers. No enterprise tier. Fully self-serve.
 
 ## Current Status
 
-Product is feature-complete and in final testing before launch.
+Product is feature-complete and launch-ready. All critical flows tested (7/7 PASS). P0 and P1 polish passes complete. Landing page updated to match current product.
 
 ### Features That EXIST (reference these freely)
 
@@ -45,11 +45,10 @@ Product is feature-complete and in final testing before launch.
 - Forgot password / reset password flow
 - Confirm password field on signup
 - Dashboard with portfolio health bar, compliance stats, action items, activity feed (simplified layout)
-- Dashboard two-column layout (65/35) — properties grid + Needs Your Attention on left, Portfolio Overview + Recent Activity on right
+- Dashboard two-column layout (65/35) — properties grid + Needs Your Attention on left, Recent Activity on right
 - Personalized greeting: "Hello, [First Name]" (falls back to "Hello" or "Hello there")
 - Needs Your Attention section capped at 5 items with "Show all [X] items" expansion, per-item Request COI and Upload COI buttons
-- Recent Activity feed limited to 5 items with "View all activity >" link
-- Portfolio Overview card (Properties, Vendors, Tenants counts) on right sidebar
+- Recent Activity feed limited to 8 items with "View all activity >" link
 - Single Upload COI button in dashboard header (no Bulk Upload button)
 - Export Report button (PDF via browser print, CSV download) for compliance reports
 - 6-step interactive dashboard tour with data-tour attributes, light tooltip style
@@ -86,7 +85,7 @@ Product is feature-complete and in final testing before launch.
 - SEO content pages and blog (MDX)
 - 57 programmatic pages under /insurance-requirements/
 - 11 blog posts (MDX) with inline CTAs and bottom-of-post CTAs
-- 6 competitor comparison pages (TrustLayer, Certificial, Billy, SmartCompliance, PINS, CertFocus)
+- 10 competitor comparison pages under /compare/ (TrustLayer, Certificial, Billy, SmartCompliance, PINS, CertFocus, BCS, Jones, MyCOI, Spreadsheets)
 - 7 vertical landing pages under /for/
 - 2 alternatives pages under /alternatives/
 - www to non-www 301 redirect
@@ -98,6 +97,7 @@ Product is feature-complete and in final testing before launch.
 - Manual review workflow (removed — compliance is now fully automatic after extraction)
 - `review_confirmed` certificate status (removed)
 - `confirmCertificate()` or `quickConfirmCertificate()` actions (removed)
+- Portfolio Overview sidebar card (removed — data already in compliance health bar)
 - Compliance Score sidebar card (removed — redundant with health bar)
 - Expiring Soon sidebar card (removed — redundant with action queue)
 - Compliance Trend chart (removed from dashboard — can be added back in analytics)
@@ -187,7 +187,7 @@ src/
 │   ├── (public)/              # Marketing pages (blog, comparisons, SEO pages, legal)
 │   │   ├── features/          # Feature pages
 │   │   ├── insurance-requirements/ # 57 programmatic SEO pages
-│   │   ├── comparisons/       # 6 competitor comparison pages
+│   │   ├── compare/            # 10 competitor comparison pages
 │   │   ├── for/               # 7 vertical landing pages
 │   │   └── alternatives/      # 2 alternatives pages
 │   ├── api/                   # Route handlers (auth callback, webhooks, cron, lease extraction)
@@ -195,6 +195,10 @@ src/
 ├── components/
 │   ├── landing/               # Landing page components
 │   ├── dashboard/             # Sidebar, session guard, trial banner, upgrade modal
+│   ├── compliance/            # Compliance views, template assignment nudge, waivers
+│   ├── notifications/         # Notification list and detail components
+│   ├── properties/            # Entity creation wizard, property detail, vendor/tenant detail
+│   ├── templates/             # Template editor, lease extraction dialog, template labels
 │   ├── settings/              # Settings page sections
 │   ├── onboarding/            # Onboarding wizard components (5 steps)
 │   └── ui/                    # shadcn/ui primitives
@@ -219,7 +223,7 @@ src/
 supabase/
 ├── functions/                 # Edge functions (extract-coi, extract-lease-requirements, send-contact)
 ├── consolidated_post_v2_migrations.sql  # All migrations (run via SQL Editor)
-└── migrations/                # Individual migration files (42 total)
+└── migrations/                # Individual migration files (47 total)
 ```
 
 No shared components between marketing and dashboard.
@@ -234,7 +238,8 @@ Notable columns:
 - `properties.accept_cert_holder_in_additional_insured` — boolean toggle for fuzzy matching flexibility
 - `properties.certificate_holder` / `properties.additional_insured` — entity name fields for compliance verification
 - `certificates.endorsement_data` — JSONB column for endorsement extraction results
-- `requirement_templates.source_type` — TEXT ('manual' | 'lease_extraction') indicating template origin
+- `requirement_templates.source_type` — TEXT ('manual' | 'lease_extraction' | 'ai_recommended') indicating template origin
+- `requirement_templates.additional_insured_name` / `requirement_templates.certificate_holder_name` — entity names extracted from leases, persisted for compliance matching
 
 ## Important Patterns
 
