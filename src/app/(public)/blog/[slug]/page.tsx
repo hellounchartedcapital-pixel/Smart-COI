@@ -66,6 +66,57 @@ const relatedResources: Record<string, { href: string; label: string }[]> = {
   ],
 };
 
+/** FAQ structured data (JSON-LD) per blog post slug. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const faqData: Record<string, any> = {
+  'acord-25-certificate-explained': {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'What is an ACORD 25 form?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'An ACORD 25 is a standardized certificate of liability insurance used to provide proof of insurance coverage. It summarizes a company\'s active insurance policies including general liability, automobile liability, umbrella/excess liability, and workers compensation.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What is the difference between ACORD 25 and ACORD 28?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'ACORD 25 covers liability insurance (general liability, auto, workers comp, umbrella). ACORD 28 covers commercial property insurance. Property managers typically need ACORD 25 from vendors and contractors, and ACORD 28 from tenants.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Who fills out an ACORD 25?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'The insurance agent or broker fills out the ACORD 25 on behalf of the insured party. The insured (vendor, contractor, or tenant) requests it from their agent, who then issues the certificate to the requesting party.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Does an ACORD 25 expire?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'The certificate itself doesn\'t technically expire, but the insurance policies listed on it have expiration dates. Once any listed policy expires, the certificate no longer provides evidence of current coverage and a new certificate should be requested.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What should a certificate holder look for on an ACORD 25?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Verify that coverage types and limits meet your requirements, policy dates are current, your entity is named as both Certificate Holder and Additional Insured, required endorsements are referenced, and the property address appears in the Description of Operations.',
+        },
+      },
+    ],
+  },
+};
+
 interface Props {
   params: Promise<{ slug: string }>;
 }
@@ -104,9 +155,18 @@ export default async function BlogPostPage({ params }: Props) {
   const otherPosts = allPosts.filter((p) => p.slug !== slug).slice(0, 3);
   const resources = relatedResources[slug] ?? [];
 
+  // FAQ structured data for specific posts
+  const faqJsonLd = faqData[slug] ?? null;
+
   return (
     <>
       <Navbar />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      )}
       <main className="mx-auto max-w-3xl px-6 pb-20 pt-32">
         <Link
           href="/blog"

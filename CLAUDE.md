@@ -111,6 +111,17 @@ Product is feature-complete and launch-ready. All critical flows tested (7/7 PAS
 
 ### Recent Changes
 
+#### SEO: ACORD 25 Post Upgrade (Apr 2026)
+
+- Expanded `/blog/acord-25-certificate-explained` from ~190 lines to ~300+ lines for deeper content and better rankings
+- Updated meta title to "ACORD 25 Certificate of Insurance Explained (2026 Guide)" and description for SEO
+- Added anchor-linked table of contents below intro
+- Expanded "ACORD 25 vs ACORD 28" section with when-to-request guidance
+- Added new "What Property Managers Need to Check on Every ACORD 25" section (8-point verification)
+- Expanded "Common Mistakes" section with 8 specific liability gaps (entity name errors, blanket AI without endorsement, umbrella gaps)
+- Added FAQ section (5 Q&As) with FAQPage JSON-LD structured data (in blog page component)
+- Added internal links to ACORD 28, Additional Insured, COI compliance, expiration tracking, and COI tracking software pages
+
 #### QA Warning Fixes (Apr 2026)
 
 - **Immediate portal upload email:** Portal extract route now sends an email to the PM immediately via Resend when a vendor/tenant uploads a COI through the self-service portal (portal/[token]/extract/route.ts). Cron-based notifications remain unchanged.
