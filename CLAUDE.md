@@ -111,6 +111,13 @@ Product is feature-complete and launch-ready. All critical flows tested (7/7 PAS
 
 ### Recent Changes
 
+#### SEO: Meta Tag Optimization (Apr 2026)
+
+- Updated meta titles and descriptions on 12 pages for improved CTR
+- Pages updated: homepage, /compare (index + 4 individual), /coi-tracking-software, /certificate-of-insurance-tracking, /ai-coi-extraction, /tenant-insurance-tracking, 2 blog posts
+- Added "(2026)" year tags to comparison and feature page titles
+- Both `metadata.title`/`description` and `openGraph` title/description updated in sync
+
 #### SEO: ACORD 25 Post Upgrade (Apr 2026)
 
 - Expanded `/blog/acord-25-certificate-explained` from ~190 lines to ~300+ lines for deeper content and better rankings

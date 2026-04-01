@@ -14,16 +14,16 @@ import { FAQSection } from '@/components/landing/faq-section';
 import { FinalCTA } from '@/components/landing/final-cta';
 
 export const metadata: Metadata = {
-  title: 'SmartCOI: Automated COI Compliance for Property Managers',
+  title: 'SmartCOI: AI-Powered COI Tracking for Property Managers',
   description:
-    'Stop chasing vendors for COIs. SmartCOI automates collection, AI extraction, and compliance checks across your portfolio. Start your 14-day free trial.',
+    'Automate certificate of insurance compliance across your portfolio. AI extracts data from COI PDFs, checks compliance, and sends follow-ups automatically.',
   alternates: {
     canonical: 'https://smartcoi.io',
   },
   openGraph: {
-    title: 'SmartCOI: Automated COI Compliance for Property Managers',
+    title: 'SmartCOI: AI-Powered COI Tracking for Property Managers',
     description:
-      'Stop chasing vendors for COIs. SmartCOI automates collection, AI extraction, and compliance checks across your portfolio. Start your 14-day free trial.',
+      'Automate certificate of insurance compliance across your portfolio. AI extracts data from COI PDFs, checks compliance, and sends follow-ups automatically.',
     type: 'website',
     url: 'https://smartcoi.io',
   },

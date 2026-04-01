@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'Track Tenant Insurance Compliance Automatically | SmartCOI',
+  title: 'Tenant Insurance Tracking for Property Managers',
   description:
-    'Tenants ignoring your insurance requirements? Automate COI collection, verify coverage against lease terms, and get alerts before policies expire. Try free.',
+    'Track tenant certificates of insurance against lease requirements. AI extracts coverage from lease PDFs and checks tenant COIs automatically.',
   alternates: {
     canonical: 'https://smartcoi.io/tenant-insurance-tracking',
   },
   openGraph: {
-    title: 'Track Tenant Insurance Compliance Automatically | SmartCOI',
+    title: 'Tenant Insurance Tracking for Property Managers',
     description:
-      'Tenants ignoring your insurance requirements? Automate COI collection, verify coverage against lease terms, and get alerts before policies expire. Try free.',
+      'Track tenant certificates of insurance against lease requirements. AI extracts coverage from lease PDFs and checks tenant COIs automatically.',
     type: 'website',
     url: 'https://smartcoi.io/tenant-insurance-tracking',
   },
