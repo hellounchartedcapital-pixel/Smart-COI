@@ -111,6 +111,13 @@ Product is feature-complete and launch-ready. All critical flows tested (7/7 PAS
 
 ### Recent Changes
 
+#### ToS & Privacy Policy Updates (Apr 2026)
+
+- **Terms of Service:** Updated entity name in introduction, added Intellectual Property section (user data ownership + limited license), Vendor Portal terms, Indemnification section (including AI reliance disclaimer), Governing Law & Disputes (Colorado, binding arbitration, no class actions), updated refund policy with service failure exception
+- **Privacy Policy:** Added vendor/tenant portal data collection disclosure, expanded Anthropic AI processing disclosure (commercial API, no model training), added PostHog to third-party services list, added Data Breach Notification section (72-hour email notice), added International Data Transfers section (US-based infrastructure)
+- **Vendor Portal:** Added explicit consent text above footer: "By uploading documents through this portal, you agree to SmartCOI's Terms of Service and Privacy Policy" with links
+- Both pages updated to "Last updated: April 2026"
+
 #### Trial Lifecycle Emails (Apr 2026)
 
 - Created 5-email trial lifecycle sequence: Day 1 welcome, Day 3 feature highlight (conditional on 0 uploads), Day 7 midpoint check-in (with real usage stats), Day 12 trial ending, Day 14 trial expired
