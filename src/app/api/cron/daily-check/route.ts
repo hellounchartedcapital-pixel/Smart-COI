@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { checkAndScheduleNotifications } from '@/lib/notifications/scheduler';
 import { processScheduledNotifications } from '@/lib/notifications/scheduler';
 import { takeComplianceSnapshots } from '@/lib/actions/compliance-snapshots';
+import { processTrialLifecycleEmails } from '@/lib/emails/trial-lifecycle';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // Allow up to 60 seconds
@@ -43,6 +44,10 @@ export async function POST(request: Request) {
     const { sent, failed } = await processScheduledNotifications();
     console.log(`[daily-check] Sent ${sent}, failed ${failed}`);
 
+    // Step 4: Process trial lifecycle emails
+    const trialEmails = await processTrialLifecycleEmails();
+    console.log(`[daily-check] Trial emails: sent ${trialEmails.sent}, skipped ${trialEmails.skipped}, errors ${trialEmails.errors}`);
+
     const duration = Date.now() - startTime;
 
     return NextResponse.json({
@@ -51,6 +56,7 @@ export async function POST(request: Request) {
       scheduled,
       sent,
       failed,
+      trialEmails,
       durationMs: duration,
     });
   } catch (err) {

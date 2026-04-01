@@ -155,3 +155,9 @@ ALTER TABLE certificates ADD COLUMN IF NOT EXISTS endorsement_data JSONB DEFAULT
 ALTER TABLE requirement_templates
   ADD COLUMN IF NOT EXISTS additional_insured_name TEXT DEFAULT NULL,
   ADD COLUMN IF NOT EXISTS certificate_holder_name TEXT DEFAULT NULL;
+
+-- ============================================================================
+-- Add trial_emails_sent JSONB column for lifecycle email tracking
+-- ============================================================================
+ALTER TABLE organizations
+  ADD COLUMN IF NOT EXISTS trial_emails_sent JSONB DEFAULT '{}';
