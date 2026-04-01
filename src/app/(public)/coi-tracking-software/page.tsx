@@ -232,6 +232,12 @@ export default function COITrackingSoftwarePage() {
             <Link href="/compare/smartcoi-vs-spreadsheets" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
               COI Tracking: Software vs Spreadsheets
             </Link>
+            <Link href="/blog/best-coi-management-software" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              Best COI Management Software for 2026 (Compared)
+            </Link>
+            <Link href="/blog/coi-expiration-tracking-best-practices" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              COI Expiration Tracking: Best Practices for 2026
+            </Link>
           </div>
         </section>
 

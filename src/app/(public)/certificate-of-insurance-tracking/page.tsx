@@ -198,6 +198,12 @@ export default function CertificateOfInsuranceTrackingPage() {
             <Link href="/ai-coi-extraction" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
               How AI-Powered COI Data Extraction Works
             </Link>
+            <Link href="/blog/best-coi-management-software" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              Best COI Management Software for 2026 (Compared)
+            </Link>
+            <Link href="/blog/coi-compliance-guide-property-managers" className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline">
+              The Complete Guide to COI Compliance for Property Managers
+            </Link>
           </div>
         </section>
 

@@ -111,6 +111,17 @@ Product is feature-complete and launch-ready. All critical flows tested (7/7 PAS
 
 ### Recent Changes
 
+#### SEO: RSS Feed + Internal Linking (Apr 2026)
+
+- Created RSS 2.0 feed at `/feed.xml` (src/app/feed.xml/route.ts) with all blog posts + pinned money pages
+- Added RSS autodiscovery link to root layout metadata (`alternates.types`)
+- Added "RSS Feed" link to site footer (Resources section)
+- Added internal links to `/certificate-of-insurance-tracking` in 6 blog posts that were missing it
+- Added internal links to `/coi-tracking-software` in 2 blog posts that were missing it
+- Added links from `/coi-tracking-software` to 2 new blog posts (best COI management software, expiration tracking)
+- Added links from `/certificate-of-insurance-tracking` to 2 new blog posts (best COI management software, compliance guide)
+- Verified robots.txt does not block `/feed.xml`
+
 #### SEO: New COI Management Software Blog Post (Apr 2026)
 
 - Created `/blog/best-coi-management-software` — ~2,200 word comparison post targeting "coi management software" keyword cluster
