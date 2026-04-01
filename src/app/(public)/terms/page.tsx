@@ -20,7 +20,7 @@ export default function TermsOfServicePage() {
           Terms of Service
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Last updated: February 2026
+          Last updated: April 2026
         </p>
 
         <div className="prose-section mt-10 space-y-10">
@@ -28,10 +28,11 @@ export default function TermsOfServicePage() {
           <section>
             <h2>Introduction</h2>
             <p>
-              SmartCOI is operated by SmartCOI (&quot;we&quot;, &quot;us&quot;,
-              &quot;our&quot;). By accessing or using the SmartCOI service, you
-              agree to be bound by these Terms of Service. If you do not agree to
-              these terms, please do not use the service.
+              SmartCOI (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) is a
+              product and service provided by its owner and operator. By
+              accessing or using the SmartCOI service, you agree to be bound by
+              these Terms of Service. If you do not agree to these terms, please
+              do not use the service.
             </p>
           </section>
 
@@ -76,6 +77,27 @@ export default function TermsOfServicePage() {
             </p>
           </section>
 
+          {/* Vendor and Tenant Portal */}
+          <section>
+            <h2>Vendor and Tenant Portal</h2>
+            <p>
+              SmartCOI provides a self-service portal that allows vendors and
+              tenants to upload certificates of insurance without creating an
+              account. By accessing the portal and uploading documents, portal
+              users agree to these Terms of Service and our{' '}
+              <a href="/privacy" className="text-brand-dark hover:underline">
+                Privacy Policy
+              </a>
+              .
+            </p>
+            <p>
+              Portal users grant SmartCOI the same limited license described in
+              the Intellectual Property section to process, store, and display
+              uploaded documents for the purpose of providing compliance
+              tracking services to the organization that issued the portal link.
+            </p>
+          </section>
+
           {/* Acceptable Use */}
           <section>
             <h2>Acceptable Use</h2>
@@ -98,6 +120,27 @@ export default function TermsOfServicePage() {
                 users&apos; access
               </li>
             </ul>
+          </section>
+
+          {/* Intellectual Property */}
+          <section>
+            <h2>Intellectual Property</h2>
+            <p>
+              SmartCOI and its original content, features, and functionality are
+              owned by SmartCOI and are protected by applicable copyright,
+              trademark, and other intellectual property laws.
+            </p>
+            <p>
+              You retain full ownership of all documents, data, and content you
+              upload to the service. By uploading content, you grant SmartCOI a
+              limited license to process, store, and display that content solely
+              for the purpose of providing the service to you. This license
+              terminates when you delete the content or close your account.
+            </p>
+            <p>
+              You may not copy, modify, distribute, sell, or lease any part of
+              the SmartCOI service or its underlying software.
+            </p>
           </section>
 
           {/* Data and Privacy */}
@@ -133,7 +176,8 @@ export default function TermsOfServicePage() {
               </li>
               <li>
                 <strong>Refunds:</strong> We do not offer refunds for partial
-                billing periods.
+                billing periods. Refunds for documented service failures may be
+                issued at our sole discretion on a case-by-case basis.
               </li>
               <li>
                 <strong>Price changes:</strong> We reserve the right to change
@@ -166,6 +210,56 @@ export default function TermsOfServicePage() {
               We are not liable for indirect, incidental, special,
               consequential, or punitive damages, including but not limited to
               loss of profits, data, or business opportunities.
+            </p>
+          </section>
+
+          {/* Indemnification */}
+          <section>
+            <h2>Indemnification</h2>
+            <p>
+              You agree to indemnify, defend, and hold harmless SmartCOI, its
+              owner, and its affiliates from any claims, damages, losses,
+              liabilities, costs, or expenses (including reasonable legal fees)
+              arising from:
+            </p>
+            <ul>
+              <li>Your use of the service</li>
+              <li>Your violation of these terms</li>
+              <li>Content you upload to the service</li>
+              <li>
+                Your reliance on AI-extracted data without independent review
+              </li>
+              <li>
+                Any third-party claims related to your insurance compliance
+                decisions
+              </li>
+            </ul>
+            <p>
+              SmartCOI provides tools to assist with compliance tracking.
+              Compliance decisions and their consequences remain your
+              responsibility.
+            </p>
+          </section>
+
+          {/* Governing Law and Disputes */}
+          <section>
+            <h2>Governing Law and Disputes</h2>
+            <p>
+              These terms are governed by the laws of the State of Colorado,
+              without regard to its conflict of laws provisions.
+            </p>
+            <p>
+              Any disputes arising from these terms or your use of the service
+              will be resolved through binding arbitration administered in
+              accordance with the rules of the American Arbitration Association.
+              Arbitration will take place in Colorado. Each party will bear its
+              own costs, and the arbitrator&apos;s decision will be final and
+              enforceable in any court of competent jurisdiction.
+            </p>
+            <p>
+              You agree that any dispute resolution will be conducted on an
+              individual basis and not as part of a class, consolidated, or
+              representative action.
             </p>
           </section>
 

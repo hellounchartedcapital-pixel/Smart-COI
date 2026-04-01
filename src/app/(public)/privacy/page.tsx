@@ -20,7 +20,7 @@ export default function PrivacyPolicyPage() {
           Privacy Policy
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Last updated: February 2026
+          Last updated: April 2026
         </p>
 
         <div className="prose-section mt-10 space-y-10">
@@ -56,6 +56,16 @@ export default function PrivacyPolicyPage() {
               their vendors and tenants through the self-service portal.
             </p>
 
+            <h3>Vendor and tenant portal data</h3>
+            <p>
+              When vendors or tenants upload certificates through the
+              self-service portal, we collect the uploaded document and any
+              information extracted from it (company names, coverage details,
+              policy dates). Portal users do not create accounts, but their
+              uploaded documents are stored and processed within the
+              organization&apos;s SmartCOI account that issued the portal link.
+            </p>
+
             <h3>Usage data</h3>
             <p>
               Pages visited, features used, and timestamps, collected
@@ -84,8 +94,14 @@ export default function PrivacyPolicyPage() {
             <p>
               Uploaded PDF documents are sent to Anthropic&apos;s Claude API for
               data extraction. Anthropic processes the document content to
-              extract structured insurance data. Anthropic&apos;s data retention
-              policies apply to this processing &mdash; see{' '}
+              extract structured insurance data.
+            </p>
+            <p>
+              SmartCOI uses Anthropic&apos;s commercial API, which does not use
+              your data to train AI models. Document content is processed in
+              real time and is not stored by Anthropic beyond the duration of
+              the API request, in accordance with Anthropic&apos;s API data
+              policies. For full details, see{' '}
               <a
                 href="https://www.anthropic.com/privacy"
                 target="_blank"
@@ -93,8 +109,8 @@ export default function PrivacyPolicyPage() {
                 className="text-brand-dark hover:underline"
               >
                 Anthropic&apos;s privacy policy
-              </a>{' '}
-              for details.
+              </a>
+              .
             </p>
 
             <h3>Email communications</h3>
@@ -157,6 +173,31 @@ export default function PrivacyPolicyPage() {
             </ul>
           </section>
 
+          {/* Data Breach Notification */}
+          <section>
+            <h2>Data Breach Notification</h2>
+            <p>
+              In the event of a data breach that compromises your personal
+              information or uploaded documents, we will notify affected users
+              via email within 72 hours of confirming the breach. Notification
+              will include a description of the breach, the types of data
+              affected, and steps we are taking to address it.
+            </p>
+          </section>
+
+          {/* International Data Transfers */}
+          <section>
+            <h2>International Data Transfers</h2>
+            <p>
+              SmartCOI&apos;s servers and data infrastructure are located in the
+              United States. If you access the service from outside the United
+              States, your data will be transferred to and processed in the
+              United States. By using the service, you consent to this transfer.
+              We apply the same security and privacy protections to all user
+              data regardless of the user&apos;s location.
+            </p>
+          </section>
+
           {/* Third-Party Services */}
           <section>
             <h2>Third-Party Services</h2>
@@ -182,6 +223,10 @@ export default function PrivacyPolicyPage() {
               <li>
                 <strong>Vercel</strong> &mdash; Application hosting and
                 deployment
+              </li>
+              <li>
+                <strong>PostHog</strong> &mdash; Product analytics (anonymized
+                usage patterns, feature adoption, no personal data)
               </li>
             </ul>
           </section>

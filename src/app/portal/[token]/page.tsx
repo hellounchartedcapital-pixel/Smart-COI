@@ -334,6 +334,20 @@ export default async function PortalPage({ params }: PortalPageProps) {
         {/* Upload Section */}
         <PortalUploadClient token={token} pmName={pmName} />
 
+        {/* Portal privacy notice */}
+        <p className="mt-6 text-center text-xs text-slate-400">
+          By uploading documents through this portal, you agree to
+          SmartCOI&apos;s{' '}
+          <a href="/terms" className="underline hover:text-slate-300">
+            Terms of Service
+          </a>{' '}
+          and{' '}
+          <a href="/privacy" className="underline hover:text-slate-300">
+            Privacy Policy
+          </a>
+          .
+        </p>
+
         {/* Footer */}
         <div className="mt-12 text-center text-xs text-slate-400 pb-8">
           <p>Powered by SmartCOI</p>
