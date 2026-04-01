@@ -36,6 +36,11 @@ export const metadata: Metadata = {
     description:
       'AI-powered COI compliance tracking for commercial property managers',
   },
+  alternates: {
+    types: {
+      'application/rss+xml': 'https://smartcoi.io/feed.xml',
+    },
+  },
 };
 
 export default function RootLayout({
