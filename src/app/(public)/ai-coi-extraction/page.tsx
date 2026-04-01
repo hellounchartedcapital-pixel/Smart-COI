@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'AI-Powered COI Data Extraction | SmartCOI',
+  title: 'AI-Powered COI Extraction | SmartCOI',
   description:
-    'Upload a COI PDF and get structured data in seconds. AI reads ACORD forms, extracts coverages, limits, and dates, then checks compliance automatically.',
+    'Upload a certificate PDF and get instant data extraction. Coverage types, limits, dates, carriers, and endorsements — pulled automatically by AI.',
   alternates: {
     canonical: 'https://smartcoi.io/ai-coi-extraction',
   },
   openGraph: {
-    title: 'AI-Powered COI Data Extraction | SmartCOI',
+    title: 'AI-Powered COI Extraction | SmartCOI',
     description:
-      'Upload a COI PDF and get structured data in seconds. AI reads ACORD forms, extracts coverages, limits, and dates, then checks compliance automatically.',
+      'Upload a certificate PDF and get instant data extraction. Coverage types, limits, dates, carriers, and endorsements — pulled automatically by AI.',
     type: 'website',
     url: 'https://smartcoi.io/ai-coi-extraction',
   },

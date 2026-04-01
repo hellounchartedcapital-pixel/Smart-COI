@@ -4,16 +4,16 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'SmartCOI vs Certificial: Honest COI Software Comparison',
+  title: 'SmartCOI vs Certificial: Honest Comparison (2026)',
   description:
-    'Compare SmartCOI and Certificial for COI tracking. See pricing, features, and ease of setup side by side. Find the right fit for your properties.',
+    'SmartCOI vs Certificial for COI compliance tracking. Compare pricing, AI extraction, self-serve setup, and which fits mid-market property managers.',
   alternates: {
     canonical: 'https://smartcoi.io/compare/smartcoi-vs-certificial',
   },
   openGraph: {
-    title: 'SmartCOI vs Certificial: Honest COI Software Comparison',
+    title: 'SmartCOI vs Certificial: Honest Comparison (2026)',
     description:
-      'Compare SmartCOI and Certificial for COI tracking. See pricing, features, and ease of setup side by side. Find the right fit for your properties.',
+      'SmartCOI vs Certificial for COI compliance tracking. Compare pricing, AI extraction, self-serve setup, and which fits mid-market property managers.',
     type: 'website',
     url: 'https://smartcoi.io/compare/smartcoi-vs-certificial',
   },
