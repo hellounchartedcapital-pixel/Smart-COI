@@ -111,6 +111,16 @@ Product is feature-complete and launch-ready. All critical flows tested (7/7 PAS
 
 ### Recent Changes
 
+#### Trial Lifecycle Emails (Apr 2026)
+
+- Created 5-email trial lifecycle sequence: Day 1 welcome, Day 3 feature highlight (conditional on 0 uploads), Day 7 midpoint check-in (with real usage stats), Day 12 trial ending, Day 14 trial expired
+- New service at `src/lib/emails/trial-lifecycle.ts` handles email selection, personalization, stat fetching, and deduplication
+- Added `trial_emails_sent` JSONB column to organizations table (migration: 20260401_add_trial_emails_sent.sql) for tracking which emails have been delivered
+- Extended daily cron job (`/api/cron/daily-check`) with Step 4: trial lifecycle email processing
+- Emails use personal tone from "Tony from SmartCOI" (contact@smartcoi.io) with minimal HTML styling
+- Day 3 email skipped automatically if user has already uploaded certificates
+- Day 7 email includes real certificate count, vendor count, and compliance rate from the database
+
 #### SEO: RSS Feed + Internal Linking (Apr 2026)
 
 - Created RSS 2.0 feed at `/feed.xml` (src/app/feed.xml/route.ts) with all blog posts + pinned money pages
