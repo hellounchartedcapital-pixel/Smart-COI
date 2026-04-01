@@ -64,6 +64,11 @@ const relatedResources: Record<string, { href: string; label: string }[]> = {
     { href: '/blog/cost-of-not-tracking-vendor-insurance', label: 'The Hidden Cost of Skipping Vendor COI Tracking' },
     { href: '/features/coi-tracking', label: 'COI Tracking Features' },
   ],
+  'best-coi-management-software': [
+    { href: '/coi-tracking-software', label: 'COI Tracking Software Features' },
+    { href: '/compare', label: 'Compare All COI Tracking Platforms' },
+    { href: '/blog/coi-compliance-guide-property-managers', label: 'The Complete Guide to COI Compliance' },
+  ],
 };
 
 /** FAQ structured data (JSON-LD) per blog post slug. */
@@ -111,6 +116,44 @@ const faqData: Record<string, any> = {
         acceptedAnswer: {
           '@type': 'Answer',
           text: 'Verify that coverage types and limits meet your requirements, policy dates are current, your entity is named as both Certificate Holder and Additional Insured, required endorsements are referenced, and the property address appears in the Description of Operations.',
+        },
+      },
+    ],
+  },
+  'best-coi-management-software': {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'What is the best COI management software?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'The best COI management software depends on your portfolio size. For mid-market property managers who want self-serve onboarding and transparent pricing, SmartCOI is purpose-built. For enterprises needing real-time policy verification, Certificial is the leader. For teams on Yardi or MRI, Jones offers the tightest integration.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How much does COI tracking software cost?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Pricing ranges from free (spreadsheets) to enterprise pricing (contact sales). SmartCOI starts at $63/month with transparent, published pricing and a 14-day free trial.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Can COI management software read PDF certificates automatically?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Some platforms use AI or OCR to extract data from certificate PDFs. SmartCOI uses AI trained on ACORD certificate formats to extract coverage types, limits, dates, and named entities automatically.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: "What's the difference between COI tracking and COI management?",
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'COI tracking focuses on monitoring expiration dates and collecting certificates. COI management is broader — it includes compliance checking against requirements, automated follow-ups, and audit reporting.',
         },
       },
     ],

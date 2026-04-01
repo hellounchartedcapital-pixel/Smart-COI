@@ -84,7 +84,7 @@ Product is feature-complete and launch-ready. All critical flows tested (7/7 PAS
 - Archive, delete, and bulk actions for vendors/tenants
 - SEO content pages and blog (MDX)
 - 57 programmatic pages under /insurance-requirements/
-- 11 blog posts (MDX) with inline CTAs and bottom-of-post CTAs
+- 12 blog posts (MDX) with inline CTAs and bottom-of-post CTAs
 - 10 competitor comparison pages under /compare/ (TrustLayer, Certificial, Billy, SmartCompliance, PINS, CertFocus, BCS, Jones, MyCOI, Spreadsheets)
 - 7 vertical landing pages under /for/
 - 2 alternatives pages under /alternatives/
@@ -110,6 +110,15 @@ Product is feature-complete and launch-ready. All critical flows tested (7/7 PAS
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### SEO: New COI Management Software Blog Post (Apr 2026)
+
+- Created `/blog/best-coi-management-software` — ~2,200 word comparison post targeting "coi management software" keyword cluster
+- Compares 6 platforms: SmartCOI, Certificial, Jones, myCOI, BCS, Spreadsheets with honest pros/cons
+- Includes comparison table, "How to Choose" decision framework, and FAQ section
+- FAQPage JSON-LD structured data (4 Q&As) added to blog page component
+- Related resources and internal links to compare pages, features, and compliance guide
+- Target: position improvement from 46 → page 1 for buyer-intent queries
 
 #### SEO: Meta Tag Optimization (Apr 2026)
 
