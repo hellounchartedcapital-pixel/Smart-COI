@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { DM_Sans } from 'next/font/google';
+import Script from 'next/script';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
@@ -50,6 +51,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={dmSans.variable} suppressHydrationWarning>
+      <head>
+        <Script
+          id="vtag-ai-js"
+          async
+          src="https://r2.leadsy.ai/tag.js"
+          data-pid="1xStA5mI6tQwjoDps"
+          data-version="062024"
+          strategy="afterInteractive"
+        />
+      </head>
       <body className="font-sans">
         {children}
         <Toaster position="bottom-right" richColors />

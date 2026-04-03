@@ -111,6 +111,11 @@ Product is feature-complete and launch-ready. All critical flows tested (7/7 PAS
 
 ### Recent Changes
 
+#### Added Instantly visitor tracking pixel (Apr 2026)
+
+- Added Instantly (leadsy.ai) visitor tracking script to root layout via `next/script` with `afterInteractive` strategy
+- Applies to all pages (public and dashboard) — no adverse effects on authenticated routes
+
 #### ToS & Privacy Policy Updates (Apr 2026)
 
 - **Terms of Service:** Updated entity name in introduction, added Intellectual Property section (user data ownership + limited license), Vendor Portal terms, Indemnification section (including AI reliance disclaimer), Governing Law & Disputes (Colorado, binding arbitration, no class actions), updated refund policy with service failure exception
