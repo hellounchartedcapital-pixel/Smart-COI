@@ -8,6 +8,7 @@ export interface VendorRecommendationInput {
   vendor_type: string;
   property_type?: string;
   property_details?: string;
+  industry?: string;
 }
 
 export interface RecommendedCoverage {
@@ -31,7 +32,7 @@ export interface VendorRecommendationResult {
 // System prompt for vendor template recommendation
 // ============================================================================
 
-const RECOMMENDATION_SYSTEM_PROMPT = `You are an expert commercial insurance advisor specializing in Certificate of Insurance (COI) requirements for commercial property management. Your task is to recommend insurance coverage requirements for a specific vendor type working at a commercial property.
+const RECOMMENDATION_SYSTEM_PROMPT = `You are an expert commercial insurance advisor specializing in Certificate of Insurance (COI) requirements across multiple industries. Your task is to recommend insurance coverage requirements for a specific third-party entity based on their type, the industry context, and any location/property details.
 
 Return a JSON object with exactly this structure:
 {
@@ -76,13 +77,21 @@ COVERAGE NAME FORMAT — CRITICAL:
   - "Installation Floater"
   - "Builder's Risk"
 
-PROPERTY CONTEXT:
+INDUSTRY CONTEXT:
+- Adjust recommendations based on the organization's industry:
+  - Property Management: emphasize GL, umbrella, additional insured requirements. Tenant-facing vendors need higher limits.
+  - Construction: emphasize completed operations, umbrella, employers' liability. Trades like roofing/electrical/demolition need higher limits. Consider builder's risk for GCs.
+  - Logistics/Transportation: emphasize auto liability, motor truck cargo, warehouse liability. Higher auto limits for fleet operators.
+  - Healthcare: emphasize professional liability, medical malpractice for clinical providers. Cyber liability for data-handling vendors.
+  - Manufacturing: emphasize product liability, pollution liability for chemical/hazmat suppliers. Higher limits for heavy equipment vendors.
+  - Hospitality: consider liquor liability for F&B vendors, event liability for entertainment providers.
+  - Retail: standard commercial requirements; emphasize product liability for suppliers, auto for delivery.
+
+PROPERTY/LOCATION CONTEXT:
 - If property type/details are provided, adjust limits accordingly:
   - Larger properties or higher-value properties → higher limits
-  - Multifamily/residential → standard limits, emphasize GL
   - Industrial/warehouse → consider higher auto and pollution limits
-  - Retail/mixed-use → standard commercial requirements
-  - If no property context, use standard commercial property defaults.
+  - If no property context, use standard commercial defaults.
 
 Return ONLY the JSON object, no other text.`;
 
@@ -108,12 +117,16 @@ export async function recommendVendorTemplate(
   }
 
   // Build user prompt with context
-  let userPrompt = `Recommend insurance coverage requirements for a "${input.vendor_type}" vendor working at a commercial property.`;
+  const industryLabel = input.industry ? input.industry.replace('_', ' ') : 'commercial';
+  let userPrompt = `Recommend insurance coverage requirements for a "${input.vendor_type}" working in the ${industryLabel} industry.`;
   if (input.property_type) {
-    userPrompt += ` The property is a ${input.property_type} property.`;
+    userPrompt += ` The location/property is a ${input.property_type} type.`;
   }
   if (input.property_details) {
-    userPrompt += ` Additional property details: ${input.property_details}.`;
+    userPrompt += ` Additional details: ${input.property_details}.`;
+  }
+  if (input.industry) {
+    userPrompt += ` Industry context: ${input.industry}.`;
   }
 
   const requestBody = JSON.stringify({

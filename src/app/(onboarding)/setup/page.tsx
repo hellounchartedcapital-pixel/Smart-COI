@@ -526,6 +526,7 @@ export default function OnboardingSetupPage() {
       )}
       {currentStep === 5 && (
         <StepTemplates
+          industry={selectedIndustry}
           onNext={handleTemplatesNext}
           onSkip={handleTemplatesSkip}
           saving={saving}

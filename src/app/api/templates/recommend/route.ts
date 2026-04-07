@@ -38,11 +38,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing vendor_type' }, { status: 400 });
     }
 
+    // Fetch org industry for context
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('industry')
+      .eq('id', profile.organization_id)
+      .single();
+
     // Run AI recommendation
     const result = await recommendVendorTemplate({
       vendor_type,
       property_type: property_type || undefined,
       property_details: property_details || undefined,
+      industry: org?.industry || undefined,
     });
 
     if (!result.success) {

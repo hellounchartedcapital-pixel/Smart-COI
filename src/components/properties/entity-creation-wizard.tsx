@@ -1105,9 +1105,14 @@ export function EntityCreationWizard({
                     </div>
                   )}
 
-                  {aiRequirements.length > 0 && !aiGenerating &&
-                    renderRequirementsTable(aiRequirements, setAiRequirements, 'wizard-ai-coverage')
-                  }
+                  {aiRequirements.length > 0 && !aiGenerating && (
+                    <>
+                      {renderRequirementsTable(aiRequirements, setAiRequirements, 'wizard-ai-coverage')}
+                      <p className="text-[10px] text-slate-400 mt-2 px-1">
+                        Coverage recommendations are based on common industry benchmarks and should not be considered insurance advice. Consult with your broker or risk management professional for your specific requirements.
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -1195,9 +1200,14 @@ export function EntityCreationWizard({
                     </div>
                   )}
 
-                  {leaseRequirements.length > 0 && !leaseExtracting &&
-                    renderRequirementsTable(leaseRequirements, setLeaseRequirements, 'wizard-lease-coverage')
-                  }
+                  {leaseRequirements.length > 0 && !leaseExtracting && (
+                    <>
+                      {renderRequirementsTable(leaseRequirements, setLeaseRequirements, 'wizard-lease-coverage')}
+                      <p className="text-[10px] text-slate-400 mt-2 px-1">
+                        Extracted requirements should be reviewed for accuracy. Consult with your broker or risk management professional for your specific requirements.
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
 
