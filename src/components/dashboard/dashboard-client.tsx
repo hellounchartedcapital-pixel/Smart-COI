@@ -179,7 +179,7 @@ export function DashboardClient({
   // Wizard state — opened from "Add new" link in upload dialog
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardMode, setWizardMode] = useState<'vendor' | 'tenant'>('vendor');
-  const [wizardPropertyId, setWizardPropertyId] = useState('');
+  const [wizardPropertyId, setWizardPropertyId] = useState<string | null>(null);
   const [wizardCoiFile, setWizardCoiFile] = useState<File | null>(null);
   const wizardPropertyType = propertyList.find((p) => p.id === wizardPropertyId)?.property_type;
 
