@@ -10,7 +10,7 @@ import { CheckCircle2, Loader2, FileText } from 'lucide-react';
 interface UploadedCOI {
   certificateId: string;
   insuredName: string;
-  entityType: 'vendor' | 'tenant';
+  entityType: string;
   entityId: string | null;
   templateId: string | null;
 }
