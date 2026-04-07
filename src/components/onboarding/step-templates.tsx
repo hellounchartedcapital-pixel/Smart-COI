@@ -1,18 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { formatCoverageType } from '@/lib/coverage-utils';
 import { formatCurrency } from '@/lib/utils';
-import type {
-  RequirementTemplate,
-  TemplateCoverageRequirement,
-  LimitType,
-} from '@/types';
+import { getTerminology } from '@/lib/constants/terminology';
+import {
+  getDefaultTemplates,
+  COVERAGE_DISCLAIMER,
+  type DefaultTemplate,
+  type DefaultTemplateRequirement,
+} from '@/lib/constants/industry-templates';
+import type { Industry, LimitType } from '@/types';
 
 const LIMIT_LABELS: Record<LimitType, string> = {
   per_occurrence: '/ Occ',
@@ -39,9 +40,8 @@ function formatLimit(amount: number | null, limitType: LimitType | null): string
   return `$${amount}`;
 }
 
-function summarizeCoverages(reqs: TemplateCoverageRequirement[]): string {
+function summarizeCoverages(reqs: DefaultTemplateRequirement[]): string {
   if (reqs.length === 0) return 'No coverages defined';
-  // Show up to 4 coverage summaries
   const parts: string[] = [];
   for (const r of reqs.slice(0, 4)) {
     const label = formatCoverageType(r.coverage_type);
@@ -53,64 +53,46 @@ function summarizeCoverages(reqs: TemplateCoverageRequirement[]): string {
 }
 
 export interface SelectedTemplate {
-  template: RequirementTemplate;
-  adjustedRequirements: TemplateCoverageRequirement[];
+  template: DefaultTemplate;
+  adjustedRequirements: DefaultTemplateRequirement[];
 }
 
 interface StepTemplatesProps {
+  industry: Industry | null;
   onNext: (selected: SelectedTemplate[]) => void;
   onSkip: () => void;
   saving: boolean;
 }
 
-export function StepTemplates({ onNext, onSkip, saving }: StepTemplatesProps) {
-  const [templates, setTemplates] = useState<RequirementTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  // Store user-edited requirements per template
+export function StepTemplates({ industry, onNext, onSkip, saving }: StepTemplatesProps) {
+  const terms = getTerminology(industry);
+  const allTemplates = useMemo(() => getDefaultTemplates(industry), [industry]);
+
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [editedReqs, setEditedReqs] = useState<
-    Record<string, TemplateCoverageRequirement[]>
-  >({});
+    Record<number, DefaultTemplateRequirement[]>
+  >(() => {
+    const initial: Record<number, DefaultTemplateRequirement[]> = {};
+    allTemplates.forEach((t, i) => {
+      initial[i] = [...t.requirements];
+    });
+    return initial;
+  });
 
-  const fetchTemplates = useCallback(async () => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('requirement_templates')
-      .select('*, coverage_requirements:template_coverage_requirements(*)')
-      .eq('is_system_default', true)
-      .order('category')
-      .order('name');
-
-    if (data) {
-      setTemplates(data as RequirementTemplate[]);
-      // Initialize edited reqs with original values
-      const initial: Record<string, TemplateCoverageRequirement[]> = {};
-      for (const t of data as RequirementTemplate[]) {
-        initial[t.id] = t.coverage_requirements ? [...t.coverage_requirements] : [];
-      }
-      setEditedReqs(initial);
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchTemplates();
-  }, [fetchTemplates]);
-
-  function toggleTemplate(id: string) {
+  function toggleTemplate(idx: number) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
       return next;
     });
   }
 
-  function updateReqLimit(templateId: string, reqId: string, value: string) {
+  function updateReqLimit(templateIdx: number, reqIdx: number, value: string) {
     setEditedReqs((prev) => ({
       ...prev,
-      [templateId]: prev[templateId].map((r) =>
-        r.id === reqId
+      [templateIdx]: prev[templateIdx].map((r, i) =>
+        i === reqIdx
           ? { ...r, minimum_limit: value === '' ? null : Number(value) }
           : r
       ),
@@ -119,35 +101,21 @@ export function StepTemplates({ onNext, onSkip, saving }: StepTemplatesProps) {
 
   function handleSubmit() {
     const selected: SelectedTemplate[] = [];
-    for (const id of selectedIds) {
-      const template = templates.find((t) => t.id === id);
-      if (template) {
-        selected.push({
-          template,
-          adjustedRequirements: editedReqs[id] || template.coverage_requirements || [],
-        });
-      }
+    for (const idx of selectedIds) {
+      selected.push({
+        template: allTemplates[idx],
+        adjustedRequirements: editedReqs[idx] || allTemplates[idx].requirements,
+      });
     }
     onNext(selected);
   }
 
-  const vendorTemplates = templates.filter((t) => t.category === 'vendor');
-  const tenantTemplates = templates.filter((t) => t.category === 'tenant');
+  const entityTemplates = allTemplates.filter((t) => t.category === 'vendor');
+  const tenantTemplates = allTemplates.filter((t) => t.category === 'tenant');
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">
-            Set your compliance requirements
-          </h2>
-        </div>
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand border-t-transparent" />
-        </div>
-      </div>
-    );
-  }
+  const entitySectionLabel = terms.hasTenants
+    ? `${terms.entity} Templates`.toUpperCase()
+    : 'Coverage Templates'.toUpperCase();
 
   return (
     <div className="space-y-8">
@@ -156,60 +124,68 @@ export function StepTemplates({ onNext, onSkip, saving }: StepTemplatesProps) {
           Set your compliance requirements
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Start with industry-standard templates and customize to fit your
-          needs.
+          Start with industry-standard templates and customize to fit your needs.
         </p>
       </div>
 
-      {/* Vendor/Entity Templates */}
-      {vendorTemplates.length > 0 && (
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Coverage Templates
-        </h3>
+      {/* Entity Templates */}
+      {entityTemplates.length > 0 && (
         <div className="space-y-3">
-          {vendorTemplates.map((t) => (
-            <TemplateCard
-              key={t.id}
-              template={t}
-              selected={selectedIds.has(t.id)}
-              onToggle={() => toggleTemplate(t.id)}
-              editedReqs={editedReqs[t.id] || []}
-              onUpdateLimit={(reqId, val) => updateReqLimit(t.id, reqId, val)}
-            />
-          ))}
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            {entitySectionLabel}
+          </h3>
+          <div className="space-y-3">
+            {entityTemplates.map((t) => {
+              const idx = allTemplates.indexOf(t);
+              return (
+                <TemplateCard
+                  key={idx}
+                  template={t}
+                  selected={selectedIds.has(idx)}
+                  onToggle={() => toggleTemplate(idx)}
+                  editedReqs={editedReqs[idx] || t.requirements}
+                  onUpdateLimit={(reqIdx, val) => updateReqLimit(idx, reqIdx, val)}
+                />
+              );
+            })}
+          </div>
         </div>
-      </div>
       )}
 
-      {/* Tenant Templates — only shown when tenant templates exist */}
+      {/* Tenant Templates — only for PM */}
       {tenantTemplates.length > 0 && (
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Tenant Templates
-        </h3>
         <div className="space-y-3">
-          {tenantTemplates.map((t) => (
-            <TemplateCard
-              key={t.id}
-              template={t}
-              selected={selectedIds.has(t.id)}
-              onToggle={() => toggleTemplate(t.id)}
-              editedReqs={editedReqs[t.id] || []}
-              onUpdateLimit={(reqId, val) => updateReqLimit(t.id, reqId, val)}
-            />
-          ))}
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            {terms.tenantPlural?.toUpperCase() ?? 'TENANT'} TEMPLATES
+          </h3>
+          <div className="space-y-3">
+            {tenantTemplates.map((t) => {
+              const idx = allTemplates.indexOf(t);
+              return (
+                <TemplateCard
+                  key={idx}
+                  template={t}
+                  selected={selectedIds.has(idx)}
+                  onToggle={() => toggleTemplate(idx)}
+                  editedReqs={editedReqs[idx] || t.requirements}
+                  onUpdateLimit={(reqIdx, val) => updateReqLimit(idx, reqIdx, val)}
+                />
+              );
+            })}
+          </div>
         </div>
-      </div>
       )}
 
-      {/* Tip */}
+      {/* Disclaimer + Tip */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
         <p className="text-sm font-medium text-emerald-800">
           Almost done!
         </p>
         <p className="mt-1 text-xs text-emerald-700">
-          These templates define what coverage each third party needs. You can always customize them later from Settings.
+          These templates define what coverage each {terms.entity.toLowerCase()} needs. You can always customize them later from Settings.
+        </p>
+        <p className="mt-2 text-[10px] text-emerald-600/80">
+          {COVERAGE_DISCLAIMER}
         </p>
       </div>
 
@@ -246,13 +222,13 @@ function TemplateCard({
   editedReqs,
   onUpdateLimit,
 }: {
-  template: RequirementTemplate;
+  template: DefaultTemplate;
   selected: boolean;
   onToggle: () => void;
-  editedReqs: TemplateCoverageRequirement[];
-  onUpdateLimit: (reqId: string, value: string) => void;
+  editedReqs: DefaultTemplateRequirement[];
+  onUpdateLimit: (reqIdx: number, value: string) => void;
 }) {
-  const reqs = editedReqs.length > 0 ? editedReqs : template.coverage_requirements || [];
+  const reqs = editedReqs.length > 0 ? editedReqs : template.requirements;
   const summary = summarizeCoverages(reqs);
 
   return (
@@ -270,11 +246,11 @@ function TemplateCard({
             <h4 className="text-sm font-semibold text-foreground">
               {template.name}
             </h4>
-            <Badge
-              className={`text-[10px] ${RISK_COLORS[template.risk_level] || 'bg-slate-100 text-slate-700'}`}
+            <span
+              className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${RISK_COLORS[template.risk_level] || 'bg-slate-100 text-slate-700'}`}
             >
               {template.risk_level.replace('_', ' ')}
-            </Badge>
+            </span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">{summary}</p>
         </div>
@@ -301,8 +277,8 @@ function TemplateCard({
             Adjust coverage limits:
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {reqs.map((req) => (
-              <div key={req.id} className="flex items-center gap-2">
+            {reqs.map((req, idx) => (
+              <div key={idx} className="flex items-center gap-2">
                 <Label className="w-28 shrink-0 text-xs text-slate-600">
                   {formatCoverageType(req.coverage_type)}
                   {req.limit_type && (
@@ -319,7 +295,7 @@ function TemplateCard({
                       type="number"
                       className="h-8 text-xs"
                       value={req.minimum_limit ?? ''}
-                      onChange={(e) => onUpdateLimit(req.id, e.target.value)}
+                      onChange={(e) => onUpdateLimit(idx, e.target.value)}
                       step={100000}
                       min={0}
                     />
