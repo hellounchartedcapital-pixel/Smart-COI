@@ -5,13 +5,15 @@ import { useRouter } from 'next/navigation';
 import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
 import { createOrgAfterSignup, completeOnboarding } from '@/lib/actions/auth';
+import { StepIndustry } from '@/components/onboarding/step-industry';
 import { StepOrgSetup, type OrgSetupData } from '@/components/onboarding/step-org-setup';
 import { StepProperty, type PropertyData } from '@/components/onboarding/step-property';
 import { StepBulkUpload } from '@/components/onboarding/step-bulk-upload';
 import { StepTemplates, type SelectedTemplate } from '@/components/onboarding/step-templates';
 import { StepAssignRequirements } from '@/components/onboarding/step-assign-requirements';
+import type { Industry } from '@/types';
 
-const STEP_LABELS = ['Organization', 'Property', 'Upload COIs', 'Requirements', 'Assign'];
+const STEP_LABELS = ['Industry', 'Organization', 'Property', 'Upload COIs', 'Requirements', 'Assign'];
 const TOTAL_STEPS = STEP_LABELS.length;
 
 export default function OnboardingSetupPage() {
@@ -23,6 +25,7 @@ export default function OnboardingSetupPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Data from each step
+  const [selectedIndustry, setSelectedIndustry] = useState<Industry | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [orgData, setOrgData] = useState<OrgSetupData>({
     companyName: '',
@@ -68,13 +71,16 @@ export default function OnboardingSetupPage() {
       if (profile?.organization_id) {
         setOrgId(profile.organization_id);
 
-        // Pre-fill the company name if the org already exists
+        // Pre-fill org data if the org already exists
         const { data: org } = await supabase
           .from('organizations')
-          .select('name')
+          .select('name, industry')
           .eq('id', profile.organization_id)
           .single();
 
+        if (org?.industry) {
+          setSelectedIndustry(org.industry as Industry);
+        }
         if (org?.name && !org.name.endsWith("'s Organization")) {
           setOrgData((prev) => ({ ...prev, companyName: org.name }));
         }
@@ -121,7 +127,32 @@ export default function OnboardingSetupPage() {
     }
   }
 
-  // Step 1: Save org name
+  // Step 1: Save industry
+  async function handleIndustryNext(industry: Industry) {
+    setSaving(true);
+    setError(null);
+    setSelectedIndustry(industry);
+
+    try {
+      const currentOrgId = await ensureOrgAndProfile(orgData.companyName || 'My Organization');
+
+      const { error: updateError } = await supabase
+        .from('organizations')
+        .update({ industry })
+        .eq('id', currentOrgId);
+
+      if (updateError) throw updateError;
+
+      posthog.capture('onboarding_step_completed', { step: 'select_industry', industry });
+      setCurrentStep(2);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save industry');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Step 2: Save org name
   async function handleOrgSetupNext(data: OrgSetupData) {
     setSaving(true);
     setError(null);
@@ -181,7 +212,7 @@ export default function OnboardingSetupPage() {
       }
 
       posthog.capture('onboarding_step_completed', { step: 'create_org' });
-      setCurrentStep(2);
+      setCurrentStep(3);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save organization');
     } finally {
@@ -189,10 +220,10 @@ export default function OnboardingSetupPage() {
     }
   }
 
-  // Step 2: Save property
+  // Step 3: Save property
   async function handlePropertyNext(data: PropertyData) {
     if (!orgId) {
-      setError('Organization not set up. Please go back to Step 1.');
+      setError('Organization not set up. Please go back to Step 2.');
       return;
     }
     setSaving(true);
@@ -234,7 +265,7 @@ export default function OnboardingSetupPage() {
       setPropertyId(property.id);
       setPropertyName(data.name);
       posthog.capture('onboarding_step_completed', { step: 'add_property' });
-      setCurrentStep(3);
+      setCurrentStep(4);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save property');
     } finally {
@@ -245,21 +276,21 @@ export default function OnboardingSetupPage() {
   function handlePropertySkip() {
     setPropertyId(null);
     setPropertyName('');
-    setCurrentStep(3);
+    setCurrentStep(4);
   }
 
-  // Step 3: Bulk upload complete → move to requirements
+  // Step 4: Bulk upload complete → move to requirements
   function handleBulkUploadNext(count: number, type?: 'vendor' | 'tenant' | null) {
     setUploadedCount(count);
     if (type) setCoiType(type);
     posthog.capture('onboarding_step_completed', { step: 'bulk_upload' });
-    setCurrentStep(4);
+    setCurrentStep(5);
   }
 
-  // Step 4: Save templates → move to step 5 (assign requirements)
+  // Step 5: Save templates → move to step 6 (assign requirements)
   async function handleTemplatesNext(selected: SelectedTemplate[]) {
     if (!orgId) {
-      setError('Organization not set up. Please go back to Step 1.');
+      setError('Organization not set up. Please go back to Step 2.');
       return;
     }
     setSaving(true);
@@ -302,9 +333,9 @@ export default function OnboardingSetupPage() {
 
       posthog.capture('onboarding_step_completed', { step: 'select_templates' });
 
-      // If there are uploaded COIs, go to step 5 to assign requirements
+      // If there are uploaded COIs, go to step 6 to assign requirements
       if (uploadedCount > 0) {
-        setCurrentStep(5);
+        setCurrentStep(6);
       } else {
         // No COIs uploaded — complete onboarding
         await completeOnboarding(orgId);
@@ -320,15 +351,15 @@ export default function OnboardingSetupPage() {
 
   async function handleTemplatesSkip() {
     if (!orgId) {
-      setError('Organization not set up. Please go back to Step 1.');
+      setError('Organization not set up. Please go back to Step 2.');
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      // If there are uploaded COIs, go to step 5 to assign requirements
+      // If there are uploaded COIs, go to step 6 to assign requirements
       if (uploadedCount > 0) {
-        setCurrentStep(5);
+        setCurrentStep(6);
         setSaving(false);
         return;
       }
@@ -342,7 +373,7 @@ export default function OnboardingSetupPage() {
     }
   }
 
-  // Step 5: Assign requirements complete → complete onboarding and go to dashboard
+  // Step 6: Assign requirements complete → complete onboarding and go to dashboard
   async function handleAssignNext() {
     if (!orgId) {
       setError('Organization not set up.');
@@ -371,7 +402,7 @@ export default function OnboardingSetupPage() {
     setError(null);
     try {
       await completeOnboarding(orgId);
-      posthog.capture('onboarding_skipped', { step: 5 });
+      posthog.capture('onboarding_skipped', { step: 6 });
       // Redirect with a query param so the dashboard can show the banner
       router.push('/dashboard?assign_pending=1');
       router.refresh();
@@ -454,6 +485,14 @@ export default function OnboardingSetupPage() {
 
       {/* Steps */}
       {currentStep === 1 && (
+        <StepIndustry
+          selected={selectedIndustry}
+          onNext={handleIndustryNext}
+          onSkip={handleSkipToDashboard}
+          saving={saving}
+        />
+      )}
+      {currentStep === 2 && (
         <StepOrgSetup
           data={orgData}
           onNext={handleOrgSetupNext}
@@ -461,7 +500,7 @@ export default function OnboardingSetupPage() {
           saving={saving}
         />
       )}
-      {currentStep === 2 && (
+      {currentStep === 3 && (
         <StepProperty
           orgData={orgData}
           data={propertyData}
@@ -470,7 +509,7 @@ export default function OnboardingSetupPage() {
           saving={saving}
         />
       )}
-      {currentStep === 3 && (
+      {currentStep === 4 && (
         <StepBulkUpload
           propertyId={propertyId}
           propertyName={propertyName}
@@ -479,14 +518,14 @@ export default function OnboardingSetupPage() {
           saving={saving}
         />
       )}
-      {currentStep === 4 && (
+      {currentStep === 5 && (
         <StepTemplates
           onNext={handleTemplatesNext}
           onSkip={handleTemplatesSkip}
           saving={saving}
         />
       )}
-      {currentStep === 5 && (
+      {currentStep === 6 && (
         <StepAssignRequirements
           propertyId={propertyId}
           orgId={orgId}

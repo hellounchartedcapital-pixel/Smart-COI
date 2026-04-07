@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import type { EntityType, OrganizationSettings } from '@/types';
+import type { EntityType, Industry, OrganizationSettings } from '@/types';
 
 // ============================================================================
 // Helpers
@@ -36,6 +36,23 @@ export async function updateOrgName(name: string) {
   const { error } = await supabase
     .from('organizations')
     .update({ name: name.trim() })
+    .eq('id', orgId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath('/dashboard');
+  return { success: true };
+}
+
+// ============================================================================
+// Update organization industry
+// ============================================================================
+
+export async function updateOrgIndustry(industry: Industry) {
+  const { supabase, orgId } = await getAuthContext();
+
+  const { error } = await supabase
+    .from('organizations')
+    .update({ industry })
     .eq('id', orgId);
   if (error) throw new Error(error.message);
 

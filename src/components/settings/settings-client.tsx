@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import {
   updateOrgName,
+  updateOrgIndustry,
   updateContactInfo,
   updateDefaultEntities,
   updateNotificationPreferences,
@@ -14,7 +15,8 @@ import {
   type NotificationPreferencesInput,
 } from '@/lib/actions/settings';
 import { getLoginTime, signOutAllDevices } from '@/lib/session';
-import type { OrganizationDefaultEntity, OrganizationSettings, EntityType } from '@/types';
+import { INDUSTRY_OPTIONS } from '@/lib/constants/industries';
+import type { Industry, OrganizationDefaultEntity, OrganizationSettings, EntityType } from '@/types';
 
 // ============================================================================
 // Props
@@ -22,6 +24,7 @@ import type { OrganizationDefaultEntity, OrganizationSettings, EntityType } from
 
 interface SettingsClientProps {
   orgName: string;
+  orgIndustry: Industry | null;
   orgSettings: OrganizationSettings;
   pmName: string;
   pmEmail: string;
@@ -36,6 +39,7 @@ interface SettingsClientProps {
 
 export function SettingsClient({
   orgName: initialOrgName,
+  orgIndustry: initialIndustry,
   orgSettings,
   pmName: initialPmName,
   pmEmail: initialPmEmail,
@@ -52,7 +56,7 @@ export function SettingsClient({
         </p>
       </div>
 
-      <OrganizationSection initialName={initialOrgName} />
+      <OrganizationSection initialName={initialOrgName} initialIndustry={initialIndustry} />
       <ContactSection initialName={initialPmName} initialEmail={initialPmEmail} />
       <DefaultEntitiesSection initialEntities={initialEntities} />
       <NotificationSection settings={orgSettings} />
@@ -65,15 +69,29 @@ export function SettingsClient({
 // Organization Section
 // ============================================================================
 
-function OrganizationSection({ initialName }: { initialName: string }) {
+function OrganizationSection({
+  initialName,
+  initialIndustry,
+}: {
+  initialName: string;
+  initialIndustry: Industry | null;
+}) {
   const [name, setName] = useState(initialName);
+  const [industry, setIndustry] = useState<Industry | null>(initialIndustry);
   const [saving, setSaving] = useState(false);
+
+  const isDirty = name !== initialName || industry !== initialIndustry;
 
   async function handleSave() {
     setSaving(true);
     try {
-      await updateOrgName(name);
-      toast.success('Organization name updated');
+      if (name !== initialName) {
+        await updateOrgName(name);
+      }
+      if (industry && industry !== initialIndustry) {
+        await updateOrgIndustry(industry);
+      }
+      toast.success('Organization settings updated');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update');
     } finally {
@@ -94,8 +112,24 @@ function OrganizationSection({ initialName }: { initialName: string }) {
             placeholder="Your Company Name"
           />
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="orgIndustry" className="text-xs">Industry</Label>
+          <select
+            id="orgIndustry"
+            value={industry ?? ''}
+            onChange={(e) => setIndustry((e.target.value || null) as Industry | null)}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <option value="">Select industry...</option>
+            {INDUSTRY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="flex justify-end">
-          <Button size="sm" disabled={saving || name === initialName} onClick={handleSave}>
+          <Button size="sm" disabled={saving || !isDirty} onClick={handleSave}>
             {saving ? 'Saving...' : 'Save'}
           </Button>
         </div>
