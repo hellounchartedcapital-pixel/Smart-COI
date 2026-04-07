@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { isOrgOnboarded } from '@/lib/actions/auth';
 import { DashboardShell } from '@/components/dashboard/sidebar';
+import type { Industry } from '@/types';
 import { TrialBanner } from '@/components/dashboard/trial-banner';
 import { UpgradeModalProvider } from '@/components/dashboard/upgrade-modal';
 import { SessionGuard } from '@/components/dashboard/session-guard';
@@ -34,17 +35,19 @@ export default async function DashboardLayout({
   let orgPlan = 'trial';
   let trialEndsAt: string | null = null;
   let paymentFailed = false;
+  let orgIndustry: Industry | null = null;
   let onboardingCompleted = false;
   if (profile?.organization_id) {
     const { data: org } = await supabase
       .from('organizations')
-      .select('name, settings, plan, trial_ends_at, payment_failed')
+      .select('name, settings, plan, trial_ends_at, payment_failed, industry')
       .eq('id', profile.organization_id)
       .single();
     if (org?.name) orgName = org.name;
     orgPlan = org?.plan ?? 'trial';
     trialEndsAt = org?.trial_ends_at ?? null;
     paymentFailed = org?.payment_failed ?? false;
+    orgIndustry = (org?.industry as Industry) ?? null;
 
     // Use the service-role-based check which also has a property/vendor fallback
     // and auto-fixes stale data. This bypasses any RLS issues with reading settings.
@@ -69,6 +72,7 @@ export default async function DashboardLayout({
             userName={userName ?? null}
             userEmail={userEmail}
             orgName={orgName}
+            industry={orgIndustry}
             trialDaysLeft={(() => {
               if (orgPlan !== 'trial' || !trialEndsAt) return null;
               const msLeft = new Date(trialEndsAt).getTime() - Date.now();

@@ -1,6 +1,10 @@
 // ============================================================================
 // SmartCOI — Notification Scheduler
 // Runs daily via cron to check expirations and schedule/send notifications.
+//
+// TODO: Migrate to query entities table instead of separate vendors/tenants.
+// TODO: Write entity_id to notification records in addition to vendor_id/tenant_id.
+// TODO: Replace PM-specific email language with terminology-aware labels.
 // ============================================================================
 
 import { createServiceClient } from '@/lib/supabase/service';
