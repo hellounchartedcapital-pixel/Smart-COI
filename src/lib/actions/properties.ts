@@ -249,7 +249,7 @@ export async function deleteProperty(propertyId: string) {
 // ---------------------------------------------------------------------------
 
 export interface CreateVendorInput {
-  property_id: string;
+  property_id: string | null;
   company_name: string;
   contact_name?: string;
   contact_email?: string;
@@ -400,7 +400,7 @@ export async function restoreVendor(vendorId: string, propertyId: string) {
 // ---------------------------------------------------------------------------
 
 export interface CreateTenantInput {
-  property_id: string;
+  property_id: string | null;
   company_name: string;
   contact_name?: string;
   contact_email?: string;
@@ -1060,7 +1060,7 @@ export async function assignCertificateToEntity(input: {
   entityType: 'vendor' | 'tenant';
   entityName: string;
   fileName: string;
-  propertyId: string;
+  propertyId: string | null;
 }) {
   const { supabase, userId, orgId } = await getAuthContext();
 

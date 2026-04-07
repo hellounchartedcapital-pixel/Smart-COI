@@ -294,7 +294,9 @@ export function DashboardClient({
                     <span className={`text-base font-medium ${rateColor}`}>Compliant</span>
                   </div>
                   <p className="mt-1 text-sm text-slate-500">
-                    Across {stats.propertyCount} {stats.propertyCount === 1 ? 'property' : 'properties'},{' '}
+                    {stats.propertyCount > 0 && (
+                      <>{stats.propertyCount} {stats.propertyCount === 1 ? 'property' : 'properties'}, </>
+                    )}
                     {stats.vendorCount} {stats.vendorCount === 1 ? 'vendor' : 'vendors'},{' '}
                     {stats.tenantCount} {stats.tenantCount === 1 ? 'tenant' : 'tenants'}
                   </p>

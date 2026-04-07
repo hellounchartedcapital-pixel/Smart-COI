@@ -92,7 +92,7 @@ interface RosterRow {
   matchedEntityId: string | null; // existing entity ID if matched
   matchScore: number;
   isNew: boolean;
-  propertyId: string;
+  propertyId: string | null;
   contactName: string;
   contactEmail: string;
   contactPhone: string;
@@ -346,7 +346,7 @@ export default function BulkUploadPage() {
 
   // ---- Step 2: Process all files (upload + extract with staggered concurrency) ----
   const processFiles = useCallback(async () => {
-    if (!orgId || !userId || !selectedPropertyId) return;
+    if (!orgId || !userId) return;
 
     // Cap at remaining extraction capacity
     if (extractionsRemaining !== null && extractionsRemaining <= 0) {
@@ -555,7 +555,7 @@ export default function BulkUploadPage() {
       const insuredName = (group.canonicalName || fileEntry.file.name).replace(/\.pdf$/i, '');
 
       // Try to match against existing entities
-      const match = findBestMatch(insuredName, existingEntities, selectedPropertyId);
+      const match = findBestMatch(insuredName, existingEntities, selectedPropertyId || undefined);
 
       rows.push({
         fileEntryId: fileEntry.id,
@@ -566,7 +566,7 @@ export default function BulkUploadPage() {
         matchedEntityId: match?.entity.id ?? null,
         matchScore: match?.score ?? 0,
         isNew: !match,
-        propertyId: selectedPropertyId,
+        propertyId: selectedPropertyId || null,
         contactName: match?.entity.contact_name ?? '',
         contactEmail: match?.entity.contact_email ?? '',
         contactPhone: match?.entity.contact_phone ?? '',
@@ -591,7 +591,7 @@ export default function BulkUploadPage() {
           matchedEntityId: match?.entity.id ?? null,
           matchScore: match?.score ?? 0,
           isNew: !match,
-          propertyId: selectedPropertyId,
+          propertyId: selectedPropertyId || null,
           contactName: match?.entity.contact_name ?? '',
           contactEmail: match?.entity.contact_email ?? '',
           contactPhone: match?.entity.contact_phone ?? '',
@@ -751,8 +751,7 @@ export default function BulkUploadPage() {
   const rosterProcessing = roster.filter((r) => r.status === 'creating').length;
   const allRosterDone = summaryStarted && rosterProcessing === 0;
 
-  const canStartProcessing =
-    selectedPropertyId && files.some((f) => f.status === 'pending');
+  const canStartProcessing = files.some((f) => f.status === 'pending');
 
   // ---- Roster row update helpers ----
   function updateRosterRow(fileEntryId: string, updates: Partial<RosterRow>) {
@@ -868,12 +867,13 @@ export default function BulkUploadPage() {
           {/* Property & entity type */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Property</Label>
+              <Label className="text-xs font-medium">Property <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
                 <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Select property" />
+                  <SelectValue placeholder="No property — org level" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">No property — org level</SelectItem>
                   {properties.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}

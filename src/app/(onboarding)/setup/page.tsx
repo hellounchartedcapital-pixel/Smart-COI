@@ -12,9 +12,7 @@ import { StepBulkUpload } from '@/components/onboarding/step-bulk-upload';
 import { StepTemplates, type SelectedTemplate } from '@/components/onboarding/step-templates';
 import { StepAssignRequirements } from '@/components/onboarding/step-assign-requirements';
 import type { Industry } from '@/types';
-
-const STEP_LABELS = ['Industry', 'Organization', 'Property', 'Upload COIs', 'Requirements', 'Assign'];
-const TOTAL_STEPS = STEP_LABELS.length;
+import { getTerminology } from '@/lib/constants/terminology';
 
 export default function OnboardingSetupPage() {
   const router = useRouter();
@@ -37,6 +35,11 @@ export default function OnboardingSetupPage() {
   const [propertyName, setPropertyName] = useState('');
   const [coiType, setCoiType] = useState<'vendor' | 'tenant' | null>(null);
   const [uploadedCount, setUploadedCount] = useState(0);
+
+  // Dynamic step labels based on industry
+  const terms = getTerminology(selectedIndustry);
+  const STEP_LABELS = ['Industry', 'Organization', terms.location, 'Upload COIs', 'Requirements', 'Assign'];
+  const TOTAL_STEPS = STEP_LABELS.length;
 
   // Store auth user ID for creating org/profile when missing
   const authUserIdRef = useRef<string | null>(null);
@@ -503,6 +506,7 @@ export default function OnboardingSetupPage() {
       {currentStep === 3 && (
         <StepProperty
           orgData={orgData}
+          industry={selectedIndustry}
           data={propertyData}
           onNext={handlePropertyNext}
           onSkip={handlePropertySkip}
