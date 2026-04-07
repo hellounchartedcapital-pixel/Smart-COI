@@ -33,10 +33,8 @@ interface StepBulkUploadProps {
   saving: boolean;
 }
 
-// Config — batch of 2 with 3s pause between batches, 1.5s stagger within batch
-const BATCH_SIZE = 2;
-const BATCH_PAUSE_MS = 3_000;
-const STAGGER_DELAY_MS = 1_500;
+// Config — sequential processing with 2s pause between files to stay within API rate limits
+const BATCH_PAUSE_MS = 2_000;
 const FETCH_TIMEOUT_MS = 120_000;
 const MAX_FREE_UPLOADS = 50;
 
@@ -320,23 +318,14 @@ export function StepBulkUpload({
       }
     }
 
-    // Batch processing: process BATCH_SIZE files with stagger, then pause before next batch
+    // Sequential processing: one file at a time with pause between each
     const queue = [...pendingFiles];
 
-    while (queue.length > 0 && !abortRef.current) {
-      const batch = queue.splice(0, BATCH_SIZE);
-      // Stagger files within the batch by STAGGER_DELAY_MS
-      const staggered = batch.map((entry, i) =>
-        new Promise<void>((resolve) =>
-          setTimeout(async () => {
-            await processOne(entry);
-            resolve();
-          }, i * STAGGER_DELAY_MS)
-        )
-      );
-      await Promise.all(staggered);
-      // Pause between batches to prevent API overload
-      if (queue.length > 0 && !abortRef.current) {
+    for (const entry of queue) {
+      if (abortRef.current) break;
+      await processOne(entry);
+      // Pause between files to stay within Anthropic API rate limits
+      if (queue.indexOf(entry) < queue.length - 1 && !abortRef.current) {
         await new Promise((resolve) => setTimeout(resolve, BATCH_PAUSE_MS));
       }
     }

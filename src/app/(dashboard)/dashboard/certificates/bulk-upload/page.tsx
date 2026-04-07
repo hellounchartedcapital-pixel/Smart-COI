@@ -106,11 +106,8 @@ interface RosterRow {
 
 type BulkStep = 'files' | 'processing' | 'review' | 'summary';
 
-// Max concurrent extractions — keep low to avoid Anthropic rate limits
-const MAX_CONCURRENT = 2;
-
-// Delay between starting each extraction (ms)
-const STAGGER_DELAY_MS = 3_000;
+// Delay between sequential file extractions (ms) — keeps us within Anthropic rate limits
+const FILE_PAUSE_MS = 2_000;
 
 // Per-request fetch timeout (ms) — prevents indefinite hangs
 const FETCH_TIMEOUT_MS = 120_000;
@@ -520,40 +517,19 @@ export default function BulkUploadPage() {
       }
     }
 
-    // Process with staggered concurrency
+    // Sequential processing: one file at a time with pause between each
     const queue = [...pendingFiles];
-    const active: Promise<void>[] = [];
-    console.log(`[bulk] Starting queue: ${queue.length} files, max concurrency=${MAX_CONCURRENT}`);
+    console.log(`[bulk] Starting queue: ${queue.length} files, sequential processing`);
 
-    async function runQueue() {
-      while (queue.length > 0 && !abortRef.current) {
-        // Wait until a slot is available
-        while (active.length >= MAX_CONCURRENT && !abortRef.current) {
-          await Promise.race(active);
-        }
-        if (abortRef.current) break;
-
-        const next = queue.shift();
-        if (!next) break;
-
-        // Stagger: wait between starting each extraction
-        if (active.length > 0) {
-          setProcessingMessage(`Pacing requests to avoid API limits...`);
-          await new Promise((resolve) => setTimeout(resolve, STAGGER_DELAY_MS));
-          setProcessingMessage(null);
-        }
-
-        const promise = processOne(next).then(() => {
-          const idx = active.indexOf(promise);
-          if (idx >= 0) active.splice(idx, 1);
-        });
-        active.push(promise);
+    for (let i = 0; i < queue.length; i++) {
+      if (abortRef.current) break;
+      await processOne(queue[i]);
+      // Pause between files to stay within Anthropic API rate limits
+      if (i < queue.length - 1 && !abortRef.current) {
+        await new Promise((resolve) => setTimeout(resolve, FILE_PAUSE_MS));
       }
-      await Promise.all(active);
-      console.log(`[bulk] Queue complete. Aborted=${abortRef.current}`);
     }
-
-    await runQueue();
+    console.log(`[bulk] Queue complete. Aborted=${abortRef.current}`);
   }, [orgId, userId, selectedPropertyId, files, supabase, showUpgradeModal, extractionsRemaining]);
 
   // ---- Build roster from extracted data ----
