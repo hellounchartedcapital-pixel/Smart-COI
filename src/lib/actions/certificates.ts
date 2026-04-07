@@ -224,6 +224,13 @@ export async function runAutoCompliance(
     if (prop) {
       acceptCertHolderInAI = prop.accept_cert_holder_in_additional_insured ?? true;
     }
+  } else {
+    // No property — fall back to organization default entities for entity matching
+    const { data: orgDefaults } = await supabase
+      .from('organization_default_entities')
+      .select('id, entity_name, entity_address, entity_type')
+      .eq('organization_id', orgId);
+    propEntities = (orgDefaults ?? []) as PropertyEntityInput[];
   }
 
   // Map to calculation inputs

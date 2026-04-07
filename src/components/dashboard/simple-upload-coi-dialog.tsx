@@ -29,7 +29,7 @@ interface SimpleUploadCOIDialogProps {
   properties: { id: string; name: string }[];
   vendors: { id: string; company_name: string; property_id: string | null }[];
   tenants: { id: string; company_name: string; property_id: string | null }[];
-  onOpenWizard?: (mode: 'vendor' | 'tenant', propertyId: string, coiFile?: File) => void;
+  onOpenWizard?: (mode: 'vendor' | 'tenant', propertyId: string | null, coiFile?: File) => void;
 }
 
 export function SimpleUploadCOIDialog({
@@ -138,7 +138,7 @@ export function SimpleUploadCOIDialog({
   }
 
   function handlePropertyChange(value: string) {
-    setSelectedPropertyId(value);
+    setSelectedPropertyId(value === '__all__' ? '' : value);
     setSelectedEntityId('');
     setEntitySearch('');
   }
@@ -158,10 +158,10 @@ export function SimpleUploadCOIDialog({
   }
 
   function handleAddNew() {
-    if (!effectivePropertyId || !onOpenWizard) return;
+    if (!onOpenWizard) return;
     const coiToPass = file ?? undefined;
     handleOpenChange(false);
-    onOpenWizard(entityType, effectivePropertyId, coiToPass);
+    onOpenWizard(entityType, effectivePropertyId || null, coiToPass);
   }
 
   const canSubmit = file && selectedEntityId;
@@ -230,9 +230,10 @@ export function SimpleUploadCOIDialog({
           {/* Assignment controls — revealed after file is selected */}
           {file && (
             <>
-              {/* Property dropdown */}
+              {/* Property dropdown (optional) */}
+              {properties.length > 0 && (
               <div className="space-y-1.5">
-                <Label className="text-xs">Property</Label>
+                <Label className="text-xs">Property <span className="text-muted-foreground font-normal">(optional)</span></Label>
                 {properties.length === 1 ? (
                   <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-foreground">
                     {properties[0].name}
@@ -243,9 +244,10 @@ export function SimpleUploadCOIDialog({
                     onValueChange={handlePropertyChange}
                   >
                     <SelectTrigger className="text-sm">
-                      <SelectValue placeholder="Select property" />
+                      <SelectValue placeholder="All — no property filter" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="__all__">All — no property filter</SelectItem>
                       {properties.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name}
@@ -255,6 +257,7 @@ export function SimpleUploadCOIDialog({
                   </Select>
                 )}
               </div>
+              )}
 
               {/* Entity type toggle */}
               <div className="space-y-1.5">

@@ -104,7 +104,7 @@ const UNIT_SIZE_RANGES = [
 
 interface EntityCreationWizardProps {
   mode: 'vendor' | 'tenant';
-  propertyId: string;
+  propertyId: string | null;
   propertyType?: string;
   templates: RequirementTemplate[];
   open: boolean;

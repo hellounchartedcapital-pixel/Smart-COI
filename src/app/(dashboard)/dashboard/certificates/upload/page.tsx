@@ -163,29 +163,32 @@ export default function CertificateUploadPage() {
     })();
   }, [orgId, entityId, supabase]);
 
-  // ------ Load vendors + tenants for selected property ------
+  // ------ Load vendors + tenants (optionally filtered by property) ------
   useEffect(() => {
-    if (!orgId || !selectedPropertyId) return;
+    if (!orgId) return;
     setLoadingEntities(true);
     (async () => {
-      const [vendorsRes, tenantsRes] = await Promise.all([
-        supabase
-          .from('vendors')
-          .select('id, company_name')
-          .eq('organization_id', orgId)
-          .eq('property_id', selectedPropertyId)
-          .is('deleted_at', null)
-          .is('archived_at', null)
-          .order('company_name'),
-        supabase
-          .from('tenants')
-          .select('id, company_name')
-          .eq('organization_id', orgId)
-          .eq('property_id', selectedPropertyId)
-          .is('deleted_at', null)
-          .is('archived_at', null)
-          .order('company_name'),
-      ]);
+      let vendorQuery = supabase
+        .from('vendors')
+        .select('id, company_name')
+        .eq('organization_id', orgId)
+        .is('deleted_at', null)
+        .is('archived_at', null)
+        .order('company_name');
+      let tenantQuery = supabase
+        .from('tenants')
+        .select('id, company_name')
+        .eq('organization_id', orgId)
+        .is('deleted_at', null)
+        .is('archived_at', null)
+        .order('company_name');
+
+      if (selectedPropertyId) {
+        vendorQuery = vendorQuery.eq('property_id', selectedPropertyId);
+        tenantQuery = tenantQuery.eq('property_id', selectedPropertyId);
+      }
+
+      const [vendorsRes, tenantsRes] = await Promise.all([vendorQuery, tenantQuery]);
 
       const merged: EntityOption[] = [
         ...(vendorsRes.data ?? []).map((v) => ({ ...v, type: 'vendor' as const })),
@@ -420,70 +423,71 @@ export default function CertificateUploadPage() {
       {needsSelector && (
         <Card>
           <CardContent className="space-y-4 pt-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Property</label>
-              <Select
-                value={selectedPropertyId ?? ''}
-                onValueChange={(val) => {
-                  setSelectedPropertyId(val);
-                  setEntityId(null);
-                  setEntityType(null);
-                  setEntityName(null);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a property…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {properties.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {selectedPropertyId && (
+            {properties.length > 0 && (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Vendor or Tenant</label>
-                {loadingEntities ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-                  </div>
-                ) : entities.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No vendors or tenants found for this property.
-                  </p>
-                ) : (
-                  <Select
-                    value={entityId ?? ''}
-                    onValueChange={(val) => {
-                      const picked = entities.find((e) => e.id === val);
-                      if (picked) {
-                        setEntityId(picked.id);
-                        setEntityType(picked.type);
-                        setEntityName(picked.company_name);
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select vendor or tenant…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {entities.map((e) => (
-                        <SelectItem key={e.id} value={e.id}>
-                          {e.company_name}{' '}
-                          <span className="text-muted-foreground">
-                            ({e.type})
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
+                <label className="text-sm font-medium">Property <span className="text-muted-foreground font-normal">(optional)</span></label>
+                <Select
+                  value={selectedPropertyId ?? ''}
+                  onValueChange={(val) => {
+                    setSelectedPropertyId(val === '__all__' ? null : val);
+                    setEntityId(null);
+                    setEntityType(null);
+                    setEntityName(null);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All — no property filter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All — no property filter</SelectItem>
+                    {properties.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Vendor or Tenant</label>
+              {loadingEntities ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+                </div>
+              ) : entities.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No vendors or tenants found.{selectedPropertyId ? ' Try removing the property filter.' : ''}
+                </p>
+              ) : (
+                <Select
+                  value={entityId ?? ''}
+                  onValueChange={(val) => {
+                    const picked = entities.find((e) => e.id === val);
+                    if (picked) {
+                      setEntityId(picked.id);
+                      setEntityType(picked.type);
+                      setEntityName(picked.company_name);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select vendor or tenant…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {entities.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.company_name}{' '}
+                        <span className="text-muted-foreground">
+                          ({e.type})
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}

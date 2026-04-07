@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { PropertyType } from '@/types';
+import { getTerminology } from '@/lib/constants/terminology';
+import type { Industry, PropertyType } from '@/types';
 import type { OrgSetupData } from './step-org-setup';
 
 interface PropertyEntityEntry {
@@ -24,17 +25,48 @@ export interface PropertyData {
   entities: PropertyEntityEntry[];
 }
 
+const PROPERTY_TYPES_BY_INDUSTRY: Partial<Record<Industry, { value: PropertyType; label: string }[]>> = {
+  property_management: [
+    { value: 'office', label: 'Office' },
+    { value: 'retail', label: 'Retail' },
+    { value: 'industrial', label: 'Industrial' },
+    { value: 'mixed_use', label: 'Mixed-Use' },
+    { value: 'multifamily', label: 'Multifamily' },
+    { value: 'other', label: 'Other' },
+  ],
+  hospitality: [
+    { value: 'other', label: 'Hotel' },
+    { value: 'retail', label: 'Resort' },
+    { value: 'mixed_use', label: 'Mixed-Use' },
+  ],
+  construction: [
+    { value: 'other', label: 'Commercial' },
+    { value: 'multifamily', label: 'Residential' },
+    { value: 'industrial', label: 'Infrastructure' },
+  ],
+  logistics: [
+    { value: 'industrial', label: 'Warehouse' },
+    { value: 'other', label: 'Distribution Center' },
+    { value: 'office', label: 'Office' },
+  ],
+};
+
 interface StepPropertyProps {
   orgData: OrgSetupData;
+  industry: Industry | null;
   data: PropertyData | null;
   onNext: (data: PropertyData) => void;
   onSkip: () => void;
   saving: boolean;
 }
 
-export function StepProperty({ orgData, data, onNext, onSkip, saving }: StepPropertyProps) {
+export function StepProperty({ orgData, industry, data, onNext, onSkip, saving }: StepPropertyProps) {
+  const terms = getTerminology(industry);
   const [name, setName] = useState(data?.name ?? '');
   const [address, setAddress] = useState(data?.address ?? '');
+
+  const typeOptions = PROPERTY_TYPES_BY_INDUSTRY[industry ?? 'other'] ?? null;
+  const [propertyType, setPropertyType] = useState<PropertyType>(data?.property_type ?? 'other');
 
   // Pre-fill entity names from existing data or org defaults
   const existingCH = data?.entities?.find((e) => e.entity_type === 'certificate_holder');
@@ -72,7 +104,7 @@ export function StepProperty({ orgData, data, onNext, onSkip, saving }: StepProp
       city: '',
       state: '',
       zip: '',
-      property_type: 'office',
+      property_type: propertyType,
       entities,
     });
   }
@@ -81,35 +113,52 @@ export function StepProperty({ orgData, data, onNext, onSkip, saving }: StepProp
     <form onSubmit={handleSubmit} className="space-y-8">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-foreground">
-          Add your first property
+          Add your first {terms.location.toLowerCase()}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          This is the building you&apos;ll upload COIs for. You can add more properties later from the dashboard.
+          {terms.locationDescription}. You can add more {terms.locationPlural.toLowerCase()} later from the dashboard.
         </p>
       </div>
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="propName">Property name *</Label>
+          <Label htmlFor="propName">{terms.location} name *</Label>
           <Input
             id="propName"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="100 Park Avenue"
+            placeholder={industry === 'property_management' ? '100 Park Avenue' : `My ${terms.location}`}
             required
             autoFocus
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="propAddress">Street address</Label>
+          <Label htmlFor="propAddress">Address</Label>
           <Input
             id="propAddress"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="100 Park Avenue, New York, NY 10178"
+            placeholder="Street address, city, state, zip"
           />
         </div>
+
+        {/* Property type — only shown when industry has specific types */}
+        {typeOptions && (
+          <div className="space-y-2">
+            <Label htmlFor="propType">Type</Label>
+            <select
+              id="propType"
+              value={propertyType}
+              onChange={(e) => setPropertyType(e.target.value as PropertyType)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+              {typeOptions.map((opt) => (
+                <option key={opt.value + opt.label} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Certificate Holder */}
         <div className="space-y-2">
@@ -118,11 +167,11 @@ export function StepProperty({ orgData, data, onNext, onSkip, saving }: StepProp
             id="certHolder"
             value={certHolderName}
             onChange={(e) => setCertHolderName(e.target.value)}
-            placeholder="Acme Property Management LLC"
+            placeholder="Your company or entity name"
             required
           />
           <p className="text-xs text-muted-foreground">
-            The entity that must appear in the certificate holder field on COIs for this property.
+            The entity that must appear in the certificate holder field on COIs for this {terms.location.toLowerCase()}.
           </p>
         </div>
 
@@ -133,7 +182,7 @@ export function StepProperty({ orgData, data, onNext, onSkip, saving }: StepProp
             id="additionalInsured"
             value={additionalInsuredName}
             onChange={(e) => setAdditionalInsuredName(e.target.value)}
-            placeholder="Park Avenue Owners LLC"
+            placeholder="Optional additional insured entity"
           />
           <p className="text-xs text-muted-foreground">
             Optional. The entity that must be listed as additional insured on COIs.
@@ -151,7 +200,7 @@ export function StepProperty({ orgData, data, onNext, onSkip, saving }: StepProp
           className="text-center text-sm text-muted-foreground hover:text-foreground"
           disabled={saving}
         >
-          Skip to Dashboard
+          Skip — I&apos;ll organize later
         </button>
       </div>
     </form>

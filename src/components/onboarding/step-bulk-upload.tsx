@@ -122,7 +122,7 @@ export function StepBulkUpload({
 
   // Process files: upload → extract
   const processFiles = useCallback(async () => {
-    if (!orgId || !userId || !propertyId) return;
+    if (!orgId || !userId) return;
 
     setProcessing(true);
     setAllDone(false);
@@ -209,19 +209,24 @@ export function StepBulkUpload({
           .eq('id', certId!)
           .single();
 
-        // Auto-assign certificate to a vendor or tenant linked to the property
+        // Auto-assign certificate to a vendor or tenant
         const insuredName = updatedCert?.insured_name || entry.file.name.replace(/\.pdf$/i, '');
-        if (propertyId && coiType) {
+        if (coiType) {
           try {
             if (coiType === 'vendor') {
-              const { data: existing } = await supabase
+              // Build query for existing vendor match
+              let query = supabase
                 .from('vendors')
                 .select('id')
                 .eq('organization_id', orgId!)
-                .eq('property_id', propertyId)
                 .ilike('company_name', insuredName)
-                .is('deleted_at', null)
-                .maybeSingle();
+                .is('deleted_at', null);
+              if (propertyId) {
+                query = query.eq('property_id', propertyId);
+              } else {
+                query = query.is('property_id', null);
+              }
+              const { data: existing } = await query.maybeSingle();
 
               let vendorId = existing?.id;
               if (!vendorId) {
@@ -229,7 +234,7 @@ export function StepBulkUpload({
                   .from('vendors')
                   .insert({
                     organization_id: orgId!,
-                    property_id: propertyId,
+                    property_id: propertyId ?? null,
                     company_name: insuredName,
                     compliance_status: 'under_review',
                   })
@@ -245,14 +250,18 @@ export function StepBulkUpload({
                   .eq('id', certId!);
               }
             } else {
-              const { data: existing } = await supabase
+              let query = supabase
                 .from('tenants')
                 .select('id')
                 .eq('organization_id', orgId!)
-                .eq('property_id', propertyId)
                 .ilike('company_name', insuredName)
-                .is('deleted_at', null)
-                .maybeSingle();
+                .is('deleted_at', null);
+              if (propertyId) {
+                query = query.eq('property_id', propertyId);
+              } else {
+                query = query.is('property_id', null);
+              }
+              const { data: existing } = await query.maybeSingle();
 
               let tenantId = existing?.id;
               if (!tenantId) {
@@ -260,7 +269,7 @@ export function StepBulkUpload({
                   .from('tenants')
                   .insert({
                     organization_id: orgId!,
-                    property_id: propertyId,
+                    property_id: propertyId ?? null,
                     company_name: insuredName,
                     compliance_status: 'under_review',
                   })
@@ -338,40 +347,6 @@ export function StepBulkUpload({
   const activeCount = files.filter((f) => f.status === 'uploading' || f.status === 'extracting').length;
   const totalCount = files.length;
 
-  // No property — show message
-  if (!propertyId) {
-    return (
-      <div className="space-y-8">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">
-            Upload your COIs
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Add a property first to start uploading certificates.
-          </p>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            You skipped adding a property. You can upload COIs from the dashboard after adding one.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3">
-          <Button size="lg" className="w-full font-semibold" onClick={() => onNext(0)} disabled={saving}>
-            {saving ? 'Finishing...' : 'Continue to Requirements'}
-          </Button>
-          <button
-            type="button"
-            onClick={onSkip}
-            className="text-center text-sm text-muted-foreground hover:text-foreground"
-            disabled={saving}
-          >
-            Skip to Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -380,7 +355,9 @@ export function StepBulkUpload({
           Upload your COIs
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Drop your certificates for <span className="font-medium text-foreground">{propertyName}</span>.
+          {propertyName ? (
+            <>Drop your certificates for <span className="font-medium text-foreground">{propertyName}</span>. </>
+          ) : null}
           Our AI will extract vendor names, coverage types, limits, and dates automatically.
         </p>
       </div>
@@ -574,7 +551,7 @@ export function StepBulkUpload({
             size="lg"
             className="w-full font-semibold"
             onClick={processFiles}
-            disabled={!propertyId || !coiType || pendingCount === 0}
+            disabled={!coiType || pendingCount === 0}
           >
             Upload &amp; Extract {pendingCount} COI{pendingCount !== 1 ? 's' : ''}
           </Button>
