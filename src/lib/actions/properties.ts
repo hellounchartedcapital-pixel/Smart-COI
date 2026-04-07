@@ -851,7 +851,7 @@ export async function assignTemplateToEntity(
  */
 export async function runComplianceForEntity(
   entityId: string,
-  entityType: 'vendor' | 'tenant',
+  entityType: string,
 ) {
   const { supabase, userId, orgId } = await getAuthContext();
 
