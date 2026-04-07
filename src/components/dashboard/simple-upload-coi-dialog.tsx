@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { validatePDFFile } from '@/lib/utils/file-validation';
 import { Upload, CheckCircle2, FileText, X, UserPlus } from 'lucide-react';
 
 interface SimpleUploadCOIDialogProps {
@@ -88,9 +89,10 @@ export function SimpleUploadCOIDialog({
     : filteredByProperty;
 
   // File validation
-  function validateAndSetFile(f: File) {
-    if (f.type !== 'application/pdf') {
-      toast.error('Please select a PDF file.');
+  async function validateAndSetFile(f: File) {
+    const result = await validatePDFFile(f);
+    if (!result.valid) {
+      toast.error(result.error);
       return;
     }
     setFile(f);

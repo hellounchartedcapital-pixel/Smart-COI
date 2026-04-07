@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL } from '@/lib/utils/file-validation';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const PDF_MAGIC_BYTES = [0x25, 0x50, 0x44, 0x46]; // %PDF
 
 type UploadState = 'idle' | 'validating' | 'uploading' | 'processing' | 'success' | 'error' | 'rate_limited';
@@ -26,7 +26,7 @@ export function PortalUploadClient({ token, pmName }: PortalUploadClientProps) {
 
     // Check file size
     if (file.size > MAX_FILE_SIZE) {
-      return 'File is too large. Maximum size is 10 MB.';
+      return `File is too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.`;
     }
 
     // Check PDF magic bytes
@@ -278,7 +278,7 @@ export function PortalUploadClient({ token, pmName }: PortalUploadClientProps) {
         >
           Select PDF File
         </button>
-        <p className="text-xs text-slate-400 mt-4">PDF only, maximum 10 MB</p>
+        <p className="text-xs text-slate-400 mt-4">PDF only, maximum {MAX_FILE_SIZE_LABEL}</p>
       </div>
     </section>
   );

@@ -1,4 +1,5 @@
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+export const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+export const MAX_FILE_SIZE_LABEL = '20MB';
 
 // PDF magic number: %PDF (hex: 25 50 44 46)
 const PDF_MAGIC_BYTES = [0x25, 0x50, 0x44, 0x46];
@@ -10,7 +11,7 @@ export interface FileValidationResult {
 
 /**
  * Validate that a file is a PDF by checking its header bytes (magic number).
- * Also validates file size (max 10MB).
+ * Also validates file size.
  */
 export async function validatePDFFile(file: File): Promise<FileValidationResult> {
   // Check file size first
@@ -18,7 +19,7 @@ export async function validatePDFFile(file: File): Promise<FileValidationResult>
     const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
     return {
       valid: false,
-      error: `File is too large (${sizeMB}MB). Maximum allowed size is 10MB.`,
+      error: `File is too large (${sizeMB}MB). Maximum allowed size is ${MAX_FILE_SIZE_LABEL}.`,
     };
   }
 
