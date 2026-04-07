@@ -91,7 +91,7 @@ async function getDashboardData(orgId: string) {
       .limit(10),
     supabase
       .from('organizations')
-      .select('plan, trial_ends_at')
+      .select('plan, trial_ends_at, industry')
       .eq('id', orgId)
       .single(),
     supabase
@@ -375,6 +375,7 @@ async function getDashboardData(orgId: string) {
     actionItems,
     propertyOverviews,
     activity,
+    industry: (org?.industry as string) ?? null,
     propertyList,
     vendorList,
     tenantList,
