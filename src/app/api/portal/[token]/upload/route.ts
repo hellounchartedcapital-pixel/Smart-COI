@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getActivePlanStatus } from '@/lib/plan-status';
+import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL } from '@/lib/utils/file-validation';
 import crypto from 'crypto';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const PDF_MAGIC_BYTES = [0x25, 0x50, 0x44, 0x46]; // %PDF
 const MAX_UPLOADS_PER_HOUR = 5;
 
@@ -89,7 +89,7 @@ export async function POST(
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: 'File is too large. Maximum size is 10 MB.' },
+        { error: `File is too large. Maximum size is ${MAX_FILE_SIZE_LABEL}.` },
         { status: 400 }
       );
     }

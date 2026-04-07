@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { extractCOIFromPDF } from '@/lib/ai/extraction';
+import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL } from '@/lib/utils/file-validation';
 import { checkExtractionLimit } from '@/lib/plan-limits';
 import { getActivePlanStatus, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import { createServiceClient } from '@/lib/supabase/service';
@@ -133,6 +134,21 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await fileData.arrayBuffer());
+
+    // ---- Server-side file size validation ----
+    if (buffer.length > MAX_FILE_SIZE) {
+      const sizeMB = (buffer.length / (1024 * 1024)).toFixed(1);
+      console.warn(`[extract] File too large: certId=${certificateId}, size=${sizeMB}MB`);
+      await serviceClient
+        .from('certificates')
+        .update({ processing_status: 'failed' })
+        .eq('id', certificateId);
+      return NextResponse.json(
+        { error: `File is too large (${sizeMB}MB). Maximum allowed size is ${MAX_FILE_SIZE_LABEL}.` },
+        { status: 400 }
+      );
+    }
+
     const pdfBase64 = buffer.toString('base64');
 
     // ---- AI extraction ----

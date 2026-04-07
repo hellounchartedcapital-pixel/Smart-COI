@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
-import { validatePDFFile, computeFileHash, formatFileSize } from '@/lib/utils/file-validation';
+import { validatePDFFile, computeFileHash, formatFileSize, MAX_FILE_SIZE_LABEL } from '@/lib/utils/file-validation';
 import { isPlanInactiveError, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
 import { Button } from '@/components/ui/button';
@@ -512,7 +512,7 @@ export default function CertificateUploadPage() {
               <p className="text-sm font-medium">
                 Drag and drop your COI PDF here or click to browse
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">PDF files only, up to 10 MB</p>
+              <p className="mt-1 text-xs text-muted-foreground">PDF files only, up to {MAX_FILE_SIZE_LABEL}</p>
               <input
                 ref={fileInputRef}
                 type="file"

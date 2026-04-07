@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
-import { validatePDFFile, computeFileHash, formatFileSize } from '@/lib/utils/file-validation';
+import { validatePDFFile, computeFileHash, formatFileSize, MAX_FILE_SIZE_LABEL } from '@/lib/utils/file-validation';
 import { isPlanInactiveError, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
 import {
@@ -957,7 +957,7 @@ export default function BulkUploadPage() {
               Drop PDF files here or click to browse
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              PDF only, up to 10MB each. You can select multiple files.
+              PDF only, up to {MAX_FILE_SIZE_LABEL} each. You can select multiple files.
             </p>
             <input
               ref={fileInputRef}
