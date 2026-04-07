@@ -25,7 +25,7 @@ interface TemplateOption {
 interface StepAssignRequirementsProps {
   propertyId: string | null;
   orgId: string | null;
-  coiType: 'vendor' | 'tenant' | null;
+  coiType: string | null;
   onNext: () => void;
   onSkip: () => void;
   saving: boolean;
@@ -54,14 +54,12 @@ export function StepAssignRequirements({
       return;
     }
 
-    // Fetch uploaded COIs (extracted or needs_review) for this property
+    // Fetch uploaded COIs (extracted or needs_review)
     const entityType = coiType ?? 'vendor';
-    const entityTable = entityType === 'vendor' ? 'vendors' : 'tenants';
-    const entityFK = entityType === 'vendor' ? 'vendor_id' : 'tenant_id';
 
     const { data: certs } = await supabase
       .from('certificates')
-      .select(`id, insured_name, ${entityFK}`)
+      .select('id, insured_name, entity_id')
       .eq('organization_id', orgId)
       .in('processing_status', ['extracted', 'needs_review'])
       .order('uploaded_at', { ascending: false });
@@ -69,13 +67,13 @@ export function StepAssignRequirements({
     if (certs && certs.length > 0) {
       // Get entity IDs to look up template assignments
       const entityIds = certs
-        .map((c) => c[entityFK as keyof typeof c] as string | null)
+        .map((c) => c.entity_id as string | null)
         .filter(Boolean) as string[];
 
       const entityTemplateMap = new Map<string, string | null>();
       if (entityIds.length > 0) {
         const { data: entities } = await supabase
-          .from(entityTable)
+          .from('entities')
           .select('id, template_id')
           .in('id', entityIds);
 
@@ -87,7 +85,7 @@ export function StepAssignRequirements({
       }
 
       const coiList: UploadedCOI[] = certs.map((c) => {
-        const eid = c[entityFK as keyof typeof c] as string | null;
+        const eid = c.entity_id as string | null;
         return {
           certificateId: c.id,
           insuredName: c.insured_name || 'Unknown',
@@ -166,9 +164,8 @@ export function StepAssignRequirements({
 
       try {
         // Update the entity's template_id
-        const table = coi.entityType === 'vendor' ? 'vendors' : 'tenants';
         await supabase
-          .from(table)
+          .from('entities')
           .update({ template_id: templateId })
           .eq('id', coi.entityId);
 
@@ -187,8 +184,10 @@ export function StepAssignRequirements({
   }
 
   // Filter templates by the COI type being uploaded
+  // Template categories are 'vendor' | 'tenant'; all non-tenant entity types use vendor templates
+  const templateCategory = coiType === 'tenant' ? 'tenant' : 'vendor';
   const relevantTemplates = templates.filter(
-    (t) => !coiType || t.category === coiType
+    (t) => !coiType || t.category === templateCategory
   );
 
   const assignedCount = Object.keys(assignments).length;

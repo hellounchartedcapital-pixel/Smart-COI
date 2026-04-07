@@ -11,7 +11,7 @@ import { StepProperty, type PropertyData } from '@/components/onboarding/step-pr
 import { StepBulkUpload } from '@/components/onboarding/step-bulk-upload';
 import { StepTemplates, type SelectedTemplate } from '@/components/onboarding/step-templates';
 import { StepAssignRequirements } from '@/components/onboarding/step-assign-requirements';
-import type { Industry } from '@/types';
+import type { Industry, CoveredEntityType } from '@/types';
 import { getTerminology } from '@/lib/constants/terminology';
 
 export default function OnboardingSetupPage() {
@@ -33,7 +33,7 @@ export default function OnboardingSetupPage() {
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
   const [propertyId, setPropertyId] = useState<string | null>(null);
   const [propertyName, setPropertyName] = useState('');
-  const [coiType, setCoiType] = useState<'vendor' | 'tenant' | null>(null);
+  const [coiType, setCoiType] = useState<CoveredEntityType | null>(null);
   const [uploadedCount, setUploadedCount] = useState(0);
 
   // Dynamic step labels based on industry
@@ -283,7 +283,7 @@ export default function OnboardingSetupPage() {
   }
 
   // Step 4: Bulk upload complete → move to requirements
-  function handleBulkUploadNext(count: number, type?: 'vendor' | 'tenant' | null) {
+  function handleBulkUploadNext(count: number, type?: CoveredEntityType | null) {
     setUploadedCount(count);
     if (type) setCoiType(type);
     posthog.capture('onboarding_step_completed', { step: 'bulk_upload' });
@@ -517,6 +517,7 @@ export default function OnboardingSetupPage() {
         <StepBulkUpload
           propertyId={propertyId}
           propertyName={propertyName}
+          industry={selectedIndustry}
           onNext={handleBulkUploadNext}
           onSkip={handleSkipToDashboard}
           saving={saving}

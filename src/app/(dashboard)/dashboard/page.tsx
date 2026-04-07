@@ -70,22 +70,16 @@ export interface ActivityEntry {
 async function getDashboardData(orgId: string) {
   const supabase = await createClient();
 
-  // Parallel-fetch everything we need
-  const [propertiesRes, vendorsRes, tenantsRes, activityRes, orgRes, templatesRes] = await Promise.all([
+  // Parallel-fetch everything we need — using unified entities table
+  const [propertiesRes, entitiesRes, activityRes, orgRes, templatesRes] = await Promise.all([
     supabase
       .from('properties')
       .select('id, name, property_type')
       .eq('organization_id', orgId)
       .order('name'),
     supabase
-      .from('vendors')
-      .select('id, company_name, property_id, compliance_status, contact_email, properties(name)')
-      .eq('organization_id', orgId)
-      .is('deleted_at', null)
-      .is('archived_at', null),
-    supabase
-      .from('tenants')
-      .select('id, company_name, property_id, compliance_status, contact_email, properties(name)')
+      .from('entities')
+      .select('id, name, entity_type, property_id, compliance_status, contact_email, properties(name)')
       .eq('organization_id', orgId)
       .is('deleted_at', null)
       .is('archived_at', null),
@@ -108,12 +102,11 @@ async function getDashboardData(orgId: string) {
   ]);
 
   const properties = propertiesRes.data ?? [];
-  const vendors = vendorsRes.data ?? [];
-  const tenants = tenantsRes.data ?? [];
+  const rawEntities = entitiesRes.data ?? [];
   const templates = templatesRes.data ?? [];
   const activity = (activityRes.data ?? []) as ActivityEntry[];
 
-  // ---- Unified entity list ----
+  // ---- Unified entity list (mapped to dashboard shape) ----
   interface Entity {
     id: string;
     name: string;
@@ -124,28 +117,17 @@ async function getDashboardData(orgId: string) {
     contactEmail: string | null;
   }
 
-  const allEntities: Entity[] = [
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...vendors.map((v: any) => ({
-      id: v.id,
-      name: v.company_name,
-      propertyId: v.property_id,
-      propertyName: v.properties?.name ?? null,
-      status: v.compliance_status as ComplianceStatus,
-      type: 'vendor' as const,
-      contactEmail: v.contact_email ?? null,
-    })),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...tenants.map((t: any) => ({
-      id: t.id,
-      name: t.company_name,
-      propertyId: t.property_id,
-      propertyName: t.properties?.name ?? null,
-      status: t.compliance_status as ComplianceStatus,
-      type: 'tenant' as const,
-      contactEmail: t.contact_email ?? null,
-    })),
-  ];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allEntities: Entity[] = rawEntities.map((e: any) => ({
+    id: e.id,
+    name: e.name,
+    propertyId: e.property_id,
+    propertyName: e.properties?.name ?? null,
+    status: e.compliance_status as ComplianceStatus,
+    // Map entity_type to legacy 'vendor' | 'tenant' for backward compat with dashboard UI
+    type: (e.entity_type === 'tenant' ? 'tenant' : 'vendor') as 'vendor' | 'tenant',
+    contactEmail: e.contact_email ?? null,
+  }));
 
   // ---- Status counts ----
   const statusCounts: StatusDistribution = {
@@ -176,6 +158,10 @@ async function getDashboardData(orgId: string) {
     trialDaysLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60 * 24)));
   }
 
+  // Derive vendor/tenant counts from the unified entities list
+  const vendors = allEntities.filter((e) => e.type === 'vendor');
+  const tenants = allEntities.filter((e) => e.type === 'tenant');
+
   const stats: DashboardStats = {
     propertyCount: properties.length,
     vendorCount: vendors.length,
@@ -189,15 +175,16 @@ async function getDashboardData(orgId: string) {
   // ---- Fetch active waivers to exclude from action queue ----
   const { data: activeWaivers } = await supabase
     .from('compliance_waivers')
-    .select('vendor_id, tenant_id')
+    .select('entity_id, vendor_id, tenant_id')
     .eq('organization_id', orgId)
     .is('revoked_at', null)
     .gt('expires_at', new Date().toISOString());
 
   const waivedEntityIds = new Set<string>();
   for (const w of activeWaivers ?? []) {
-    if (w.vendor_id) waivedEntityIds.add(w.vendor_id);
-    if (w.tenant_id) waivedEntityIds.add(w.tenant_id);
+    if (w.entity_id) waivedEntityIds.add(w.entity_id);
+    else if (w.vendor_id) waivedEntityIds.add(w.vendor_id);
+    else if (w.tenant_id) waivedEntityIds.add(w.tenant_id);
   }
 
   // ---- Action items: entities that aren't compliant and not waived ----
@@ -373,13 +360,13 @@ async function getDashboardData(orgId: string) {
   const propertyList = properties.map((p) => ({ id: p.id, name: p.name, property_type: p.property_type ?? 'other' }));
   const vendorList = vendors.map((v) => ({
     id: v.id,
-    company_name: v.company_name,
-    property_id: v.property_id,
+    company_name: v.name,
+    property_id: v.propertyId,
   }));
   const tenantList = tenants.map((t) => ({
     id: t.id,
-    company_name: t.company_name,
-    property_id: t.property_id,
+    company_name: t.name,
+    property_id: t.propertyId,
   }));
 
   return {

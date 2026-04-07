@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Building2,
+  Users,
   FileCheck,
   Bell,
   Settings,
@@ -19,11 +20,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { signOut } from '@/lib/auth';
+import { getTerminology } from '@/lib/constants/terminology';
+import type { Industry } from '@/types';
 
 const COLLAPSED_KEY = 'smartcoi-sidebar-collapsed';
 
 /* ------------------------------------------------------------------ */
-/* Nav items grouped by section (Remote.com-inspired grouping)        */
+/* Nav items grouped by section                                       */
 /* ------------------------------------------------------------------ */
 
 interface NavItem {
@@ -38,35 +41,42 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const navGroups: NavGroup[] = [
-  {
-    title: 'OVERVIEW',
-    items: [
-      { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, tutorialId: null },
-    ],
-  },
-  {
-    title: 'COMPLIANCE',
-    items: [
-      { label: 'Properties', href: '/dashboard/properties', icon: Building2, tutorialId: 'nav-properties' },
-      { label: 'Templates', href: '/dashboard/templates', icon: FileCheck, tutorialId: 'nav-templates' },
-      { label: 'Notifications', href: '/dashboard/notifications', icon: Bell, tutorialId: 'nav-notifications' },
-    ],
-  },
-  {
-    title: 'ACCOUNT',
-    items: [
-      { label: 'Settings', href: '/dashboard/settings', icon: Settings, tutorialId: null },
-      { label: 'Billing', href: '/dashboard/settings/billing', icon: CreditCard, tutorialId: null },
-    ],
-  },
-];
+function buildNavGroups(industry: Industry | null): NavGroup[] {
+  const terms = getTerminology(industry);
+  const entityLabel = terms.hasTenants
+    ? `${terms.entityPlural} & ${terms.tenantPlural}`
+    : terms.entityPlural;
 
-// Flat list for backward-compatible getPageTitle
-const navItems = navGroups.flatMap((g) => g.items);
+  return [
+    {
+      title: 'OVERVIEW',
+      items: [
+        { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, tutorialId: null },
+      ],
+    },
+    {
+      title: 'COMPLIANCE',
+      items: [
+        { label: terms.locationPlural, href: '/dashboard/properties', icon: Building2, tutorialId: 'nav-properties' },
+        { label: entityLabel, href: '/dashboard/entities', icon: Users, tutorialId: 'nav-entities' },
+        { label: 'Templates', href: '/dashboard/templates', icon: FileCheck, tutorialId: 'nav-templates' },
+        { label: 'Notifications', href: '/dashboard/notifications', icon: Bell, tutorialId: 'nav-notifications' },
+      ],
+    },
+    {
+      title: 'ACCOUNT',
+      items: [
+        { label: 'Settings', href: '/dashboard/settings', icon: Settings, tutorialId: null },
+        { label: 'Billing', href: '/dashboard/settings/billing', icon: CreditCard, tutorialId: null },
+      ],
+    },
+  ];
+}
 
-function getPageTitle(pathname: string): string {
-  const sorted = [...navItems].sort((a, b) => b.href.length - a.href.length);
+function getPageTitle(pathname: string, industry: Industry | null): string {
+  const groups = buildNavGroups(industry);
+  const items = groups.flatMap((g) => g.items);
+  const sorted = [...items].sort((a, b) => b.href.length - a.href.length);
   const match = sorted.find(
     (item) =>
       pathname === item.href ||
@@ -135,6 +145,7 @@ interface DashboardShellProps {
   userName: string | null;
   userEmail: string;
   orgName: string;
+  industry?: Industry | null;
   trialDaysLeft?: number | null;
   plan?: string;
   topBanner?: React.ReactNode;
@@ -145,6 +156,7 @@ export function DashboardShell({
   userName,
   userEmail,
   orgName,
+  industry = null,
   trialDaysLeft = null,
   plan = '',
   topBanner,
@@ -153,6 +165,8 @@ export function DashboardShell({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navGroups = buildNavGroups(industry);
+  const navItems = navGroups.flatMap((g) => g.items);
 
   useEffect(() => {
     const stored = localStorage.getItem(COLLAPSED_KEY);
@@ -171,7 +185,7 @@ export function DashboardShell({
     setMobileOpen(false);
   }, [pathname]);
 
-  const pageTitle = getPageTitle(pathname);
+  const pageTitle = getPageTitle(pathname, industry);
 
   // Initials for user avatar
   const initials = userName

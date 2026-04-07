@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash } from '@/lib/utils/file-validation';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, X, CheckCircle2, Loader2, AlertTriangle, Building2, Users } from 'lucide-react';
+import { getTerminology } from '@/lib/constants/terminology';
+import type { Industry, CoveredEntityType } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -28,7 +30,8 @@ interface FileEntry {
 interface StepBulkUploadProps {
   propertyId: string | null;
   propertyName: string;
-  onNext: (uploadedCount: number, coiType?: 'vendor' | 'tenant' | null) => void;
+  industry: Industry | null;
+  onNext: (uploadedCount: number, coiType?: CoveredEntityType | null) => void;
   onSkip: () => void;
   saving: boolean;
 }
@@ -50,15 +53,26 @@ function generateFileId(): string {
 export function StepBulkUpload({
   propertyId,
   propertyName,
+  industry,
   onNext,
   onSkip,
   saving,
 }: StepBulkUploadProps) {
   const supabase = createClient();
+  const terms = getTerminology(industry);
 
   const [orgId, setOrgId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [coiType, setCoiType] = useState<'vendor' | 'tenant' | null>(null);
+
+  // For non-PM industries without tenants, auto-set the entity type
+  const defaultEntityType: CoveredEntityType | null = (() => {
+    if (industry === 'property_management') return null; // user must choose
+    if (industry === 'construction') return 'subcontractor';
+    if (industry === 'logistics') return 'carrier';
+    if (industry === 'manufacturing') return 'supplier';
+    return 'vendor';
+  })();
+  const [coiType, setCoiType] = useState<CoveredEntityType | null>(defaultEntityType);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -209,81 +223,48 @@ export function StepBulkUpload({
           .eq('id', certId!)
           .single();
 
-        // Auto-assign certificate to a vendor or tenant
+        // Auto-assign certificate to an entity
         const insuredName = updatedCert?.insured_name || entry.file.name.replace(/\.pdf$/i, '');
         if (coiType) {
           try {
-            if (coiType === 'vendor') {
-              // Build query for existing vendor match
-              let query = supabase
-                .from('vendors')
-                .select('id')
-                .eq('organization_id', orgId!)
-                .ilike('company_name', insuredName)
-                .is('deleted_at', null);
-              if (propertyId) {
-                query = query.eq('property_id', propertyId);
-              } else {
-                query = query.is('property_id', null);
-              }
-              const { data: existing } = await query.maybeSingle();
-
-              let vendorId = existing?.id;
-              if (!vendorId) {
-                const { data: newVendor } = await supabase
-                  .from('vendors')
-                  .insert({
-                    organization_id: orgId!,
-                    property_id: propertyId ?? null,
-                    company_name: insuredName,
-                    compliance_status: 'under_review',
-                  })
-                  .select('id')
-                  .single();
-                vendorId = newVendor?.id;
-              }
-
-              if (vendorId) {
-                await supabase
-                  .from('certificates')
-                  .update({ vendor_id: vendorId })
-                  .eq('id', certId!);
-              }
+            // Look for existing entity match
+            let query = supabase
+              .from('entities')
+              .select('id')
+              .eq('organization_id', orgId!)
+              .eq('entity_type', coiType)
+              .ilike('name', insuredName)
+              .is('deleted_at', null);
+            if (propertyId) {
+              query = query.eq('property_id', propertyId);
             } else {
-              let query = supabase
-                .from('tenants')
+              query = query.is('property_id', null);
+            }
+            const { data: existing } = await query.maybeSingle();
+
+            let entityId = existing?.id;
+            if (!entityId) {
+              const { data: newEntity } = await supabase
+                .from('entities')
+                .insert({
+                  organization_id: orgId!,
+                  property_id: propertyId ?? null,
+                  name: insuredName,
+                  entity_type: coiType,
+                  compliance_status: 'under_review',
+                })
                 .select('id')
-                .eq('organization_id', orgId!)
-                .ilike('company_name', insuredName)
-                .is('deleted_at', null);
-              if (propertyId) {
-                query = query.eq('property_id', propertyId);
-              } else {
-                query = query.is('property_id', null);
-              }
-              const { data: existing } = await query.maybeSingle();
+                .single();
+              entityId = newEntity?.id;
+            }
 
-              let tenantId = existing?.id;
-              if (!tenantId) {
-                const { data: newTenant } = await supabase
-                  .from('tenants')
-                  .insert({
-                    organization_id: orgId!,
-                    property_id: propertyId ?? null,
-                    company_name: insuredName,
-                    compliance_status: 'under_review',
-                  })
-                  .select('id')
-                  .single();
-                tenantId = newTenant?.id;
-              }
-
-              if (tenantId) {
-                await supabase
-                  .from('certificates')
-                  .update({ tenant_id: tenantId })
-                  .eq('id', certId!);
-              }
+            if (entityId) {
+              // Write entity_id + legacy FK for backward compatibility
+              const legacyFK = coiType === 'tenant' ? 'tenant_id' : 'vendor_id';
+              await supabase
+                .from('certificates')
+                .update({ entity_id: entityId, [legacyFK]: entityId })
+                .eq('id', certId!);
             }
           } catch (assignErr) {
             console.error('Auto-assign failed:', assignErr);
@@ -362,8 +343,8 @@ export function StepBulkUpload({
         </p>
       </div>
 
-      {/* COI type selection */}
-      {!coiType && (
+      {/* COI type selection — only shown for PM (which has vendor + tenant) */}
+      {!coiType && terms.hasTenants && (
         <div className="space-y-3">
           <p className="text-sm font-medium text-foreground">
             What type of COIs are you uploading?
@@ -375,9 +356,9 @@ export function StepBulkUpload({
               className="flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 bg-white p-5 transition-all hover:border-brand hover:bg-emerald-50"
             >
               <Building2 className="h-7 w-7 text-emerald-600" />
-              <span className="text-sm font-semibold text-foreground">Vendor COIs</span>
+              <span className="text-sm font-semibold text-foreground">{terms.entity} COIs</span>
               <span className="text-xs text-muted-foreground text-center">
-                Contractors, service providers, maintenance companies
+                {terms.entityDescription}
               </span>
             </button>
             <button
@@ -386,9 +367,9 @@ export function StepBulkUpload({
               className="flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 bg-white p-5 transition-all hover:border-brand hover:bg-emerald-50"
             >
               <Users className="h-7 w-7 text-emerald-600" />
-              <span className="text-sm font-semibold text-foreground">Tenant COIs</span>
+              <span className="text-sm font-semibold text-foreground">{terms.tenant} COIs</span>
               <span className="text-xs text-muted-foreground text-center">
-                Renters insurance, tenant liability certificates
+                {terms.tenantDescription}
               </span>
             </button>
           </div>

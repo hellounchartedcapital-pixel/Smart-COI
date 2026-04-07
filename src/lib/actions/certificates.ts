@@ -186,15 +186,13 @@ export async function runAutoCompliance(
     .select('*')
     .eq('certificate_id', certificateId);
 
-  // Determine entity type
-  const entityType = cert.vendor_id ? 'vendor' : 'tenant';
-  const entityId = cert.vendor_id ?? cert.tenant_id;
+  // Determine entity — prefer entity_id, fall back to legacy vendor_id/tenant_id
+  const entityId = cert.entity_id ?? cert.vendor_id ?? cert.tenant_id;
   if (!entityId) return; // Certificate not assigned to an entity yet
 
-  const tableName = entityType === 'vendor' ? 'vendors' : 'tenants';
   const { data: entity } = await supabase
-    .from(tableName)
-    .select('template_id, property_id')
+    .from('entities')
+    .select('template_id, property_id, entity_type')
     .eq('id', entityId)
     .single();
 
@@ -285,23 +283,33 @@ export async function runAutoCompliance(
     );
   }
 
-  // Update entity compliance_status
+  // Update entity compliance_status (in entities table + legacy table for backward compat)
   await supabase
-    .from(tableName)
+    .from('entities')
     .update({ compliance_status: result.overallStatus })
     .eq('id', entityId);
+
+  // Also update legacy table
+  const legacyEntityType = entity?.entity_type === 'tenant' ? 'tenant' : 'vendor';
+  const legacyTable = legacyEntityType === 'tenant' ? 'tenants' : 'vendors';
+  await supabase
+    .from(legacyTable)
+    .update({ compliance_status: result.overallStatus })
+    .eq('id', entityId)
+    .then(() => { /* best-effort legacy sync */ });
 
   // Log activity
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     certificate_id: certificateId,
-    [entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
+    entity_id: entityId,
+    [legacyEntityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
     action: 'compliance_checked',
     description: `Compliance auto-calculated: ${result.overallStatus}`,
   });
 
   console.log(`[runAutoCompliance] cert=${certificateId} entity=${entityId} status=${result.overallStatus}`);
-  return { overallStatus: result.overallStatus, entityType, entityId };
+  return { overallStatus: result.overallStatus, entityType: legacyEntityType, entityId };
 }
 
 // ============================================================================

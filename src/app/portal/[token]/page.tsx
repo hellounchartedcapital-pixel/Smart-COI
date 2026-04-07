@@ -1,3 +1,5 @@
+// TODO: Migrate portal to use entities table via entity_id on upload_portal_tokens
+// TODO: Replace "contact your property manager" with generic "contact your administrator"
 import { createServiceClient } from '@/lib/supabase/service';
 import { formatCurrency } from '@/lib/utils';
 import { getCoverageLabel, LIMIT_TYPE_LABELS } from '@/components/templates/template-labels';

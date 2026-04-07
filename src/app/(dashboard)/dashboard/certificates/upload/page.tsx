@@ -120,32 +120,20 @@ export default function CertificateUploadPage() {
   // ------ Load entity name from query params ------
   useEffect(() => {
     if (!orgId) return;
+    const paramEntityId = vendorIdParam ?? tenantIdParam;
+    if (!paramEntityId) return;
 
     (async () => {
-      if (vendorIdParam) {
-        const { data } = await supabase
-          .from('vendors')
-          .select('company_name, property_id, properties(name)')
-          .eq('id', vendorIdParam)
-          .eq('organization_id', orgId)
-          .single();
-        if (data) {
-          setEntityName(data.company_name);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          setPropertyName((data as any).properties?.name ?? null);
-        }
-      } else if (tenantIdParam) {
-        const { data } = await supabase
-          .from('tenants')
-          .select('company_name, property_id, properties(name)')
-          .eq('id', tenantIdParam)
-          .eq('organization_id', orgId)
-          .single();
-        if (data) {
-          setEntityName(data.company_name);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          setPropertyName((data as any).properties?.name ?? null);
-        }
+      const { data } = await supabase
+        .from('entities')
+        .select('name, property_id, properties(name)')
+        .eq('id', paramEntityId)
+        .eq('organization_id', orgId)
+        .single();
+      if (data) {
+        setEntityName(data.name);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setPropertyName((data as any).properties?.name ?? null);
       }
     })();
   }, [orgId, vendorIdParam, tenantIdParam, supabase]);
@@ -163,38 +151,31 @@ export default function CertificateUploadPage() {
     })();
   }, [orgId, entityId, supabase]);
 
-  // ------ Load vendors + tenants (optionally filtered by property) ------
+  // ------ Load entities (optionally filtered by property) ------
   useEffect(() => {
     if (!orgId) return;
     setLoadingEntities(true);
     (async () => {
-      let vendorQuery = supabase
-        .from('vendors')
-        .select('id, company_name')
+      let query = supabase
+        .from('entities')
+        .select('id, name, entity_type')
         .eq('organization_id', orgId)
         .is('deleted_at', null)
         .is('archived_at', null)
-        .order('company_name');
-      let tenantQuery = supabase
-        .from('tenants')
-        .select('id, company_name')
-        .eq('organization_id', orgId)
-        .is('deleted_at', null)
-        .is('archived_at', null)
-        .order('company_name');
+        .order('name');
 
       if (selectedPropertyId) {
-        vendorQuery = vendorQuery.eq('property_id', selectedPropertyId);
-        tenantQuery = tenantQuery.eq('property_id', selectedPropertyId);
+        query = query.eq('property_id', selectedPropertyId);
       }
 
-      const [vendorsRes, tenantsRes] = await Promise.all([vendorQuery, tenantQuery]);
+      const { data } = await query;
 
-      const merged: EntityOption[] = [
-        ...(vendorsRes.data ?? []).map((v) => ({ ...v, type: 'vendor' as const })),
-        ...(tenantsRes.data ?? []).map((t) => ({ ...t, type: 'tenant' as const })),
-      ];
-      setEntities(merged);
+      const mapped: EntityOption[] = (data ?? []).map((e) => ({
+        id: e.id,
+        company_name: e.name,
+        type: (e.entity_type === 'tenant' ? 'tenant' : 'vendor') as 'vendor' | 'tenant',
+      }));
+      setEntities(mapped);
       setLoadingEntities(false);
     })();
   }, [orgId, selectedPropertyId, supabase]);
@@ -289,6 +270,7 @@ export default function CertificateUploadPage() {
         .from('certificates')
         .insert({
           organization_id: orgId,
+          entity_id: entityId,
           vendor_id: entityType === 'vendor' ? entityId : null,
           tenant_id: entityType === 'tenant' ? entityId : null,
           file_path: storagePath,
@@ -307,6 +289,7 @@ export default function CertificateUploadPage() {
       await supabase.from('activity_log').insert({
         organization_id: orgId,
         certificate_id: cert.id,
+        entity_id: entityId,
         vendor_id: entityType === 'vendor' ? entityId : null,
         tenant_id: entityType === 'tenant' ? entityId : null,
         action: 'coi_uploaded',
