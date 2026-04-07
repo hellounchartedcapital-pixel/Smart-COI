@@ -240,7 +240,7 @@ export function DashboardClient({
             Hello{firstName ? `, ${firstName}` : stats.propertyCount > 0 ? '' : ' there'}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Here&apos;s what&apos;s going on with your portfolio today.
+            Here&apos;s your compliance overview.
           </p>
         </div>
         <div className="flex gap-2.5">
@@ -296,10 +296,9 @@ export function DashboardClient({
                   </div>
                   <p className="mt-1 text-sm text-slate-500">
                     {stats.propertyCount > 0 && (
-                      <>{stats.propertyCount} {stats.propertyCount === 1 ? 'property' : 'properties'}, </>
+                      <>{stats.propertyCount} {stats.propertyCount === 1 ? 'location' : 'locations'}, </>
                     )}
-                    {stats.vendorCount} {stats.vendorCount === 1 ? 'vendor' : 'vendors'},{' '}
-                    {stats.tenantCount} {stats.tenantCount === 1 ? 'tenant' : 'tenants'}
+                    {stats.entityCount} {stats.entityCount === 1 ? 'entity' : 'entities'}
                   </p>
                 </div>
               </div>
@@ -439,8 +438,7 @@ function PropertyCard({ property }: { property: PropertyOverview }) {
               {property.name}
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              {property.vendorCount} {property.vendorCount === 1 ? 'vendor' : 'vendors'} &middot;{' '}
-              {property.tenantCount} {property.tenantCount === 1 ? 'tenant' : 'tenants'}
+              {property.vendorCount + property.tenantCount} {(property.vendorCount + property.tenantCount) === 1 ? 'entity' : 'entities'}
             </p>
           </div>
           {complianceRate != null && (
@@ -545,7 +543,7 @@ function ActionQueue({
           <p className="mt-1 text-xs text-slate-500">
             {pillFilter
               ? `No ${STATUS_CONFIG[pillFilter].label.toLowerCase()} items.`
-              : 'Your portfolio is fully compliant.'}
+              : 'All compliant.'}
           </p>
         </div>
       ) : (

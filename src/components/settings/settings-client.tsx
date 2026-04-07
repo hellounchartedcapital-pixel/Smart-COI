@@ -175,11 +175,11 @@ function ContactSection({
     <div className="rounded-lg border border-slate-200 bg-white p-5">
       <h2 className="text-sm font-semibold text-foreground">Contact Information</h2>
       <p className="mt-0.5 text-xs text-muted-foreground">
-        Used in notification emails and portal pages as the PM contact.
+        Used in notification emails and portal pages as the contact person.
       </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="pmName" className="text-xs">PM Name</Label>
+          <Label htmlFor="pmName" className="text-xs">Contact Name</Label>
           <Input
             id="pmName"
             value={fullName}
@@ -188,7 +188,7 @@ function ContactSection({
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="pmEmail" className="text-xs">PM Email</Label>
+          <Label htmlFor="pmEmail" className="text-xs">Contact Email</Label>
           <Input
             id="pmEmail"
             type="email"

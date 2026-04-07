@@ -15,9 +15,9 @@ function escapeHtml(str: string): string {
 }
 
 export interface EmailMergeFields {
-  entity_name: string; // vendor or tenant company name
+  entity_name: string; // entity company name
   contact_name?: string; // optional contact person name
-  entity_type: 'vendor' | 'tenant';
+  entity_type: string; // vendor, tenant, subcontractor, carrier, supplier
   property_name: string;
   organization_name: string;
   gaps_summary: string; // HTML list of compliance gaps
@@ -25,8 +25,12 @@ export interface EmailMergeFields {
   expiration_date: string; // formatted date string
   days_until_expiration: number;
   is_expired?: boolean; // true when the certificate has expired coverage
+  /** @deprecated Use admin_name instead */
   pm_name: string;
+  /** @deprecated Use admin_email instead */
   pm_email: string;
+  admin_name?: string;
+  admin_email?: string;
 }
 
 interface EmailTemplate {
@@ -75,9 +79,11 @@ function greeting(fields: Pick<EmailMergeFields, 'contact_name' | 'entity_name'>
   return `<p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 16px;">Hi ${name},</p>`;
 }
 
-function contactBlock(fields: Pick<EmailMergeFields, 'pm_name' | 'pm_email'>): string {
+function contactBlock(fields: Pick<EmailMergeFields, 'pm_name' | 'pm_email' | 'admin_name' | 'admin_email'>): string {
+  const name = fields.admin_name ?? fields.pm_name;
+  const email = fields.admin_email ?? fields.pm_email;
   return `<p style="font-size:13px;color:#475569;margin-top:24px;">
-  Questions? Reach out to <strong>${escapeHtml(fields.pm_name)}</strong> at <a href="mailto:${encodeURI(fields.pm_email)}" style="color:#059669;">${escapeHtml(fields.pm_email)}</a>
+  Questions? Reach out to <strong>${escapeHtml(name)}</strong> at <a href="mailto:${encodeURI(email)}" style="color:#059669;">${escapeHtml(email)}</a>
 </p>`;
 }
 

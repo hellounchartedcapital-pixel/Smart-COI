@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import type { Industry } from '@/types';
 
 interface EntityEntry {
   id: string;
@@ -17,14 +18,25 @@ export interface OrgSetupData {
   additionalInsured: EntityEntry[];
 }
 
+const PLACEHOLDERS: Partial<Record<Industry, string>> = {
+  property_management: 'Acme Property Management',
+  construction: 'Acme Construction Co.',
+  logistics: 'Acme Logistics Inc.',
+  healthcare: 'City General Hospital',
+  manufacturing: 'Acme Manufacturing',
+  hospitality: 'Grand Hotel Group',
+  retail: 'Acme Retail Corp.',
+};
+
 interface StepOrgSetupProps {
   data: OrgSetupData;
+  industry: Industry | null;
   onNext: (data: OrgSetupData) => void;
   onSkip: () => void;
   saving: boolean;
 }
 
-export function StepOrgSetup({ data, onNext, onSkip, saving }: StepOrgSetupProps) {
+export function StepOrgSetup({ data, industry, onNext, onSkip, saving }: StepOrgSetupProps) {
   const [companyName, setCompanyName] = useState(data.companyName);
 
   function handleSubmit(e: React.FormEvent) {
@@ -56,7 +68,7 @@ export function StepOrgSetup({ data, onNext, onSkip, saving }: StepOrgSetupProps
           id="companyName"
           value={companyName}
           onChange={(e) => setCompanyName(e.target.value)}
-          placeholder="Acme Property Management"
+          placeholder={PLACEHOLDERS[industry ?? 'other'] ?? 'Acme Company'}
           required
           autoFocus
         />

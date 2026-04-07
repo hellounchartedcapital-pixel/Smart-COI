@@ -498,6 +498,7 @@ export default function OnboardingSetupPage() {
       {currentStep === 2 && (
         <StepOrgSetup
           data={orgData}
+          industry={selectedIndustry}
           onNext={handleOrgSetupNext}
           onSkip={handleSkipToDashboard}
           saving={saving}

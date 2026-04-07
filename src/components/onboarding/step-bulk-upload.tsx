@@ -339,7 +339,7 @@ export function StepBulkUpload({
           {propertyName ? (
             <>Drop your certificates for <span className="font-medium text-foreground">{propertyName}</span>. </>
           ) : null}
-          Our AI will extract vendor names, coverage types, limits, and dates automatically.
+          Our AI will extract names, coverage types, limits, and dates automatically.
         </p>
       </div>
 

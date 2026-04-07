@@ -1,10 +1,6 @@
 // ============================================================================
 // SmartCOI — Notification Scheduler
 // Runs daily via cron to check expirations and schedule/send notifications.
-//
-// TODO: Migrate to query entities table instead of separate vendors/tenants.
-// TODO: Write entity_id to notification records in addition to vendor_id/tenant_id.
-// TODO: Replace PM-specific email language with terminology-aware labels.
 // ============================================================================
 
 import { createServiceClient } from '@/lib/supabase/service';
@@ -30,72 +26,38 @@ export async function checkAndScheduleNotifications(): Promise<number> {
   const supabase = createServiceClient();
   let scheduled = 0;
 
-  // Fetch all active vendors and tenants with their org, property, and template info
-  const [vendorsRes, tenantsRes] = await Promise.all([
-    supabase
-      .from('vendors')
-      .select('id, company_name, contact_name, contact_email, property_id, organization_id, compliance_status, notifications_paused, properties(name), organizations(name)')
-      .is('deleted_at', null)
-      .is('archived_at', null)
-      .or('notifications_paused.eq.false,notifications_paused.is.null')
-      .neq('compliance_status', 'compliant'),
-    supabase
-      .from('tenants')
-      .select('id, company_name, contact_name, contact_email, property_id, organization_id, compliance_status, notifications_paused, properties(name), organizations(name)')
-      .is('deleted_at', null)
-      .is('archived_at', null)
-      .or('notifications_paused.eq.false,notifications_paused.is.null')
-      .neq('compliance_status', 'compliant'),
-  ]);
+  // Fetch all active entities with their org, property, and template info
+  const { data: entitiesData } = await supabase
+    .from('entities')
+    .select('id, name, entity_type, contact_name, contact_email, property_id, organization_id, compliance_status, notifications_paused, properties(name), organizations(name)')
+    .is('deleted_at', null)
+    .is('archived_at', null)
+    .or('notifications_paused.eq.false,notifications_paused.is.null')
+    .neq('compliance_status', 'compliant');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const allEntities: any[] = [
-    ...(vendorsRes.data ?? []).map((v) => ({ ...v, _type: 'vendor' as const })),
-    ...(tenantsRes.data ?? []).map((t) => ({ ...t, _type: 'tenant' as const })),
-  ];
+  const allEntities: any[] = (entitiesData ?? []).map((e) => ({
+    ...e,
+    company_name: e.name, // backward compat with downstream code
+    _type: (e.entity_type === 'tenant' ? 'tenant' : 'vendor') as 'vendor' | 'tenant',
+  }));
 
   // Batch-fetch the latest confirmed certificate for each entity
   const entityIds = allEntities.map((e) => e.id);
   if (entityIds.length === 0) return 0;
 
-  // Get expiration dates from extracted coverages for latest confirmed certs
-  const vendorIds = allEntities.filter((e) => e._type === 'vendor').map((e) => e.id);
-  const tenantIds = allEntities.filter((e) => e._type === 'tenant').map((e) => e.id);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const certFetches: Promise<any>[] = [];
-  if (vendorIds.length > 0) {
-    certFetches.push(
-      Promise.resolve(
-        supabase
-          .from('certificates')
-          .select('id, vendor_id, tenant_id, uploaded_at')
-          .in('vendor_id', vendorIds)
-          .in('processing_status', ['extracted', 'review_confirmed'])
-          .order('uploaded_at', { ascending: false })
-      )
-    );
-  }
-  if (tenantIds.length > 0) {
-    certFetches.push(
-      Promise.resolve(
-        supabase
-          .from('certificates')
-          .select('id, vendor_id, tenant_id, uploaded_at')
-          .in('tenant_id', tenantIds)
-          .in('processing_status', ['extracted', 'review_confirmed'])
-          .order('uploaded_at', { ascending: false })
-      )
-    );
-  }
-
-  const certResults = await Promise.all(certFetches);
-  const allCerts = certResults.flatMap((r) => r.data ?? []);
+  // Get latest confirmed cert for each entity via entity_id
+  const { data: allCerts } = await supabase
+    .from('certificates')
+    .select('id, entity_id, uploaded_at')
+    .in('entity_id', entityIds)
+    .in('processing_status', ['extracted', 'review_confirmed'])
+    .order('uploaded_at', { ascending: false });
 
   // Map entity -> latest confirmed cert
   const entityCertMap = new Map<string, string>();
-  for (const cert of allCerts) {
-    const eid = cert.vendor_id ?? cert.tenant_id;
+  for (const cert of allCerts ?? []) {
+    const eid = cert.entity_id;
     if (eid && !entityCertMap.has(eid)) {
       entityCertMap.set(eid, cert.id);
     }
@@ -167,7 +129,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
 
     const certId = entityCertMap.get(entity.id);
     const earliestExp = certId ? expirationMap.get(certId) : null;
-    const pm = orgPmMap.get(entity.organization_id) ?? { name: 'Property Manager', email: '' };
+    const pm = orgPmMap.get(entity.organization_id) ?? { name: 'Your Administrator', email: '' };
     const orgName = entity.organizations?.name ?? 'Your Organization';
     const propName = entity.properties?.name ?? 'N/A';
 
@@ -217,6 +179,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
           const template = daysUntil < 0 ? expiredNotice(fields) : expirationWarning(fields);
 
           await supabase.from('notifications').insert({
+            entity_id: entity.id,
             vendor_id: entity._type === 'vendor' ? entity.id : null,
             tenant_id: entity._type === 'tenant' ? entity.id : null,
             organization_id: entity.organization_id,
@@ -326,6 +289,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
           const template = lastGapNotif ? followUpReminder(fields) : gapNotification(fields);
 
           await supabase.from('notifications').insert({
+            entity_id: entity.id,
             vendor_id: entity._type === 'vendor' ? entity.id : null,
             tenant_id: entity._type === 'tenant' ? entity.id : null,
             organization_id: entity.organization_id,
@@ -355,7 +319,7 @@ export async function processScheduledNotifications(): Promise<{ sent: number; f
 
   const { data: pending } = await supabase
     .from('notifications')
-    .select('id, vendor_id, tenant_id, organization_id, email_subject, email_body, type')
+    .select('id, entity_id, vendor_id, tenant_id, organization_id, email_subject, email_body, type')
     .eq('status', 'scheduled')
     .lte('scheduled_date', new Date().toISOString())
     .limit(50);
@@ -363,20 +327,14 @@ export async function processScheduledNotifications(): Promise<{ sent: number; f
   if (!pending || pending.length === 0) return { sent: 0, failed: 0 };
 
   for (const notif of pending) {
-    // Get recipient email
+    // Get recipient email from entities table
+    const eid = notif.entity_id ?? notif.vendor_id ?? notif.tenant_id;
     let recipientEmail: string | null = null;
-    if (notif.vendor_id) {
+    if (eid) {
       const { data } = await supabase
-        .from('vendors')
+        .from('entities')
         .select('contact_email')
-        .eq('id', notif.vendor_id)
-        .single();
-      recipientEmail = data?.contact_email ?? null;
-    } else if (notif.tenant_id) {
-      const { data } = await supabase
-        .from('tenants')
-        .select('contact_email')
-        .eq('id', notif.tenant_id)
+        .eq('id', eid)
         .single();
       recipientEmail = data?.contact_email ?? null;
     }
