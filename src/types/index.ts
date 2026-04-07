@@ -27,7 +27,16 @@ export type PropertyType =
   | 'multifamily'
   | 'other';
 
+/** Entity type for COI document entities (cert holder / additional insured) */
 export type EntityType = 'certificate_holder' | 'additional_insured';
+
+/** Entity type for covered parties (vendors, tenants, subcontractors, etc.) */
+export type CoveredEntityType =
+  | 'vendor'
+  | 'tenant'
+  | 'subcontractor'
+  | 'carrier'
+  | 'supplier';
 
 export type TemplateCategory = 'vendor' | 'tenant';
 
@@ -105,6 +114,7 @@ export type ActivityAction =
   | 'template_updated'
   | 'vendor_created'
   | 'tenant_created'
+  | 'entity_created'
   | 'portal_upload_received';
 
 // ============================================================================
@@ -215,7 +225,31 @@ export interface TemplateCoverageRequirement {
   created_at: string;
 }
 
-/** vendors */
+/** entities — unified table replacing vendors + tenants */
+export interface Entity {
+  id: string;
+  organization_id: string;
+  property_id: string | null;
+  name: string;
+  entity_type: CoveredEntityType;
+  entity_category: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  unit_suite: string | null;
+  template_id: string | null;
+  compliance_status: ComplianceStatus;
+  notifications_paused: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  archived_at: string | null;
+  // Joined relations
+  property?: Property;
+  template?: RequirementTemplate;
+}
+
+/** @deprecated Use Entity instead — vendors table is being replaced by entities */
 export interface Vendor {
   id: string;
   property_id: string | null;
@@ -237,7 +271,7 @@ export interface Vendor {
   template?: RequirementTemplate;
 }
 
-/** tenants */
+/** @deprecated Use Entity instead — tenants table is being replaced by entities */
 export interface Tenant {
   id: string;
   property_id: string | null;
@@ -263,7 +297,10 @@ export interface Tenant {
 /** certificates */
 export interface Certificate {
   id: string;
+  entity_id: string | null;
+  /** @deprecated Use entity_id instead */
   vendor_id: string | null;
+  /** @deprecated Use entity_id instead */
   tenant_id: string | null;
   organization_id: string;
   file_path: string | null;
@@ -336,8 +373,9 @@ export interface EntityComplianceResult {
 /** notifications */
 export interface Notification {
   id: string;
-  vendor_id: string | null;
-  tenant_id: string | null;
+  entity_id: string | null;
+  /** @deprecated */ vendor_id: string | null;
+  /** @deprecated */ tenant_id: string | null;
   organization_id: string;
   type: NotificationType;
   scheduled_date: string;
@@ -352,8 +390,9 @@ export interface Notification {
 /** upload_portal_tokens */
 export interface UploadPortalToken {
   id: string;
-  vendor_id: string | null;
-  tenant_id: string | null;
+  entity_id: string | null;
+  /** @deprecated */ vendor_id: string | null;
+  /** @deprecated */ tenant_id: string | null;
   token: string;
   expires_at: string;
   is_active: boolean;
@@ -365,8 +404,9 @@ export interface ActivityLogEntry {
   id: string;
   organization_id: string;
   property_id: string | null;
-  vendor_id: string | null;
-  tenant_id: string | null;
+  entity_id: string | null;
+  /** @deprecated */ vendor_id: string | null;
+  /** @deprecated */ tenant_id: string | null;
   certificate_id: string | null;
   action: ActivityAction;
   description: string;
