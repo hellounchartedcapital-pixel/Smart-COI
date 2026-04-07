@@ -33,10 +33,10 @@ interface StepBulkUploadProps {
   saving: boolean;
 }
 
-// Config — batch of 5 with 2s pause between batches, 3 retries with exponential backoff
-const BATCH_SIZE = 5;
-const BATCH_PAUSE_MS = 2_000;
-const CLIENT_RETRY_DELAYS = [2_000, 4_000, 8_000]; // 3 retries with exponential backoff
+// Config — batch of 2 with 3s pause between batches, 1.5s stagger within batch
+const BATCH_SIZE = 2;
+const BATCH_PAUSE_MS = 3_000;
+const STAGGER_DELAY_MS = 1_500;
 const FETCH_TIMEOUT_MS = 120_000;
 const MAX_FREE_UPLOADS = 50;
 
@@ -178,157 +178,128 @@ export function StepBulkUpload({
           );
         }
 
-        // Extract with retry
-        let lastError = '';
-        const maxAttempts = CLIENT_RETRY_DELAYS.length + 1;
+        // Extract — single attempt (server-side retry in extraction.ts handles transient errors)
+        if (abortRef.current) return;
 
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          if (abortRef.current) return;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.id === entry.id
-                ? { ...f, status: 'extracting', error: attempt > 0 ? `Attempt ${attempt + 1}...` : undefined }
-                : f
-            )
-          );
-
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-          let extractRes: Response;
-          try {
-            extractRes = await fetch('/api/certificates/extract', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ certificateId: certId }),
-              signal: controller.signal,
-            });
-          } catch {
-            clearTimeout(timeoutId);
-            lastError = 'Network error';
-            if (attempt < CLIENT_RETRY_DELAYS.length) {
-              await new Promise((resolve) => setTimeout(resolve, CLIENT_RETRY_DELAYS[attempt]));
-            }
-            continue;
-          }
+        let extractRes: Response;
+        try {
+          extractRes = await fetch('/api/certificates/extract', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ certificateId: certId }),
+            signal: controller.signal,
+          });
+        } catch (fetchErr) {
           clearTimeout(timeoutId);
+          const isTimeout = fetchErr instanceof DOMException && fetchErr.name === 'AbortError';
+          throw new Error(isTimeout ? 'Extraction timed out' : 'Network error');
+        }
+        clearTimeout(timeoutId);
 
-          if (extractRes.ok) {
-            const extractBody = await extractRes.json();
-            const { data: updatedCert } = await supabase
-              .from('certificates')
-              .select('insured_name')
-              .eq('id', certId!)
-              .single();
+        if (!extractRes.ok) {
+          const body = await extractRes.json().catch(() => ({}));
+          throw new Error(body.error ?? `Failed (HTTP ${extractRes.status})`);
+        }
 
-            // Auto-assign certificate to a vendor or tenant linked to the property
-            const insuredName = updatedCert?.insured_name || entry.file.name.replace(/\.pdf$/i, '');
-            if (propertyId && coiType) {
-              try {
-                if (coiType === 'vendor') {
-                  // Check if vendor with same name already exists for this property
-                  const { data: existing } = await supabase
-                    .from('vendors')
-                    .select('id')
-                    .eq('organization_id', orgId!)
-                    .eq('property_id', propertyId)
-                    .ilike('company_name', insuredName)
-                    .is('deleted_at', null)
-                    .maybeSingle();
+        const extractBody = await extractRes.json();
+        const { data: updatedCert } = await supabase
+          .from('certificates')
+          .select('insured_name')
+          .eq('id', certId!)
+          .single();
 
-                  let vendorId = existing?.id;
-                  if (!vendorId) {
-                    const { data: newVendor } = await supabase
-                      .from('vendors')
-                      .insert({
-                        organization_id: orgId!,
-                        property_id: propertyId,
-                        company_name: insuredName,
-                        compliance_status: 'under_review',
-                      })
-                      .select('id')
-                      .single();
-                    vendorId = newVendor?.id;
-                  }
+        // Auto-assign certificate to a vendor or tenant linked to the property
+        const insuredName = updatedCert?.insured_name || entry.file.name.replace(/\.pdf$/i, '');
+        if (propertyId && coiType) {
+          try {
+            if (coiType === 'vendor') {
+              const { data: existing } = await supabase
+                .from('vendors')
+                .select('id')
+                .eq('organization_id', orgId!)
+                .eq('property_id', propertyId)
+                .ilike('company_name', insuredName)
+                .is('deleted_at', null)
+                .maybeSingle();
 
-                  if (vendorId) {
-                    await supabase
-                      .from('certificates')
-                      .update({ vendor_id: vendorId })
-                      .eq('id', certId!);
-                  }
-                } else {
-                  // Tenant flow
-                  const { data: existing } = await supabase
-                    .from('tenants')
-                    .select('id')
-                    .eq('organization_id', orgId!)
-                    .eq('property_id', propertyId)
-                    .ilike('company_name', insuredName)
-                    .is('deleted_at', null)
-                    .maybeSingle();
+              let vendorId = existing?.id;
+              if (!vendorId) {
+                const { data: newVendor } = await supabase
+                  .from('vendors')
+                  .insert({
+                    organization_id: orgId!,
+                    property_id: propertyId,
+                    company_name: insuredName,
+                    compliance_status: 'under_review',
+                  })
+                  .select('id')
+                  .single();
+                vendorId = newVendor?.id;
+              }
 
-                  let tenantId = existing?.id;
-                  if (!tenantId) {
-                    const { data: newTenant } = await supabase
-                      .from('tenants')
-                      .insert({
-                        organization_id: orgId!,
-                        property_id: propertyId,
-                        company_name: insuredName,
-                        compliance_status: 'under_review',
-                      })
-                      .select('id')
-                      .single();
-                    tenantId = newTenant?.id;
-                  }
+              if (vendorId) {
+                await supabase
+                  .from('certificates')
+                  .update({ vendor_id: vendorId })
+                  .eq('id', certId!);
+              }
+            } else {
+              const { data: existing } = await supabase
+                .from('tenants')
+                .select('id')
+                .eq('organization_id', orgId!)
+                .eq('property_id', propertyId)
+                .ilike('company_name', insuredName)
+                .is('deleted_at', null)
+                .maybeSingle();
 
-                  if (tenantId) {
-                    await supabase
-                      .from('certificates')
-                      .update({ tenant_id: tenantId })
-                      .eq('id', certId!);
-                  }
-                }
-              } catch (assignErr) {
-                console.error('Auto-assign failed:', assignErr);
-                // Non-fatal: certificate is still extracted, just not assigned
+              let tenantId = existing?.id;
+              if (!tenantId) {
+                const { data: newTenant } = await supabase
+                  .from('tenants')
+                  .insert({
+                    organization_id: orgId!,
+                    property_id: propertyId,
+                    company_name: insuredName,
+                    compliance_status: 'under_review',
+                  })
+                  .select('id')
+                  .single();
+                tenantId = newTenant?.id;
+              }
+
+              if (tenantId) {
+                await supabase
+                  .from('certificates')
+                  .update({ tenant_id: tenantId })
+                  .eq('id', certId!);
               }
             }
-
-            setFiles((prev) =>
-              prev.map((f) =>
-                f.id === entry.id
-                  ? {
-                      ...f,
-                      status: 'done',
-                      error: undefined,
-                      attempts: attempt + 1,
-                      extractedData: {
-                        insuredName: updatedCert?.insured_name ?? null,
-                        coverageCount: extractBody.coverages ?? 0,
-                      },
-                    }
-                  : f
-              )
-            );
-            return;
-          }
-
-          const body = await extractRes.json().catch(() => ({}));
-          lastError = body.error ?? `Failed (HTTP ${extractRes.status})`;
-
-          if (extractRes.status === 403 || extractRes.status === 422) {
-            throw new Error(lastError);
-          }
-
-          if (attempt < CLIENT_RETRY_DELAYS.length) {
-            await new Promise((resolve) => setTimeout(resolve, CLIENT_RETRY_DELAYS[attempt]));
+          } catch (assignErr) {
+            console.error('Auto-assign failed:', assignErr);
           }
         }
 
-        throw new Error(lastError);
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === entry.id
+              ? {
+                  ...f,
+                  status: 'done',
+                  error: undefined,
+                  attempts: 1,
+                  extractedData: {
+                    insuredName: updatedCert?.insured_name ?? null,
+                    coverageCount: extractBody.coverages ?? 0,
+                  },
+                }
+              : f
+          )
+        );
+        return;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Processing failed';
         // Mark as failed in DB if we have a certificate ID
@@ -349,12 +320,21 @@ export function StepBulkUpload({
       }
     }
 
-    // Batch processing: process BATCH_SIZE files concurrently, then pause before next batch
+    // Batch processing: process BATCH_SIZE files with stagger, then pause before next batch
     const queue = [...pendingFiles];
 
     while (queue.length > 0 && !abortRef.current) {
       const batch = queue.splice(0, BATCH_SIZE);
-      await Promise.all(batch.map((entry) => processOne(entry)));
+      // Stagger files within the batch by STAGGER_DELAY_MS
+      const staggered = batch.map((entry, i) =>
+        new Promise<void>((resolve) =>
+          setTimeout(async () => {
+            await processOne(entry);
+            resolve();
+          }, i * STAGGER_DELAY_MS)
+        )
+      );
+      await Promise.all(staggered);
       // Pause between batches to prevent API overload
       if (queue.length > 0 && !abortRef.current) {
         await new Promise((resolve) => setTimeout(resolve, BATCH_PAUSE_MS));

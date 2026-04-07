@@ -112,9 +112,6 @@ const MAX_CONCURRENT = 2;
 // Delay between starting each extraction (ms)
 const STAGGER_DELAY_MS = 3_000;
 
-// Client-side retry backoff for failed extractions (ms) — 2s, 4s, 8s
-const CLIENT_RETRY_DELAYS = [2_000, 4_000, 8_000];
-
 // Per-request fetch timeout (ms) — prevents indefinite hangs
 const FETCH_TIMEOUT_MS = 120_000;
 
@@ -372,7 +369,7 @@ export default function BulkUploadPage() {
       completedCountRef.current = completed;
     }
 
-    // Process a single file: upload → create record → extract (with client-side retry)
+    // Process a single file: upload → create record → extract
     async function processOne(entry: FileEntry) {
       if (abortRef.current) return;
 
@@ -441,128 +438,70 @@ export default function BulkUploadPage() {
           );
         }
 
-        // Call extraction API with client-side retry for transient errors
-        let lastError = '';
-        const maxAttempts = CLIENT_RETRY_DELAYS.length + 1; // 3 total
+        // Extract — single attempt (server-side retry in extraction.ts handles transient errors)
+        if (abortRef.current) return;
 
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          if (abortRef.current) return;
+        console.log(`[bulk] Extracting ${entry.file.name} (certId=${certId})`);
 
-          // Clear stale retry message — show active extraction status
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.id === entry.id
-                ? {
-                    ...f,
-                    status: 'extracting',
-                    error: attempt > 0 ? `Attempt ${attempt + 1} of ${maxAttempts}...` : undefined,
-                  }
-                : f
-            )
-          );
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-          console.log(`[bulk] Extracting ${entry.file.name} attempt ${attempt + 1}/${maxAttempts} (certId=${certId})`);
-
-          // Fetch with timeout to prevent indefinite hangs
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-          let extractRes: Response;
-          try {
-            extractRes = await fetch('/api/certificates/extract', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ certificateId: certId }),
-              signal: controller.signal,
-            });
-          } catch (fetchErr) {
-            clearTimeout(timeoutId);
-            // AbortController timeout or network error
-            const isTimeout = fetchErr instanceof DOMException && fetchErr.name === 'AbortError';
-            lastError = isTimeout ? 'Extraction timed out' : 'Network error';
-            console.warn(`[bulk] Fetch error for ${entry.file.name}: ${lastError}`);
-            // Fall through to retry logic below
-            if (attempt < CLIENT_RETRY_DELAYS.length) {
-              const delay = CLIENT_RETRY_DELAYS[attempt];
-              setFiles((prev) =>
-                prev.map((f) =>
-                  f.id === entry.id
-                    ? { ...f, error: `${lastError}. Retrying in ${delay / 1000}s...`, attempts: attempt + 1 }
-                    : f
-                )
-              );
-              await new Promise((resolve) => setTimeout(resolve, delay));
-            }
-            continue;
-          }
+        let extractRes: Response;
+        try {
+          extractRes = await fetch('/api/certificates/extract', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ certificateId: certId }),
+            signal: controller.signal,
+          });
+        } catch (fetchErr) {
           clearTimeout(timeoutId);
+          const isTimeout = fetchErr instanceof DOMException && fetchErr.name === 'AbortError';
+          const errorMsg = isTimeout ? 'Extraction timed out' : 'Network error';
+          console.warn(`[bulk] Fetch error for ${entry.file.name}: ${errorMsg}`);
+          throw new Error(errorMsg);
+        }
+        clearTimeout(timeoutId);
 
-          console.log(`[bulk] Extract response for ${entry.file.name}: status=${extractRes.status}`);
+        console.log(`[bulk] Extract response for ${entry.file.name}: status=${extractRes.status}`);
 
-          if (extractRes.ok) {
-            const extractBody = await extractRes.json();
-
-            // Fetch the insured name from the updated certificate
-            const { data: updatedCert } = await supabase
-              .from('certificates')
-              .select('insured_name')
-              .eq('id', certId!)
-              .single();
-
-            console.log(`[bulk] ✓ Done: ${entry.file.name} — insured="${updatedCert?.insured_name}", coverages=${extractBody.coverages}`);
-
-            setFiles((prev) =>
-              prev.map((f) =>
-                f.id === entry.id
-                  ? {
-                      ...f,
-                      status: 'done',
-                      error: undefined,
-                      attempts: attempt + 1,
-                      extractedData: {
-                        insuredName: updatedCert?.insured_name ?? null,
-                        coverageCount: extractBody.coverages ?? 0,
-                        entityCount: extractBody.entities ?? 0,
-                      },
-                    }
-                  : f
-              )
-            );
-            updateProgress(completedCountRef.current + 1);
-            return; // success
-          }
-
-          // Failed — check if retryable
+        if (!extractRes.ok) {
           const body = await extractRes.json().catch(() => ({}));
-          lastError = body.error ?? `Extraction failed (HTTP ${extractRes.status})`;
-          console.warn(`[bulk] ✗ Failed: ${entry.file.name} — ${lastError} (status=${extractRes.status}, attempt=${attempt + 1})`);
-
-          // Plan-related errors should not retry
-          if (isPlanInactiveError(lastError) || extractRes.status === 403) {
-            throw new Error(lastError);
-          }
-
-          // 422 is extraction failure (bad PDF, etc.) — don't retry
-          if (extractRes.status === 422 && !lastError.includes('busy')) {
-            throw new Error(lastError);
-          }
-
-          // Retryable — wait with backoff
-          if (attempt < CLIENT_RETRY_DELAYS.length) {
-            const delay = CLIENT_RETRY_DELAYS[attempt];
-            setFiles((prev) =>
-              prev.map((f) =>
-                f.id === entry.id
-                  ? { ...f, error: `${lastError}. Retrying in ${delay / 1000}s...`, attempts: attempt + 1 }
-                  : f
-              )
-            );
-            await new Promise((resolve) => setTimeout(resolve, delay));
-          }
+          const lastError = body.error ?? `Extraction failed (HTTP ${extractRes.status})`;
+          console.warn(`[bulk] ✗ Failed: ${entry.file.name} — ${lastError} (status=${extractRes.status})`);
+          throw new Error(lastError);
         }
 
-        // All retries exhausted
-        throw new Error(lastError);
+        const extractBody = await extractRes.json();
+
+        // Fetch the insured name from the updated certificate
+        const { data: updatedCert } = await supabase
+          .from('certificates')
+          .select('insured_name')
+          .eq('id', certId!)
+          .single();
+
+        console.log(`[bulk] ✓ Done: ${entry.file.name} — insured="${updatedCert?.insured_name}", coverages=${extractBody.coverages}`);
+
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === entry.id
+              ? {
+                  ...f,
+                  status: 'done',
+                  error: undefined,
+                  attempts: 1,
+                  extractedData: {
+                    insuredName: updatedCert?.insured_name ?? null,
+                    coverageCount: extractBody.coverages ?? 0,
+                    entityCount: extractBody.entities ?? 0,
+                  },
+                }
+              : f
+          )
+        );
+        updateProgress(completedCountRef.current + 1);
+        return;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Processing failed';
         console.error(`[bulk] ✗ Final failure: ${entry.file.name} — ${message}`);
@@ -1162,8 +1101,7 @@ export default function BulkUploadPage() {
           {hasHighFailures && !allProcessed && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               <AlertTriangle className="mr-1.5 inline h-4 w-4" />
-              Some extractions are failing due to high demand. The system will automatically retry.
-              This may take a few extra minutes.
+              Some extractions are failing due to high demand. You can retry failed files after the batch completes.
             </div>
           )}
 

@@ -305,11 +305,43 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
   let lastErrorText = '';
 
   for (let attempt = 0; attempt <= BACKOFF_MS.length; attempt++) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers,
-      body: requestBody,
-    });
+    // 90-second timeout to prevent indefinite hangs
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 90_000);
+
+    let response: Response;
+    try {
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers,
+        body: requestBody,
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      const isTimeout = fetchErr instanceof DOMException && fetchErr.name === 'AbortError';
+      const errorLabel = isTimeout ? 'Request timed out (90s)' : 'Network error';
+      console.error(
+        `[extraction] ${errorLabel} (attempt ${attempt + 1}/${BACKOFF_MS.length + 1})`
+      );
+
+      // Treat timeouts and network errors as retryable
+      if (attempt >= BACKOFF_MS.length) {
+        return {
+          success: false, coverages: [], entities: [], endorsements: [], insuredName: null,
+          error: errorLabel,
+          userMessage: 'AI extraction is temporarily unavailable. Please try again in a few minutes.',
+        };
+      }
+
+      const delay = BACKOFF_MS[attempt];
+      console.warn(
+        `[extraction] ${errorLabel}, waiting ${delay / 1000}s before retry…`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      continue;
+    }
+    clearTimeout(timeoutId);
 
     if (response.ok) {
       // Successful response — parse and return
