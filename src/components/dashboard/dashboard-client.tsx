@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { formatTimeAgo, formatDate } from '@/lib/utils';
 import { SimpleUploadCOIDialog } from '@/components/dashboard/simple-upload-coi-dialog';
 import { EntityCreationWizard } from '@/components/properties/entity-creation-wizard';
+import { getTerminology } from '@/lib/constants/terminology';
+import type { Industry } from '@/types';
 import { ExportReportButton } from '@/components/dashboard/export-report-button';
 import { DashboardTutorial, useTutorial } from '@/components/dashboard/dashboard-tutorial';
 import {
@@ -63,6 +65,7 @@ interface DashboardClientProps {
   actionItems: ActionItem[];
   propertyOverviews: PropertyOverview[];
   activity: ActivityEntry[];
+  industry: string | null;
   propertyList: UploadDialogProperty[];
   vendorList: UploadDialogEntity[];
   tenantList: UploadDialogEntity[];
@@ -165,6 +168,7 @@ export function DashboardClient({
   actionItems,
   propertyOverviews,
   activity,
+  industry,
   propertyList,
   vendorList,
   tenantList,
@@ -172,6 +176,8 @@ export function DashboardClient({
   showAssignBanner,
   firstName,
 }: DashboardClientProps) {
+  const terms = getTerminology(industry as Industry | null);
+  const hasProperties = propertyOverviews.length > 0;
   const [uploadOpen, setUploadOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [pillFilter, setPillFilter] = useState<PillFilter>(null);
@@ -350,8 +356,10 @@ export function DashboardClient({
             pillFilter={pillFilter}
           />
 
-          {/* Properties Grid */}
-          <PropertiesSection properties={propertyOverviews} />
+          {/* Properties/Locations Grid — only show if org has locations */}
+          {hasProperties && (
+            <PropertiesSection properties={propertyOverviews} locationLabel={terms.locationPlural} addLabel={terms.location} />
+          )}
         </div>
 
         {/* Right sidebar: Activity */}
@@ -371,12 +379,12 @@ export function DashboardClient({
 // Properties Grid
 // ============================================================================
 
-function PropertiesSection({ properties }: { properties: PropertyOverview[] }) {
+function PropertiesSection({ properties, locationLabel, addLabel }: { properties: PropertyOverview[]; locationLabel: string; addLabel: string }) {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-base font-semibold text-slate-900">
-          Properties
+          {locationLabel}
         </h2>
         <Link
           href="/dashboard/properties"
@@ -391,7 +399,7 @@ function PropertiesSection({ properties }: { properties: PropertyOverview[] }) {
         {properties.map((p) => (
           <PropertyCard key={p.id} property={p} />
         ))}
-        <AddPropertyCard />
+        <AddPropertyCard label={addLabel} />
       </div>
     </div>
   );
@@ -481,7 +489,7 @@ function PropertyCard({ property }: { property: PropertyOverview }) {
   );
 }
 
-function AddPropertyCard() {
+function AddPropertyCard({ label }: { label: string }) {
   return (
     <Link href="/dashboard/properties" className="group block">
       <div className="flex h-full min-h-[120px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white p-5 transition-all hover:border-emerald-300 hover:bg-emerald-50/30">
@@ -489,7 +497,7 @@ function AddPropertyCard() {
           <Plus className="h-5 w-5 text-slate-400 group-hover:text-emerald-600" />
         </div>
         <p className="mt-2.5 text-xs font-medium text-slate-500 group-hover:text-emerald-700">
-          Add Property
+          Add {label}
         </p>
       </div>
     </Link>

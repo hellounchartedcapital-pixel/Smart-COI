@@ -34,11 +34,6 @@ const PROPERTY_TYPES_BY_INDUSTRY: Partial<Record<Industry, { value: PropertyType
     { value: 'multifamily', label: 'Multifamily' },
     { value: 'other', label: 'Other' },
   ],
-  hospitality: [
-    { value: 'other', label: 'Hotel' },
-    { value: 'retail', label: 'Resort' },
-    { value: 'mixed_use', label: 'Mixed-Use' },
-  ],
   construction: [
     { value: 'other', label: 'Commercial' },
     { value: 'multifamily', label: 'Residential' },
@@ -48,6 +43,28 @@ const PROPERTY_TYPES_BY_INDUSTRY: Partial<Record<Industry, { value: PropertyType
     { value: 'industrial', label: 'Warehouse' },
     { value: 'other', label: 'Distribution Center' },
     { value: 'office', label: 'Office' },
+  ],
+  healthcare: [
+    { value: 'other', label: 'Hospital' },
+    { value: 'office', label: 'Clinic' },
+    { value: 'retail', label: 'Urgent Care' },
+  ],
+  manufacturing: [
+    { value: 'industrial', label: 'Factory' },
+    { value: 'other', label: 'Warehouse' },
+    { value: 'office', label: 'Office' },
+  ],
+  hospitality: [
+    { value: 'other', label: 'Hotel' },
+    { value: 'retail', label: 'Resort' },
+    { value: 'mixed_use', label: 'Restaurant' },
+    { value: 'industrial', label: 'Event Venue' },
+  ],
+  retail: [
+    { value: 'retail', label: 'Store' },
+    { value: 'mixed_use', label: 'Mall' },
+    { value: 'industrial', label: 'Warehouse' },
+    { value: 'other', label: 'Other' },
   ],
 };
 
