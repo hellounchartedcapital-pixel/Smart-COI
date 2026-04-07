@@ -161,10 +161,11 @@ export function StepTemplates({ onNext, onSkip, saving }: StepTemplatesProps) {
         </p>
       </div>
 
-      {/* Vendor Templates */}
+      {/* Vendor/Entity Templates */}
+      {vendorTemplates.length > 0 && (
       <div className="space-y-3">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Vendor Templates
+          Coverage Templates
         </h3>
         <div className="space-y-3">
           {vendorTemplates.map((t) => (
@@ -179,8 +180,10 @@ export function StepTemplates({ onNext, onSkip, saving }: StepTemplatesProps) {
           ))}
         </div>
       </div>
+      )}
 
-      {/* Tenant Templates */}
+      {/* Tenant Templates — only shown when tenant templates exist */}
+      {tenantTemplates.length > 0 && (
       <div className="space-y-3">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Tenant Templates
@@ -198,6 +201,7 @@ export function StepTemplates({ onNext, onSkip, saving }: StepTemplatesProps) {
           ))}
         </div>
       </div>
+      )}
 
       {/* Tip */}
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
@@ -205,7 +209,7 @@ export function StepTemplates({ onNext, onSkip, saving }: StepTemplatesProps) {
           Almost done!
         </p>
         <p className="mt-1 text-xs text-emerald-700">
-          These templates define what coverage each vendor or tenant needs. You can always customize them later from Settings.
+          These templates define what coverage each third party needs. You can always customize them later from Settings.
         </p>
       </div>
 

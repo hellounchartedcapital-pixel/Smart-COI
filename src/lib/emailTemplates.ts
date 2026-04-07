@@ -66,7 +66,7 @@ function baseLayout(content: string): string {
                 This is an automated notification from <a href="https://smartcoi.io" style="color: #10B981; text-decoration: none;">SmartCOI</a>.
               </p>
               <p style="margin: 0; font-size: 11px; color: #d1d5db; text-align: center; line-height: 1.5;">
-                If you believe you received this in error, please contact your property manager.
+                If you believe you received this in error, please contact your administrator.
               </p>
             </td>
           </tr>

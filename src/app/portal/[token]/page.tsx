@@ -1,5 +1,3 @@
-// TODO: Migrate portal to use entities table via entity_id on upload_portal_tokens
-// TODO: Replace "contact your property manager" with generic "contact your administrator"
 import { createServiceClient } from '@/lib/supabase/service';
 import { formatCurrency } from '@/lib/utils';
 import { getCoverageLabel, LIMIT_TYPE_LABELS } from '@/components/templates/template-labels';
@@ -55,32 +53,34 @@ export default async function PortalPage({ params }: PortalPageProps) {
   // Look up the portal token
   const { data: tokenRecord, error: tokenError } = await supabase
     .from('upload_portal_tokens')
-    .select('id, vendor_id, tenant_id, token, expires_at, is_active')
+    .select('id, entity_id, vendor_id, tenant_id, token, expires_at, is_active')
     .eq('token', token)
     .single();
 
   // Token not found or inactive
   if (tokenError || !tokenRecord || !tokenRecord.is_active) {
-    return <PortalErrorPage message="This upload link is no longer active. Please contact your property manager for a new link." />;
+    return <PortalErrorPage message="This upload link is no longer active. Please contact your administrator for a new link." />;
   }
 
   // Token expired
   if (new Date(tokenRecord.expires_at) < new Date()) {
-    return <PortalErrorPage message="This upload link has expired. Please contact your property manager for a new link." />;
+    return <PortalErrorPage message="This upload link has expired. Please contact your administrator for a new link." />;
   }
 
-  const entityType = tokenRecord.vendor_id ? 'vendor' : 'tenant';
-  const entityId = (tokenRecord.vendor_id ?? tokenRecord.tenant_id)!;
+  const entityId = tokenRecord.entity_id ?? tokenRecord.vendor_id ?? tokenRecord.tenant_id;
+  if (!entityId) {
+    return <PortalErrorPage message="This upload link is no longer active. Please contact your administrator for a new link." />;
+  }
 
-  // Fetch entity details
+  // Fetch entity details from unified entities table
   const { data: entity } = await supabase
-    .from(entityType === 'vendor' ? 'vendors' : 'tenants')
-    .select('id, company_name, organization_id, property_id, template_id')
+    .from('entities')
+    .select('id, name, entity_type, organization_id, property_id, template_id')
     .eq('id', entityId)
     .single();
 
   if (!entity) {
-    return <PortalErrorPage message="This upload link is no longer active. Please contact your property manager for a new link." />;
+    return <PortalErrorPage message="This upload link is no longer active. Please contact your administrator for a new link." />;
   }
 
   // Fetch organization name
@@ -90,8 +90,8 @@ export default async function PortalPage({ params }: PortalPageProps) {
     .eq('id', entity.organization_id)
     .single();
 
-  // Fetch PM contact info
-  const { data: pmUser } = await supabase
+  // Fetch admin/contact info (first user in the org)
+  const { data: adminUser } = await supabase
     .from('users')
     .select('full_name, email')
     .eq('organization_id', entity.organization_id)
@@ -136,7 +136,7 @@ export default async function PortalPage({ params }: PortalPageProps) {
   const { data: latestCert } = await supabase
     .from('certificates')
     .select('id')
-    .eq(entityType === 'vendor' ? 'vendor_id' : 'tenant_id', entityId)
+    .eq('entity_id', entityId)
     .in('processing_status', ['extracted', 'review_confirmed'])
     .order('uploaded_at', { ascending: false })
     .limit(1)
@@ -200,8 +200,8 @@ export default async function PortalPage({ params }: PortalPageProps) {
 
   const additionalInsured = propertyEntities.filter((e) => e.entity_type === 'additional_insured');
   const certificateHolder = propertyEntities.find((e) => e.entity_type === 'certificate_holder');
-  const pmName = pmUser?.full_name ?? 'your property manager';
-  const organizationName = org?.name ?? 'Your Property Manager';
+  const contactName = adminUser?.full_name ?? 'your administrator';
+  const organizationName = org?.name ?? 'Your Organization';
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -334,7 +334,7 @@ export default async function PortalPage({ params }: PortalPageProps) {
         )}
 
         {/* Upload Section */}
-        <PortalUploadClient token={token} pmName={pmName} />
+        <PortalUploadClient token={token} pmName={contactName} />
 
         {/* Portal privacy notice */}
         <p className="mt-6 text-center text-xs text-slate-400">
@@ -353,11 +353,11 @@ export default async function PortalPage({ params }: PortalPageProps) {
         {/* Footer */}
         <div className="mt-12 text-center text-xs text-slate-400 pb-8">
           <p>Powered by SmartCOI</p>
-          {pmUser?.email && (
+          {adminUser?.email && (
             <p className="mt-1">
               Questions? Contact{' '}
-              <a href={`mailto:${pmUser.email}`} className="text-emerald-600 hover:text-emerald-700 underline">
-                {pmName}
+              <a href={`mailto:${adminUser.email}`} className="text-emerald-600 hover:text-emerald-700 underline">
+                {contactName}
               </a>
             </p>
           )}

@@ -305,7 +305,7 @@ function day3Feature(firstName: string): { subject: string; html: string } {
   const body = `
 <p>Hi ${firstName},</p>
 
-<p>Most property managers who try SmartCOI start with the bulk upload — drag and drop up to 50 certificate PDFs at once, and the AI builds your vendor roster with compliance status automatically. No typing vendor names or coverage limits.</p>
+<p>Most teams who try SmartCOI start with the bulk upload — drag and drop up to 50 certificate PDFs at once, and the AI builds your compliance roster automatically. No typing names or coverage limits.</p>
 
 <p>If you have a folder of COIs on your computer or in a shared drive, give it a try:</p>
 <ol style="padding-left:20px;margin:12px 0;">
@@ -314,14 +314,14 @@ function day3Feature(firstName: string): { subject: string; html: string } {
   <li style="margin-bottom:6px;">Select your files — the AI does the rest</li>
 </ol>
 
-<p>Most teams have their entire portfolio loaded in about 10 minutes.</p>
+<p>Most teams have everything loaded in about 10 minutes.</p>
 
 <p>If you've already started uploading — great, ignore this email. If you need help getting set up, just reply and I'll walk you through it.</p>
 
 <p>Tony</p>`;
 
   return {
-    subject: 'The fastest way to load your portfolio into SmartCOI',
+    subject: 'The fastest way to get started with SmartCOI',
     html: personalWrapper(body),
   };
 }
@@ -336,8 +336,8 @@ function day7Checkin(firstName: string, stats: OrgStats): { subject: string; htm
 <p>Here's a quick snapshot of your account:</p>
 <ul style="padding-left:20px;margin:12px 0;">
   <li style="margin-bottom:4px;"><strong>${stats.certificateCount}</strong> certificates uploaded</li>
-  <li style="margin-bottom:4px;"><strong>${stats.vendorCount}</strong> vendors tracked</li>
-  <li style="margin-bottom:4px;"><strong>${complianceStr}</strong> portfolio compliance</li>
+  <li style="margin-bottom:4px;"><strong>${stats.vendorCount}</strong> entities tracked</li>
+  <li style="margin-bottom:4px;"><strong>${complianceStr}</strong> compliance rate</li>
 </ul>
 <p>The two things that save the most time are the automated follow-ups (expiring vendors get reminded automatically) and the vendor portal (vendors upload their own certificates through a link — no login required).</p>`;
   } else {
