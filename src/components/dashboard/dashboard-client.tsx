@@ -146,6 +146,7 @@ const ACTIVITY_ICONS: Record<ActivityAction, typeof Upload> = {
   template_updated: FileCheck,
   vendor_created: User,
   tenant_created: User,
+  entity_created: User,
 };
 
 // ============================================================================
