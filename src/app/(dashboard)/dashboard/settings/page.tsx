@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { SettingsClient } from '@/components/settings/settings-client';
-import type { OrganizationDefaultEntity, OrganizationSettings } from '@/types';
+import type { Industry, OrganizationDefaultEntity, OrganizationSettings } from '@/types';
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -24,7 +24,7 @@ export default async function SettingsPage() {
   const [{ data: org }, { data: defaultEntities }] = await Promise.all([
     supabase
       .from('organizations')
-      .select('name, settings')
+      .select('name, industry, settings')
       .eq('id', orgId)
       .single(),
     supabase
@@ -38,6 +38,7 @@ export default async function SettingsPage() {
   return (
     <SettingsClient
       orgName={org?.name ?? ''}
+      orgIndustry={(org?.industry as Industry) ?? null}
       orgSettings={(org?.settings ?? {}) as OrganizationSettings}
       pmName={profile.full_name ?? ''}
       pmEmail={profile.email}

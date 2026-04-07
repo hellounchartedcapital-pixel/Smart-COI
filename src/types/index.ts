@@ -7,6 +7,16 @@
 // Enum types (mirror CHECK constraints in the database)
 // ============================================================================
 
+export type Industry =
+  | 'property_management'
+  | 'construction'
+  | 'logistics'
+  | 'healthcare'
+  | 'manufacturing'
+  | 'hospitality'
+  | 'retail'
+  | 'other';
+
 export type UserRole = 'manager';
 
 export type PropertyType =
@@ -105,6 +115,7 @@ export type ActivityAction =
 export interface Organization {
   id: string;
   name: string;
+  industry: Industry | null;
   plan: string;
   trial_ends_at: string | null;
   settings: OrganizationSettings;
