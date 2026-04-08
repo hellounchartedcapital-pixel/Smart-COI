@@ -269,18 +269,25 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Added "(2026)" year tags to comparison and feature page titles
 - Both `metadata.title`/`description` and `openGraph` title/description updated in sync
 
-#### SEO: ACORD 25 Post Comprehensive Expansion (Apr 2026)
+#### SEO: ACORD 25 Post Upgrade (Apr 2026)
 
-- Expanded `/blog/acord-25-certificate-explained` to ~3,100 words (from ~2,200) targeting "acord 25", "acord 25 certificate of liability insurance", "acord 25 form" queries
-- Restructured as field-by-field guide with H2/H3 hierarchy: "How to Read an ACORD 25: Section by Section" parent H2 with H3s for each form section (Header, Insured, Insurers, GL, Auto, WC, Umbrella, Description of Operations, Certificate Holder)
-- Added new "Who Uses the ACORD 25?" section broadening audience beyond property managers (construction, logistics, healthcare, etc.)
-- Added new "How to Verify Coverage Limits on an ACORD 25" section (5-step systematic approach)
-- Converted FAQ questions from bold to H3 headings (7 Q&As) for better SEO
-- Added 2 new FAQs: "Is an ACORD 25 the same as a certificate of insurance?" and "How do you request an ACORD 25 from a vendor?"
-- Updated frontmatter description for SEO with CTA language
-- Added internal links to /coi-tracking-software, /compare, /compare/smartcoi-vs-spreadsheets, plus existing ACORD 28, Additional Insured, COI expiration, waiver of subrogation links
-- Consolidated "What to Check" section into enriched 10-point checklist to eliminate content overlap
-- FAQPage JSON-LD in page component needs update to match new H3-format FAQ questions (2 new Q&As to add)
+- Fully rewrote `/blog/acord-25-certificate-explained` with new expanded content (~180 lines of MDX) focused on field-by-field reading guide, common mistakes, and automation CTA
+- Updated meta title to "ACORD 25 Certificate of Insurance Explained (2026 Guide)" and description to "Complete guide to the ACORD 25 certificate of liability insurance. Learn how to read every field, verify coverage, spot common mistakes, and automate compliance tracking."
+- openGraph title/description synced via `generateMetadata` (reads from MDX frontmatter)
+- Restructured sections: What Is an ACORD 25, ACORD 25 vs ACORD 28, How to Read (field-by-field with Producer/Insured/Coverage/Certificate Holder/Additional Insured/Description of Operations subsections), 8-point PM verification checklist, 8 common mistakes, SmartCOI automation section
+- Updated FAQ section from 5 Q&As to 6 Q&As with FAQPage JSON-LD structured data (in blog page component): ACORD 25 vs 28, guarantee coverage, update frequency, who issues, additional insured meaning, forgery risk
+- Internal links to ACORD 28, Additional Insured, COI expiration tracking, and COI tracking software pages
+- Date updated to 2026-04-08
+
+#### SEO: ACORD 28 Post Upgrade (Apr 2026)
+
+- Fully rewrote `/blog/acord-28-evidence-of-property-insurance` with new expanded content focused on field-by-field reading guide, ACORD 27 vs 28 distinction, common compliance mistakes, and automation CTA
+- Updated meta title to "ACORD 28 Evidence of Property Insurance: Complete Guide (2026)" and description to "Everything you need to know about the ACORD 28 form. Learn what it covers, how it differs from the ACORD 27, how to verify property coverage, and common compliance mistakes."
+- openGraph title/description synced via `generateMetadata` (reads from MDX frontmatter)
+- Restructured sections: What Is an ACORD 28, ACORD 28 vs ACORD 27, How to Read (section-by-section with Producer/Insured/Property/Coverage/Valuation/Coinsurance/Deductible/Certificate Holder/Endorsements subsections), When Required, 5 common mistakes, ACORD 28 vs 25 quick reference, automation section
+- Moved FAQ JSON-LD from inline MDX to blog page component `faqData` map (5 Q&As): ACORD 28 usage, ACORD 27 vs 28, coverage guarantee, tenant limits, certificate holder
+- Internal links to ACORD 25, COI tracking software pages
+- Date updated to 2026-04-08
 
 #### QA Warning Fixes (Apr 2026)
 
