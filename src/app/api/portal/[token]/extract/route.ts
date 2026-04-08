@@ -3,6 +3,8 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { extractCOIFromPDF } from '@/lib/ai/extraction';
 import { checkExtractionLimit } from '@/lib/plan-limits';
 import { getActivePlanStatus } from '@/lib/plan-status';
+import { getTerminology } from '@/lib/constants/terminology';
+import type { Industry } from '@/types';
 import { runAutoCompliance } from '@/lib/actions/certificates';
 import { sendNotificationEmail } from '@/lib/notifications/email-sender';
 
@@ -114,15 +116,17 @@ export async function POST(
     // Check org plan status — reject if canceled or trial expired
     const { data: orgForPlan } = await supabase
       .from('organizations')
-      .select('plan, trial_ends_at')
+      .select('plan, trial_ends_at, industry')
       .eq('id', cert.organization_id)
       .single();
+
+    const requesterLabel = getTerminology((orgForPlan?.industry as Industry) ?? null).requesterLabel;
 
     if (orgForPlan) {
       const planStatus = getActivePlanStatus(orgForPlan);
       if (!planStatus.isActive) {
         return NextResponse.json(
-          { error: 'This upload portal is temporarily unavailable. Please contact your property manager.' },
+          { error: `This upload portal is temporarily unavailable. Please contact your ${requesterLabel}.` },
           { status: 403 }
         );
       }
@@ -132,7 +136,7 @@ export async function POST(
     const limitCheck = await checkExtractionLimit(cert.organization_id);
     if (!limitCheck.allowed) {
       return NextResponse.json(
-        { error: 'This organization has reached its monthly processing limit. Please contact your property manager.' },
+        { error: `This organization has reached its monthly processing limit. Please contact your ${requesterLabel}.` },
         { status: 403 }
       );
     }
