@@ -254,8 +254,8 @@ function isRetryableStatus(status: number): boolean {
  * Send a PDF (as base64) to the Anthropic Claude API and extract
  * structured COI data. Returns rows ready for database insertion.
  *
- * Automatically retries up to 3 times for transient errors (429, 529, 502, 503)
- * with exponential backoff: 5s → 15s → 30s.
+ * Automatically retries up to 5 times for transient errors (429, 529, 502, 503)
+ * with exponential backoff: 5s → 15s → 30s → 60s → 90s.
  */
 export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -300,7 +300,7 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
   };
 
   // Retry with exponential backoff for transient errors
-  const BACKOFF_MS = [5_000, 15_000, 30_000];
+  const BACKOFF_MS = [5_000, 15_000, 30_000, 60_000, 90_000];
   let lastStatus = 0;
   let lastErrorText = '';
 

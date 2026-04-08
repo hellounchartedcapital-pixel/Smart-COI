@@ -156,6 +156,15 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Under Review Status + Bulk Upload Retry Improvements (Apr 2026)
+
+- **Fixed `runComplianceForEntity()` querying legacy tables:** Function in `src/lib/actions/properties.ts` was querying legacy `vendors`/`tenants` tables instead of the unified `entities` table. Entities created during onboarding exist only in the `entities` table, so the lookup returned null → template not found → compliance never calculated → status stuck at `under_review`. Now queries `entities` table first with fallback to legacy tables.
+- **Fixed certificate lookup in compliance calculation:** Certificate queries now use `or(entity_id, vendor_id, tenant_id)` filter instead of only legacy `vendor_id`/`tenant_id` match, ensuring certificates linked via `entity_id` are found.
+- **Fixed compliance status dual-write:** Status updates now write to both `entities` table and legacy table (was only writing to legacy table). Activity log now includes `entity_id`.
+- **Increased AI extraction retries from 3 to 5:** `BACKOFF_MS` in `src/lib/ai/extraction.ts` expanded from `[5s, 15s, 30s]` to `[5s, 15s, 30s, 60s, 90s]` to better handle Anthropic API 529 (overloaded) errors during bulk upload.
+- **Bulk upload concurrency already optimal:** Verified processing is sequential (1 file at a time) with 2-second pause between files — no concurrency reduction needed.
+- **Retry UI already exists:** Verified "Retry All Failed" button and per-file "Retry" buttons are present in bulk upload UI.
+
 #### Compliance Audit PDF Report Generator (Apr 2026)
 
 - Created `src/lib/reports/compliance-audit-report.ts` — server-side PDF report generator using jsPDF + jspdf-autotable (Vercel-compatible, no headless browser required)
@@ -385,7 +394,7 @@ Full end-to-end audit of 7 critical user flows. **All 7 flows PASS** — no bloc
 
 ### Known Issues
 
-- Anthropic API 529 errors during bulk upload (retry logic with exponential backoff in place)
+- Anthropic API 529 errors during bulk upload (retry logic with exponential backoff in place — increased to 5 retries with up to 90s backoff)
 - Tutorial walkthrough positioning edge cases
 
 ## Architecture Notes
@@ -487,7 +496,7 @@ Notable columns:
 - **Middleware** (`src/middleware.ts`) checks for `smartcoi-session` cookie before refreshing auth tokens. No cookie = expired session = redirect to `/login`. Redirects unauthenticated users to `/login`.
 - **Session management** (`src/lib/session.ts`) uses a browser cookie (`smartcoi-session`) as a server-readable session marker (24h or 7d max-age) plus localStorage for inactivity tracking. `SessionGuard` component in the dashboard layout checks both.
 - **Compliance pipeline:** No manual review step. Extraction → automatic compliance calculation. Fuzzy name matching for certificate holder and additional insured.
-- **Bulk upload:** Batch processing with 5 concurrent files, exponential backoff retry (2s/4s/8s) on Anthropic API 529 errors.
+- **Bulk upload:** Sequential processing (1 file at a time) with 2-second pause between files, exponential backoff retry (5s/15s/30s/60s/90s — 5 retries) on Anthropic API 529 errors.
 - **Google OAuth:** Handled via Supabase Auth callback at `/api/auth/callback`. Uses request-aware `createServerClient` (not `cookies()` from next/headers) to ensure auth tokens are set on the redirect response. Trial period assigned on org creation for both email and OAuth signups.
 - **Lease extraction:** API route at `/api/leases/extract`. Uses `src/lib/ai/lease-extraction.ts` with lease-specific prompt. Counts against extraction credits via `checkExtractionLimit()`.
 
