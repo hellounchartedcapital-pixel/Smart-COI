@@ -262,6 +262,16 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Related resources and internal links to compare pages, features, and compliance guide
 - Target: position improvement from 46 → page 1 for buyer-intent queries
 
+#### SEO: COI Expiration Tracking Post Optimization (Apr 2026)
+
+- Optimized `/blog/coi-expiration-tracking-best-practices` for improved CTR (was 0.43% at position 6)
+- Updated title to "COI Expiration Tracking: How to Never Miss a Renewal" and description for action-oriented CTR
+- Added "Signs Your COI Tracking Process Is Broken" section (5 warning signs)
+- Added "Manual vs Automated Expiration Tracking" section (5 comparison points)
+- Added "What to Track Beyond Expiration Dates" section with internal links to ACORD 25, ACORD 28, and additional insured guides
+- Added clear SmartCOI free trial CTA section
+- Date updated to 2026-04-08
+
 #### SEO: Meta Tag Optimization (Apr 2026)
 
 - Updated meta titles and descriptions on 12 pages for improved CTR
