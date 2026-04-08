@@ -164,6 +164,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - **Increased AI extraction retries from 3 to 5:** `BACKOFF_MS` in `src/lib/ai/extraction.ts` expanded from `[5s, 15s, 30s]` to `[5s, 15s, 30s, 60s, 90s]` to better handle Anthropic API 529 (overloaded) errors during bulk upload.
 - **Bulk upload concurrency already optimal:** Verified processing is sequential (1 file at a time) with 2-second pause between files — no concurrency reduction needed.
 - **Retry UI already exists:** Verified "Retry All Failed" button and per-file "Retry" buttons are present in bulk upload UI.
+- **Admin recheck route:** Created `src/app/api/admin/recheck-compliance/route.ts` — one-time POST endpoint (auth via `CRON_SECRET`) that finds all entities with `compliance_status = 'under_review'` or `null`, recalculates compliance using the fixed logic, and returns a summary with per-entity before/after status. Logs `compliance_checked` activity for each recalculated entity.
 
 #### Compliance Audit PDF Report Generator (Apr 2026)
 
