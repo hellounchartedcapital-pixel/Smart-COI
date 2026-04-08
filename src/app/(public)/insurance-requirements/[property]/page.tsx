@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
-import { propertyTypes, coverageTypes, getPropertyType } from '@/lib/pseo';
+import { propertyTypes, coverageTypes, coverageGuides, getPropertyType } from '@/lib/pseo';
 
 interface PageProps {
   params: Promise<{ property: string }>;
@@ -174,6 +174,23 @@ export default async function PropertyInsuranceHubPage({ params }: PageProps) {
               Automated Compliance Checking
             </Link>
           </div>
+        </section>
+
+        {/* Coverage Guides */}
+        <section className="mx-auto max-w-4xl px-6 mt-16">
+          <h2 className="text-xl font-bold text-slate-900">Coverage Guides</h2>
+          <ul className="mt-4 flex flex-col gap-3">
+            {coverageGuides.map((g) => (
+              <li key={g.slug}>
+                <Link
+                  href={`/insurance-requirements/coverage/${g.slug}`}
+                  className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline"
+                >
+                  {g.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
 
         {/* CTA */}
