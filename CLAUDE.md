@@ -65,7 +65,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 **Unified entity model:**
 - Merged vendors/tenants into `entities` table with `type` field
 - Legacy vendor/tenant tables still active via dual-writing (portal, notifications, detail pages still read from legacy)
-- Entity detail page redirects to legacy vendor/tenant pages (functional)
+- Entity detail page redirects to legacy vendor/tenant pages (with entities table fallback)
 
 **KNOWN GAPS (in progress):**
 - ~~\~30 dashboard components still have hardcoded "Vendor"/"Tenant" strings instead of using terminology~~ **FIXED** (Apr 2026)
@@ -155,6 +155,12 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Fix: Entity Detail Page 404 + Delete/Archive for Unified Entities (Apr 2026)
+
+- **Fixed vendor/tenant detail pages returning 404:** Detail pages at `/dashboard/vendors/[id]` and `/dashboard/tenants/[id]` only queried legacy `vendors`/`tenants` tables. Entities created via the unified `createEntity()` flow (onboarding, entity creation wizard) exist only in the `entities` table — legacy lookup failed → `notFound()` → 404. Both pages now fall back to the `entities` table and map Entity fields to the Vendor/Tenant shape expected by client components.
+- **Fixed certificate/notification/waiver queries on detail pages:** All queries on vendor/tenant detail pages now use `or(entity_id, vendor_id/tenant_id)` filters instead of only legacy `vendor_id`/`tenant_id`. This ensures certificates, notifications, and waivers linked via `entity_id` are found.
+- **Fixed archive/delete/restore for entities-only records:** `archiveVendor()`, `permanentlyDeleteVendor()`, `restoreVendor()`, `archiveTenant()`, `permanentlyDeleteTenant()`, `restoreTenant()` now dual-write to both legacy and `entities` tables. Also resolves entity name from `entities` table when not found in legacy table for activity log.
 
 #### Fix: Under Review Status + Bulk Upload Retry Improvements (Apr 2026)
 
