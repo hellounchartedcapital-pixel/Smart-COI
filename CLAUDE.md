@@ -157,6 +157,17 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Onboarding Bulk Upload — Orphaned Certificates (Apr 2026)
+
+- **Root cause:** Onboarding bulk upload (`step-bulk-upload.tsx`) created certificate records without `entity_id`/`vendor_id`/`tenant_id`, then attempted to auto-assign entities via client-side Supabase calls that: (a) bypassed the `createEntity()` server action (no dual-write to legacy tables), (b) silently swallowed errors via try/catch, (c) ran auto-compliance before entity assignment (compliance returned early with "no entity"), and (d) never re-triggered compliance after assignment.
+- **Fix:** Created `autoAssignCertificateToEntity()` server action in `certificates.ts` that: (1) finds or creates entity with dual-write to both `entities` and legacy `vendors`/`tenants` tables, (2) links certificate with all 3 ID columns (`entity_id`, `vendor_id`, `tenant_id`), (3) updates compliance status in both tables, and (4) triggers `runAutoCompliance()` after assignment so compliance is calculated immediately.
+- **Onboarding component:** Replaced client-side entity creation + certificate update in `step-bulk-upload.tsx` with call to `autoAssignCertificateToEntity()` server action.
+- **Single upload flow:** Verified correct — already sets all 3 ID columns at certificate INSERT time (`certificates/upload/page.tsx` lines 275-277).
+- **Dashboard bulk upload:** Verified correct — uses `assignCertificateToEntity()` server action (already fixed) in the finalize step.
+- **Data fix SQL:** Created `supabase/migrations/20260408_fix_orphaned_bulk_upload_certs.sql` — matches orphaned certificates to entities by `insured_name`, creates entities where no match exists, sets `entity_id` + `vendor_id`/`tenant_id`.
+
+⚠️ ACTION REQUIRED: Run `supabase/migrations/20260408_fix_orphaned_bulk_upload_certs.sql` in Supabase SQL Editor to link existing orphaned certificates. Then run the admin recheck endpoint to recalculate compliance for affected entities.
+
 #### Fix: Entity Unification Full Regression Fix (Apr 2026)
 
 Complete end-to-end audit and fix of entity unification regressions. The multi-industry expansion merged vendors/tenants into an `entities` table but many parts of the codebase still only queried/wrote to one side, breaking certificate display, compliance calculation, dashboard stats, and notifications.

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash } from '@/lib/utils/file-validation';
+import { autoAssignCertificateToEntity } from '@/lib/actions/certificates';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, X, CheckCircle2, Loader2, AlertTriangle, Building2, Users } from 'lucide-react';
 import { getTerminology } from '@/lib/constants/terminology';
@@ -223,49 +224,18 @@ export function StepBulkUpload({
           .eq('id', certId!)
           .single();
 
-        // Auto-assign certificate to an entity
+        // Auto-assign certificate to an entity via server action
+        // This properly dual-writes to entities + legacy tables and triggers compliance
         const insuredName = updatedCert?.insured_name || entry.file.name.replace(/\.pdf$/i, '');
         if (coiType) {
           try {
-            // Look for existing entity match
-            let query = supabase
-              .from('entities')
-              .select('id')
-              .eq('organization_id', orgId!)
-              .eq('entity_type', coiType)
-              .ilike('name', insuredName)
-              .is('deleted_at', null);
-            if (propertyId) {
-              query = query.eq('property_id', propertyId);
-            } else {
-              query = query.is('property_id', null);
-            }
-            const { data: existing } = await query.maybeSingle();
-
-            let entityId = existing?.id;
-            if (!entityId) {
-              const { data: newEntity } = await supabase
-                .from('entities')
-                .insert({
-                  organization_id: orgId!,
-                  property_id: propertyId ?? null,
-                  name: insuredName,
-                  entity_type: coiType,
-                  compliance_status: 'under_review',
-                })
-                .select('id')
-                .single();
-              entityId = newEntity?.id;
-            }
-
-            if (entityId) {
-              // Write entity_id + legacy FK for backward compatibility
-              const legacyFK = coiType === 'tenant' ? 'tenant_id' : 'vendor_id';
-              await supabase
-                .from('certificates')
-                .update({ entity_id: entityId, [legacyFK]: entityId })
-                .eq('id', certId!);
-            }
+            await autoAssignCertificateToEntity({
+              certificateId: certId!,
+              orgId: orgId!,
+              propertyId: propertyId ?? null,
+              insuredName,
+              entityType: coiType,
+            });
           } catch (assignErr) {
             console.error('Auto-assign failed:', assignErr);
           }
