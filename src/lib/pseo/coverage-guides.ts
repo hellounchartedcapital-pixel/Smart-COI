@@ -284,6 +284,64 @@ A certificate that shows adequate limits but has an unchecked additional insured
       { slug: 'property-inland-marine', name: 'Property & Inland Marine' },
     ],
   },
+  {
+    slug: 'umbrella-excess-liability',
+    title:
+      'Umbrella & Excess Liability Insurance Requirements',
+    metaDescription:
+      'When to require umbrella or excess liability coverage from vendors. Covers the difference between umbrella and excess, standard limits by industry, and ACORD 25 verification.',
+    headline:
+      'Umbrella & Excess Liability Insurance Requirements',
+    intro:
+      'Umbrella and excess liability policies provide additional limits above a vendor\'s primary general liability, auto, and employers liability coverage. For high-risk vendors — especially construction contractors and those performing work on occupied properties — underlying policy limits alone may not be enough to cover a catastrophic claim. This guide explains the difference between umbrella and excess policies, when to require them, how they interact with underlying coverage, and where to verify them on an ACORD 25.',
+    sections: [
+      {
+        id: 'umbrella-vs-excess',
+        title: 'Umbrella vs Excess Liability',
+        content: `An umbrella policy provides broader coverage than the underlying policies it sits above — it increases limits on underlying coverages and can also "drop down" to cover certain claims that the underlying policies exclude, subject to a self-insured retention. An excess liability policy, by contrast, follows form exactly with the underlying policies, meaning it only increases the dollar limits without expanding the scope of coverage. In practice, many certificates list "umbrella/excess" interchangeably, but the distinction matters when a claim falls outside the underlying policy's coverage terms — an umbrella may respond where a strict excess policy would not.`,
+      },
+      {
+        id: 'when-to-require',
+        title: 'When to Require Umbrella Coverage',
+        content: `Umbrella coverage should be required from any vendor whose work creates exposure that could exceed primary policy limits in a single incident — construction contractors, vendors working at height or with heavy equipment, and any vendor with significant vehicle operations. The required umbrella limit should reflect the realistic severity of a worst-case claim, not an arbitrary multiple of the underlying limits.
+
+| Industry | Umbrella / Excess Limit | Notes |
+|---|---|---|
+| General property management vendors | $1,000,000 – $2,000,000 | Cleaning, landscaping, pest control |
+| Construction & general contractors | $5,000,000+ | Multi-party jobsites, severe injury potential |
+| Healthcare & medical tenants | $5,000,000+ | Malpractice severity drives higher limits |
+| Logistics & transportation | $5,000,000+ | Large vehicle accidents produce high-value claims |
+| Retail & office tenants | Not typically required | Primary GL limits are usually sufficient |`,
+      },
+      {
+        id: 'following-form',
+        title: 'Following Form vs Standalone',
+        content: `A following-form umbrella or excess policy adopts the same terms, conditions, and exclusions as the underlying policies it sits above, which means coverage is predictable and there are no gaps between layers. A standalone umbrella has its own policy terms that may differ from the underlying coverage — creating the possibility that a claim covered by the primary policy is excluded by the umbrella, or vice versa. For COI compliance purposes, following-form policies are preferred because they ensure the additional limits apply to the same risks you verified on the primary coverage.`,
+      },
+      {
+        id: 'underlying-interaction',
+        title: 'How Umbrella Interacts with Underlying Policies',
+        content: `An umbrella or excess policy sits above the vendor's primary GL, commercial auto, and employers liability policies and triggers only after the underlying policy's per-occurrence limit is fully exhausted. For example, a vendor with $1M GL and a $5M umbrella has $6M of total per-occurrence coverage — the umbrella pays the portion of a claim between $1M and $6M. Umbrella policies carry their own aggregate limit, which caps total payments across all claims during the policy period regardless of which underlying policy the claim falls under.`,
+      },
+      {
+        id: 'verify-acord-25',
+        title: 'How to Verify on an ACORD 25',
+        content: `On the ACORD 25 form, umbrella and excess liability appear in a dedicated section below the auto liability section. The form indicates whether the policy is an umbrella or excess type and whether it is occurrence-based or claims-made — require occurrence-based for consistency with the underlying GL policy. Verify the "Each Occurrence" limit and the "Aggregate" limit meet your requirements, and confirm the policy dates cover your contract period. The Description of Operations section or an attached schedule should list the underlying policies (GL, auto, employers liability) that the umbrella sits above — if the underlying policies are not scheduled, the umbrella may not apply to all coverage lines you expect.`,
+      },
+      {
+        id: 'disclaimer',
+        title: 'Coverage Recommendations Disclaimer',
+        content: `These coverage recommendations are based on common industry benchmarks and should not be considered insurance advice. Every property has unique risk characteristics, and the appropriate coverage requirements for your vendors and tenants depend on factors including your property type, location, lease terms, and risk tolerance. Consult with your insurance broker or risk management professional to determine appropriate requirements for your specific situation.`,
+      },
+    ],
+    relatedGuides: [
+      { slug: 'general-liability', name: 'General Liability' },
+      { slug: 'workers-compensation', name: 'Workers\' Compensation' },
+      { slug: 'auto-liability', name: 'Auto Liability' },
+      { slug: 'professional-liability', name: 'Professional Liability' },
+      { slug: 'property-inland-marine', name: 'Property & Inland Marine' },
+    ],
+  },
 ];
 
 export function getCoverageGuide(slug: string): CoverageGuide | undefined {
