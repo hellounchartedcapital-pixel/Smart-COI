@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getActivePlanStatus } from '@/lib/plan-status';
+import { getTerminology } from '@/lib/constants/terminology';
+import type { Industry } from '@/types';
 import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL } from '@/lib/utils/file-validation';
 import crypto from 'crypto';
 
@@ -138,7 +140,7 @@ export async function POST(
 
     if (entityError || !entityData) {
       return NextResponse.json(
-        { error: 'Unable to process your upload. Please contact your property manager.' },
+        { error: `Unable to process your upload. Please contact your ${getTerminology(null).requesterLabel}.` },
         { status: 500 }
       );
     }
@@ -148,15 +150,17 @@ export async function POST(
     // Check org plan status — reject if canceled or trial expired
     const { data: orgForPlan } = await supabase
       .from('organizations')
-      .select('plan, trial_ends_at')
+      .select('plan, trial_ends_at, industry')
       .eq('id', organizationId)
       .single();
+
+    const requesterLabel = getTerminology((orgForPlan?.industry as Industry) ?? null).requesterLabel;
 
     if (orgForPlan) {
       const planStatus = getActivePlanStatus(orgForPlan);
       if (!planStatus.isActive) {
         return NextResponse.json(
-          { error: 'This upload portal is temporarily unavailable. Please contact your property manager.' },
+          { error: `This upload portal is temporarily unavailable. Please contact your ${requesterLabel}.` },
           { status: 403 }
         );
       }

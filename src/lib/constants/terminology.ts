@@ -23,6 +23,9 @@ export interface Terminology {
   entityDescription: string;
   tenantDescription: string | null;
   uploadPrompt: string;
+
+  /** Label shown to external parties (portal, emails) for who requested the COI */
+  requesterLabel: string;
 }
 
 const TERMINOLOGY_MAP: Record<Industry, Terminology> = {
@@ -38,6 +41,7 @@ const TERMINOLOGY_MAP: Record<Industry, Terminology> = {
     entityDescription: 'Contractors and service providers for your property',
     tenantDescription: 'Commercial or residential tenants in your property',
     uploadPrompt: 'Upload COIs from your vendors and tenants',
+    requesterLabel: 'property manager',
   },
   construction: {
     location: 'Project',
@@ -51,6 +55,7 @@ const TERMINOLOGY_MAP: Record<Industry, Terminology> = {
     entityDescription: 'Subcontractors working on your project',
     tenantDescription: null,
     uploadPrompt: 'Upload COIs from your subcontractors',
+    requesterLabel: 'project manager',
   },
   logistics: {
     location: 'Location',
@@ -64,6 +69,7 @@ const TERMINOLOGY_MAP: Record<Industry, Terminology> = {
     entityDescription: 'Carriers and transportation providers',
     tenantDescription: null,
     uploadPrompt: 'Upload COIs from your carriers and vendors',
+    requesterLabel: 'operations team',
   },
   healthcare: {
     location: 'Facility',
@@ -77,6 +83,7 @@ const TERMINOLOGY_MAP: Record<Industry, Terminology> = {
     entityDescription: 'Third-party service providers',
     tenantDescription: null,
     uploadPrompt: 'Upload COIs from your vendors',
+    requesterLabel: 'compliance department',
   },
   manufacturing: {
     location: 'Plant',
@@ -90,6 +97,7 @@ const TERMINOLOGY_MAP: Record<Industry, Terminology> = {
     entityDescription: 'Suppliers and contractors',
     tenantDescription: null,
     uploadPrompt: 'Upload COIs from your suppliers',
+    requesterLabel: 'safety coordinator',
   },
   hospitality: {
     location: 'Property',
@@ -103,6 +111,7 @@ const TERMINOLOGY_MAP: Record<Industry, Terminology> = {
     entityDescription: 'Contractors and service providers',
     tenantDescription: null,
     uploadPrompt: 'Upload COIs from your vendors',
+    requesterLabel: 'operations manager',
   },
   retail: {
     location: 'Location',
@@ -116,6 +125,7 @@ const TERMINOLOGY_MAP: Record<Industry, Terminology> = {
     entityDescription: 'Vendors and suppliers',
     tenantDescription: null,
     uploadPrompt: 'Upload COIs from your vendors',
+    requesterLabel: 'compliance team',
   },
   other: {
     location: 'Location',
@@ -129,6 +139,7 @@ const TERMINOLOGY_MAP: Record<Industry, Terminology> = {
     entityDescription: 'Your third-party vendors',
     tenantDescription: null,
     uploadPrompt: 'Upload COIs from your vendors',
+    requesterLabel: 'compliance team',
   },
 };
 

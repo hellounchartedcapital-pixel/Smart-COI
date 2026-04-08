@@ -54,7 +54,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Server helper: `src/lib/terminology-server.ts` — use in server components and API routes
 - Helper functions: `getTerminology(industry)` and `formatTerm(template, terms)`
 
-**Terminology fields per industry:** location, locationPlural, entity, entityPlural, tenant, tenantPlural, hasTenants, locationDescription, entityDescription, tenantDescription, uploadPrompt
+**Terminology fields per industry:** location, locationPlural, entity, entityPlural, tenant, tenantPlural, hasTenants, locationDescription, entityDescription, tenantDescription, uploadPrompt, requesterLabel
 
 **Key behaviors:**
 - Tenants only visible when `hasTenants === true` (PM only currently)
@@ -69,7 +69,6 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 **KNOWN GAPS (in progress):**
 - ~30 dashboard components still have hardcoded "Vendor"/"Tenant" strings instead of using terminology
-- Portal has zero industry awareness (hardcoded "property manager" in 4 places)
 - Email templates have zero industry awareness (no industry in EmailMergeFields)
 - Landing page is PM-specific (intentional for current marketing)
 
@@ -153,6 +152,13 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Portal Industry Awareness (Apr 2026)
+
+- Added `requesterLabel` field to Terminology interface (PM → "property manager", Construction → "project manager", Logistics → "operations team", etc.)
+- Portal page now fetches `organizations.industry` and resolves terminology
+- Replaced 4 hardcoded "property manager" strings in portal API routes (upload + extract) with dynamic `requesterLabel`
+- Falls back to "compliance team" when industry is null
 
 #### Multi-Industry Expansion (Apr 2026)
 

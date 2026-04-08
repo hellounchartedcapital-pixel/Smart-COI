@@ -1,7 +1,8 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { formatCurrency } from '@/lib/utils';
 import { getCoverageLabel, LIMIT_TYPE_LABELS } from '@/components/templates/template-labels';
-import type { LimitType } from '@/types';
+import type { Industry, LimitType } from '@/types';
+import { getTerminology } from '@/lib/constants/terminology';
 import { PortalUploadClient } from './portal-upload-client';
 
 interface PortalPageProps {
@@ -83,12 +84,14 @@ export default async function PortalPage({ params }: PortalPageProps) {
     return <PortalErrorPage message="This upload link is no longer active. Please contact your administrator for a new link." />;
   }
 
-  // Fetch organization name
+  // Fetch organization name and industry
   const { data: org } = await supabase
     .from('organizations')
-    .select('name')
+    .select('name, industry')
     .eq('id', entity.organization_id)
     .single();
+
+  const terms = getTerminology((org?.industry as Industry) ?? null);
 
   // Fetch admin/contact info (first user in the org)
   const { data: adminUser } = await supabase

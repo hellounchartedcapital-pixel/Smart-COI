@@ -178,6 +178,17 @@ console.log('\nTest: formatTerm');
 }
 
 // ============================================================================
+// Test: requesterLabel returns correct label per industry
+// ============================================================================
+console.log('\nTest: requesterLabel per industry');
+{
+  assertEqual(getTerminology('property_management').requesterLabel, 'property manager', 'PM requesterLabel');
+  assertEqual(getTerminology('construction').requesterLabel, 'project manager', 'construction requesterLabel');
+  assertEqual(getTerminology('logistics').requesterLabel, 'operations team', 'logistics requesterLabel');
+  assertEqual(getTerminology(null).requesterLabel, 'compliance team', 'null industry requesterLabel fallback');
+}
+
+// ============================================================================
 // Summary
 // ============================================================================
 console.log(`\n${'='.repeat(50)}`);
