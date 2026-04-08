@@ -59,8 +59,27 @@ export async function POST(request: Request) {
     const entityType = ent.entity_type ?? 'vendor';
     const legacyTable = entityType === 'tenant' ? 'tenants' : 'vendors';
 
-    // Skip if no template assigned
-    if (!ent.template_id) {
+    // Check for template — entities table first, then legacy table
+    let templateId = ent.template_id;
+    if (!templateId) {
+      // Template may have been assigned via updateVendor/updateTenant (legacy tables only)
+      const { data: legacyEntity } = await supabase
+        .from(legacyTable)
+        .select('template_id')
+        .eq('id', entityId)
+        .maybeSingle();
+      if (legacyEntity?.template_id) {
+        templateId = legacyEntity.template_id;
+        // Sync template_id to entities table for future lookups
+        await supabase
+          .from('entities')
+          .update({ template_id: templateId })
+          .eq('id', entityId);
+      }
+    }
+
+    // Skip if no template found in either table
+    if (!templateId) {
       skippedNoTemplate++;
       details.push({
         id: entityId,
@@ -107,7 +126,7 @@ export async function POST(request: Request) {
     const { data: reqs } = await supabase
       .from('template_coverage_requirements')
       .select('*')
-      .eq('template_id', ent.template_id);
+      .eq('template_id', templateId);
 
     const requirements = (reqs ?? []) as RequirementInput[];
 

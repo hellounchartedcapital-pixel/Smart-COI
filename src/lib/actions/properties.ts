@@ -687,6 +687,15 @@ export async function updateVendor(vendorId: string, input: UpdateVendorInput) {
     performed_by: userId,
   });
 
+  // Sync template_id to unified entities table
+  if (input.template_id) {
+    await supabase
+      .from('entities')
+      .update({ template_id: input.template_id })
+      .eq('id', vendorId)
+      .then(() => { /* best-effort sync */ });
+  }
+
   // Recalculate compliance when template is changed
   if (input.template_id) {
     try {
@@ -763,6 +772,15 @@ export async function updateTenant(tenantId: string, input: UpdateTenantInput) {
     description: `Tenant "${input.company_name}" updated`,
     performed_by: userId,
   });
+
+  // Sync template_id to unified entities table
+  if (input.template_id) {
+    await supabase
+      .from('entities')
+      .update({ template_id: input.template_id })
+      .eq('id', tenantId)
+      .then(() => { /* best-effort sync */ });
+  }
 
   // Recalculate compliance when template is changed
   if (input.template_id) {
@@ -868,6 +886,24 @@ export async function runComplianceForEntity(
 
   if (unifiedEntity) {
     entity = unifiedEntity;
+    // If unified entity has no template, check legacy table (template may have been
+    // assigned via updateVendor/updateTenant which only writes to legacy tables)
+    if (!entity.template_id) {
+      const { data: legacyEntity } = await supabase
+        .from(legacyTable)
+        .select('template_id')
+        .eq('id', entityId)
+        .eq('organization_id', orgId)
+        .single();
+      if (legacyEntity?.template_id) {
+        entity = { ...entity, template_id: legacyEntity.template_id };
+        // Sync template_id to entities table so future lookups work directly
+        await supabase
+          .from('entities')
+          .update({ template_id: legacyEntity.template_id })
+          .eq('id', entityId);
+      }
+    }
   } else {
     // Fall back to legacy table for older entities not yet in unified model
     const { data: legacyEntity } = await supabase
