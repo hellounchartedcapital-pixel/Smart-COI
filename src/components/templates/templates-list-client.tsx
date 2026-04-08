@@ -58,10 +58,12 @@ export function TemplatesListClient({
     const reqs = template.coverage_requirements ?? [];
     const usageCount =
       template.category === 'vendor' ? template.vendor_count : template.tenant_count;
-    const usageLabel =
-      template.category === 'vendor'
-        ? `Used by ${usageCount} vendor${usageCount !== 1 ? 's' : ''}`
-        : `Used by ${usageCount} tenant${usageCount !== 1 ? 's' : ''}`;
+
+    // Use terminology for usage label
+    const entityLabel = template.category === 'tenant'
+      ? (terminology.tenantPlural?.toLowerCase() ?? 'tenants')
+      : terminology.entityPlural.toLowerCase();
+    const usageLabel = `Used by ${usageCount} ${entityLabel}`;
 
     return (
       <Link href={`/dashboard/templates/${template.id}`}>
@@ -108,7 +110,7 @@ export function TemplatesListClient({
                 {reqs.length > 0 ? coverageSummary(reqs) : 'No coverages defined'}
               </p>
               <p className="text-xs text-muted-foreground">
-                {usageCount > 0 ? usageLabel : `No ${template.category}s assigned`}
+                {usageCount > 0 ? usageLabel : `No ${entityLabel} assigned`}
               </p>
             </div>
           </CardContent>
@@ -191,10 +193,16 @@ export function TemplatesListClient({
       ) : (
         <div className="space-y-8">
           {vendorTemplates.length > 0 && (
-            <TemplateGroup title="Vendor Templates" templates={vendorTemplates} />
+            <TemplateGroup
+              title={`${terminology.entityPlural.toUpperCase()} TEMPLATES`}
+              templates={vendorTemplates}
+            />
           )}
-          {tenantTemplates.length > 0 && (
-            <TemplateGroup title="Tenant Templates" templates={tenantTemplates} />
+          {terminology.hasTenants && tenantTemplates.length > 0 && (
+            <TemplateGroup
+              title={`${(terminology.tenantPlural ?? 'TENANT').toUpperCase()} TEMPLATES`}
+              templates={tenantTemplates}
+            />
           )}
         </div>
       )}
