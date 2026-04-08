@@ -128,6 +128,52 @@ const faqData: Record<string, any> = {
       },
     ],
   },
+  'acord-28-evidence-of-property-insurance': {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'What is the ACORD 28 used for?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'The ACORD 28 is used to provide evidence of commercial property insurance. Property owners, lenders, and management companies request it to verify that a building, business personal property, or tenant improvements are adequately insured.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What is the difference between ACORD 27 and ACORD 28?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'The ACORD 27 covers personal property insurance (homeowner\'s, renter\'s insurance), while the ACORD 28 covers commercial property insurance. Use the ACORD 28 for commercial real estate and the ACORD 27 for residential.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Does an ACORD 28 guarantee that coverage is active?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'No. Like all certificates of insurance, the ACORD 28 is a snapshot showing coverage at the time of issuance. The underlying policy can be cancelled or modified after the certificate is generated. Ongoing tracking and renewal verification is necessary for continuous compliance.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What property coverage limits should I require from tenants?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'This depends on your lease terms and the tenant\'s operations. Common requirements include business personal property coverage equal to the full value of the tenant\'s assets, tenant improvements coverage for any buildouts, and business income coverage for 12 months of estimated revenue. Consult your lease agreement and insurance advisor for specific limits.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Who should be listed as certificate holder on an ACORD 28?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'The property owner or management company that requires proof of coverage should be listed as the certificate holder. If there\'s a mortgage, the lender should be listed as loss payee or mortgagee. The exact entities and designations should match what\'s specified in the lease or loan agreement.',
+        },
+      },
+    ],
+  },
   'best-coi-management-software': {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',

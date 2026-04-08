@@ -279,6 +279,16 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Internal links to ACORD 28, Additional Insured, COI expiration tracking, and COI tracking software pages
 - Date updated to 2026-04-08
 
+#### SEO: ACORD 28 Post Upgrade (Apr 2026)
+
+- Fully rewrote `/blog/acord-28-evidence-of-property-insurance` with new expanded content focused on field-by-field reading guide, ACORD 27 vs 28 distinction, common compliance mistakes, and automation CTA
+- Updated meta title to "ACORD 28 Evidence of Property Insurance: Complete Guide (2026)" and description to "Everything you need to know about the ACORD 28 form. Learn what it covers, how it differs from the ACORD 27, how to verify property coverage, and common compliance mistakes."
+- openGraph title/description synced via `generateMetadata` (reads from MDX frontmatter)
+- Restructured sections: What Is an ACORD 28, ACORD 28 vs ACORD 27, How to Read (section-by-section with Producer/Insured/Property/Coverage/Valuation/Coinsurance/Deductible/Certificate Holder/Endorsements subsections), When Required, 5 common mistakes, ACORD 28 vs 25 quick reference, automation section
+- Moved FAQ JSON-LD from inline MDX to blog page component `faqData` map (5 Q&As): ACORD 28 usage, ACORD 27 vs 28, coverage guarantee, tenant limits, certificate holder
+- Internal links to ACORD 25, COI tracking software pages
+- Date updated to 2026-04-08
+
 #### QA Warning Fixes (Apr 2026)
 
 - **Immediate portal upload email:** Portal extract route now sends an email to the PM immediately via Resend when a vendor/tenant uploads a COI through the self-service portal (portal/[token]/extract/route.ts). Cron-based notifications remain unchanged.
