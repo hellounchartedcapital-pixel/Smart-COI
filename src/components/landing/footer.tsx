@@ -13,7 +13,7 @@ export function Footer() {
               <span className="text-lg font-bold text-white">SmartCOI</span>
             </div>
             <p className="text-sm text-slate-500">
-              AI-powered COI compliance tracking for commercial property managers.
+              AI-powered COI compliance tracking for every industry.
             </p>
           </div>
 

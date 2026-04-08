@@ -15,8 +15,8 @@ const FAQS = [
     a: 'SmartCOI accepts PDF files — the standard format for certificates of insurance. You can upload individual files or drag and drop up to 50 PDFs at once using our bulk upload feature.',
   },
   {
-    q: 'Can vendors and tenants upload their own COIs?',
-    a: 'Yes. Every account includes a self-service portal where vendors and tenants can upload certificates directly through a secure link — no login or account creation required on their end. You can include the portal link in your onboarding emails or compliance notices.',
+    q: 'Can third parties upload their own COIs?',
+    a: 'Yes. Every account includes a self-service portal where vendors, subcontractors, carriers, and other third parties can upload certificates directly through a secure link — no login or account creation required on their end.',
   },
   {
     q: 'What happens if I reach my certificate limit?',
@@ -28,7 +28,7 @@ const FAQS = [
   },
   {
     q: 'Can I import data from my current system?',
-    a: 'If you\'re currently tracking COIs in spreadsheets or another tool, the fastest way to migrate is our bulk upload feature — simply upload all your existing certificate PDFs and SmartCOI will extract the data and build your vendor roster automatically. No manual data entry or CSV mapping required.',
+    a: 'If you\'re currently tracking COIs in spreadsheets or another tool, the fastest way to migrate is our bulk upload feature — simply upload all your existing certificate PDFs and SmartCOI will extract the data automatically. No manual data entry or CSV mapping required.',
   },
   {
     q: 'Is my data secure?',
