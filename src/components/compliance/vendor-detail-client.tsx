@@ -215,7 +215,7 @@ export function VendorDetailClient({
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <Link href="/dashboard/properties" className="hover:text-foreground">
-          Properties
+          Locations
         </Link>
         <span>/</span>
         {property && (

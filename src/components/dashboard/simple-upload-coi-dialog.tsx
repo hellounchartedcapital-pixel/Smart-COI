@@ -172,7 +172,7 @@ export function SimpleUploadCOIDialog({
         <DialogHeader>
           <DialogTitle>Upload Certificate of Insurance</DialogTitle>
           <DialogDescription>
-            Upload a COI PDF and assign it to a vendor or tenant.
+            Upload a COI PDF and assign it to an entity.
           </DialogDescription>
         </DialogHeader>
 

@@ -441,7 +441,7 @@ export default function CertificateUploadPage() {
                 </div>
               ) : entities.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No vendors or tenants found.{selectedPropertyId ? ' Try removing the property filter.' : ''}
+                  No entities found.{selectedPropertyId ? ' Try removing the property filter.' : ''}
                 </p>
               ) : (
                 <Select
@@ -456,7 +456,7 @@ export default function CertificateUploadPage() {
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select vendor or tenant…" />
+                    <SelectValue placeholder="Select an entity…" />
                   </SelectTrigger>
                   <SelectContent>
                     {entities.map((e) => (

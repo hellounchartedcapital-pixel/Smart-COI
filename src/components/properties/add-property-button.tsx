@@ -14,6 +14,7 @@ import { createProperty } from '@/lib/actions/properties';
 import { toast } from 'sonner';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
 import { handleActionError, handleActionResult } from '@/lib/handle-action-error';
+import { useTerminology } from '@/hooks/useTerminology';
 import type { EntityType } from '@/types';
 
 interface AddPropertyButtonProps {
@@ -33,6 +34,7 @@ export function AddPropertyButton({
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const { showUpgradeModal } = useUpgradeModal();
+  const { terminology } = useTerminology();
 
   async function handleSubmit(data: PropertyFormData) {
     setSaving(true);
@@ -66,15 +68,15 @@ export function AddPropertyButton({
   return (
     <>
       <Button variant={variant} onClick={() => setOpen(true)}>
-        + Add Property
+        + Add {terminology.location}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add Property</DialogTitle>
+            <DialogTitle>Add {terminology.location}</DialogTitle>
             <DialogDescription>
-              Add a new property to your portfolio.
+              Add a new {terminology.location.toLowerCase()} to track compliance.
             </DialogDescription>
           </DialogHeader>
           <PropertyForm

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDate } from '@/lib/utils';
+import { useTerminology } from '@/hooks/useTerminology';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -107,6 +108,7 @@ export function PropertyDetailClient({
 }: PropertyDetailClientProps) {
   const router = useRouter();
   const { showUpgradeModal } = useUpgradeModal();
+  const { terminology: terms } = useTerminology();
 
   // Dialog states
   const [editOpen, setEditOpen] = useState(false);
@@ -510,7 +512,7 @@ export function PropertyDetailClient({
           {vendors.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-300 bg-white py-12 text-center">
               <p className="text-sm text-muted-foreground">
-                No vendors for this property yet.
+                No {terms.entityPlural.toLowerCase()} for this {terms.location.toLowerCase()} yet.
               </p>
               <div className="mt-3 flex justify-center gap-2">
                 <Button
@@ -532,7 +534,7 @@ export function PropertyDetailClient({
           ) : filteredVendors.length === 0 ? (
             <div className="rounded-lg border border-slate-200 bg-white py-8 text-center">
               <p className="text-sm text-muted-foreground">
-                No vendors match the selected filter.
+                No {terms.entityPlural.toLowerCase()} match the selected filter.
               </p>
             </div>
           ) : (
@@ -684,7 +686,7 @@ export function PropertyDetailClient({
           {tenants.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-300 bg-white py-12 text-center">
               <p className="text-sm text-muted-foreground">
-                No tenants for this property yet.
+                No {terms.tenantPlural?.toLowerCase() ?? 'tenants'} for this {terms.location.toLowerCase()} yet.
               </p>
               <div className="mt-3 flex justify-center gap-2">
                 <Button
@@ -706,7 +708,7 @@ export function PropertyDetailClient({
           ) : filteredTenants.length === 0 ? (
             <div className="rounded-lg border border-slate-200 bg-white py-8 text-center">
               <p className="text-sm text-muted-foreground">
-                No tenants match the selected filter.
+                No {terms.tenantPlural?.toLowerCase() ?? 'tenants'} match the selected filter.
               </p>
             </div>
           ) : (
