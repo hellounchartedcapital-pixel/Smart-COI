@@ -69,24 +69,45 @@ export default async function PropertyInsuranceHubPage({ params }: PageProps) {
           </p>
         </section>
 
-        {/* Coverage cards */}
+        {/* Compliance challenges — unique per property type */}
+        {pt.complianceChallenges && (
+          <section className="mx-auto max-w-4xl px-6 mt-16">
+            <h2 className="text-2xl font-bold text-[#111827]">
+              Compliance Challenges for {pt.plural}
+            </h2>
+            <p className="mt-4 text-base text-[#374151] leading-relaxed">{pt.complianceChallenges}</p>
+          </section>
+        )}
+
+        {/* Common gaps — unique per property type */}
+        {pt.commonGaps && (
+          <section className="mx-auto max-w-4xl px-6 mt-12">
+            <h2 className="text-2xl font-bold text-[#111827]">
+              Common Insurance Gaps
+            </h2>
+            <p className="mt-4 text-base text-[#374151] leading-relaxed">{pt.commonGaps}</p>
+          </section>
+        )}
+
+        {/* Coverage guides — link to the 6 comprehensive guides */}
         <section className="mx-auto max-w-4xl px-6 mt-16">
-          <h2 className="text-2xl font-bold text-slate-900">Coverage Requirements</h2>
+          <h2 className="text-2xl font-bold text-[#111827]">Coverage Requirements</h2>
+          <p className="mt-2 text-base text-[#6B7280]">Explore detailed coverage guides for {pt.plural.toLowerCase()}.</p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {coverageTypes.map((ct) => (
               <Link
                 key={ct.slug}
-                href={`/insurance-requirements/${pt.slug}/${ct.slug}`}
-                className="group rounded-lg border border-slate-200 p-5 hover:border-[#4CC78A] hover:shadow-sm transition"
+                href={`/insurance-requirements/coverage/${ct.slug}`}
+                className="group rounded-xl border border-[#E5E7EB] bg-white p-5 hover:border-[#D1D5DB] transition"
               >
-                <p className="text-xs font-semibold uppercase tracking-wider text-[#4CC78A]">
+                <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#73E2A7]">
                   {ct.abbreviation}
                 </p>
-                <h3 className="mt-1 font-semibold text-slate-900 group-hover:text-[#4CC78A] transition">
+                <h3 className="mt-1 text-sm font-semibold text-[#111827] group-hover:text-[#4CC78A] transition">
                   {ct.name}
                 </h3>
-                <p className="mt-2 text-sm text-slate-500 line-clamp-2">{ct.description}</p>
-                <p className="mt-3 text-xs text-slate-400">Typical: {ct.typicalLimits}</p>
+                <p className="mt-2 text-sm text-[#6B7280] line-clamp-2">{ct.description}</p>
+                <p className="mt-3 text-xs text-[#9CA3AF]">Typical: {ct.typicalLimits}</p>
               </Link>
             ))}
           </div>
@@ -139,6 +160,16 @@ export default async function PropertyInsuranceHubPage({ params }: PageProps) {
             </Link>
           </div>
         </section>
+
+        {/* How SmartCOI helps */}
+        {pt.smartcoiHelps && (
+          <section className="mx-auto max-w-4xl px-6 mt-12">
+            <h2 className="text-2xl font-bold text-[#111827]">
+              How SmartCOI Helps {pt.name} Managers
+            </h2>
+            <p className="mt-4 text-base text-[#374151] leading-relaxed">{pt.smartcoiHelps}</p>
+          </section>
+        )}
 
         {/* CTA */}
         <section className="mx-auto max-w-4xl px-6 mt-20 text-center">

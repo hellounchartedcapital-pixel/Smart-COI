@@ -6,6 +6,12 @@ export interface PropertyType {
   /** Typical vendor/tenant examples for this property type */
   vendorExamples: string[];
   tenantExamples: string[];
+  /** Unique compliance challenges for this property type (3-5 paragraphs) */
+  complianceChallenges?: string;
+  /** Common insurance gaps specific to this property type */
+  commonGaps?: string;
+  /** How SmartCOI helps this property type specifically */
+  smartcoiHelps?: string;
 }
 
 export interface CoverageType {
