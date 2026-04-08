@@ -360,6 +360,119 @@ export async function runAutoCompliance(
 }
 
 // ============================================================================
+// Auto-assign certificate to entity (used by onboarding bulk upload)
+// Finds or creates entity, links certificate, triggers compliance.
+// ============================================================================
+
+export async function autoAssignCertificateToEntity(input: {
+  certificateId: string;
+  orgId: string;
+  propertyId: string | null;
+  insuredName: string;
+  entityType: string; // CoveredEntityType
+}) {
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const supabase = createServiceClient();
+
+  const { certificateId, orgId, propertyId, insuredName, entityType } = input;
+  const legacyType = entityType === 'tenant' ? 'tenant' : 'vendor';
+
+  // 1. Look for existing entity match
+  let query = supabase
+    .from('entities')
+    .select('id')
+    .eq('organization_id', orgId)
+    .eq('entity_type', entityType)
+    .ilike('name', insuredName)
+    .is('deleted_at', null);
+  if (propertyId) {
+    query = query.eq('property_id', propertyId);
+  } else {
+    query = query.is('property_id', null);
+  }
+  const { data: existing } = await query.maybeSingle();
+
+  let entityId = existing?.id;
+
+  // 2. Create entity if not found — dual-write to entities + legacy table
+  if (!entityId) {
+    const { data: newEntity, error: entityErr } = await supabase
+      .from('entities')
+      .insert({
+        organization_id: orgId,
+        property_id: propertyId,
+        name: insuredName,
+        entity_type: entityType,
+        compliance_status: 'under_review',
+      })
+      .select('id')
+      .single();
+
+    if (entityErr || !newEntity) {
+      console.error('[autoAssignCertificateToEntity] Entity creation failed:', entityErr);
+      return { error: 'Failed to create entity' };
+    }
+    entityId = newEntity.id;
+
+    // Dual-write to legacy table with SAME ID
+    if (legacyType === 'vendor') {
+      await supabase.from('vendors').insert({
+        id: entityId,
+        organization_id: orgId,
+        property_id: propertyId,
+        company_name: insuredName,
+        compliance_status: 'under_review',
+      }).then(() => { /* best-effort */ });
+    } else {
+      await supabase.from('tenants').insert({
+        id: entityId,
+        organization_id: orgId,
+        property_id: propertyId,
+        company_name: insuredName,
+        compliance_status: 'under_review',
+      }).then(() => { /* best-effort */ });
+    }
+  }
+
+  // 3. Link certificate to entity — set ALL 3 ID columns
+  const updateFields: Record<string, unknown> = {
+    entity_id: entityId,
+  };
+  if (legacyType === 'vendor') {
+    updateFields.vendor_id = entityId;
+  } else {
+    updateFields.tenant_id = entityId;
+  }
+
+  const { error: updateErr } = await supabase
+    .from('certificates')
+    .update(updateFields)
+    .eq('id', certificateId);
+
+  if (updateErr) {
+    console.error('[autoAssignCertificateToEntity] Certificate update failed:', updateErr);
+    return { error: 'Failed to link certificate' };
+  }
+
+  // 4. Update entity compliance status
+  await supabase.from('entities').update({ compliance_status: 'under_review' }).eq('id', entityId);
+  await supabase.from(legacyType === 'vendor' ? 'vendors' : 'tenants')
+    .update({ compliance_status: 'under_review' }).eq('id', entityId)
+    .then(() => { /* best-effort */ });
+
+  // 5. Trigger compliance calculation
+  try {
+    await runAutoCompliance(certificateId, orgId);
+  } catch (err) {
+    console.error('[autoAssignCertificateToEntity] Compliance failed:', err);
+    // Non-fatal — compliance can be recalculated later
+  }
+
+  console.log(`[autoAssignCertificateToEntity] cert=${certificateId} entity=${entityId} type=${entityType}`);
+  return { entityId };
+}
+
+// ============================================================================
 // COI Document Signed URL
 // ============================================================================
 
