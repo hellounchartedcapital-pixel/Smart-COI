@@ -171,6 +171,61 @@ A certificate that shows adequate limits but has an unchecked additional insured
       { slug: 'property-inland-marine', name: 'Property & Inland Marine' },
     ],
   },
+  {
+    slug: 'workers-compensation',
+    title:
+      'Workers Compensation Insurance Requirements for Vendors & Contractors',
+    metaDescription:
+      'Understand workers compensation requirements for third-party vendors including statutory limits, employers liability, and waiver of subrogation.',
+    headline:
+      'Workers Compensation Insurance Requirements for Vendors & Contractors',
+    intro:
+      'Workers compensation is a mandatory coverage in nearly every state that protects employees injured on the job. When you collect COIs from vendors and contractors working on your property, verifying workers comp coverage is essential — without it, injured workers may file claims against the property owner directly. This guide covers what workers comp protects, the employers liability limits to require, waiver of subrogation endorsements, state-specific rules, and how to verify coverage on an ACORD 25.',
+    sections: [
+      {
+        id: 'what-wc-covers',
+        title: 'What Workers Compensation Covers',
+        content: `Workers compensation insurance covers medical expenses, lost wages, and rehabilitation costs for employees who are injured or become ill as a result of their job duties. It operates on a no-fault basis — the employee does not need to prove the employer was negligent to receive benefits, and in exchange the employee generally cannot sue the employer for the injury. Coverage limits are not selected by the policyholder but are set by state statute, meaning every compliant policy in a given state provides the same baseline benefits.`,
+      },
+      {
+        id: 'employers-liability-limits',
+        title: 'Employers Liability Limits',
+        content: `While the workers compensation portion of the policy pays statutory benefits, the employers liability portion covers lawsuits that fall outside the workers comp system — such as third-party-over actions or claims by spouses for loss of consortium. Standard employers liability limits are $500,000 per accident, $500,000 per employee for disease, and $500,000 disease policy limit. Construction and high-risk trades should carry $1,000,000 across all three.
+
+| Risk Level | Each Accident | Disease – Each Employee | Disease – Policy Limit |
+|---|---|---|---|
+| Standard vendors | $500,000 | $500,000 | $500,000 |
+| Construction / high-risk | $1,000,000 | $1,000,000 | $1,000,000 |`,
+      },
+      {
+        id: 'waiver-of-subrogation',
+        title: 'Waiver of Subrogation',
+        content: `A waiver of subrogation on a workers comp policy prevents the vendor's insurer from recovering claim payments by suing the property owner. The standard endorsement is WC 00 03 13 (Waiver of Our Right to Recover from Others). Without this endorsement, if a vendor's employee is injured on your property and the insurer pays the claim, the insurer can turn around and sue you to recoup those costs. Requiring WC 00 03 13 from every vendor eliminates this exposure and should be a standard part of your insurance requirements.`,
+      },
+      {
+        id: 'state-specific-considerations',
+        title: 'State-Specific Considerations',
+        content: `Workers compensation laws vary significantly by state. Four states — Ohio, Washington, Wyoming, and North Dakota — operate monopolistic state funds, meaning employers must purchase workers comp from the state rather than private insurers. Vendors operating in these states will show the state fund as the carrier on their certificate. Many states allow sole proprietors and business owners to exempt themselves from workers comp coverage, which means a one-person contractor may legally carry no workers comp policy. However, if that contractor hires subcontractors or temporary labor, the exemption no longer applies. Always confirm that vendors claiming an exemption have no employees or subcontractors performing work on your property.`,
+      },
+      {
+        id: 'verify-acord-25',
+        title: 'How to Verify on an ACORD 25',
+        content: `On the ACORD 25 form, workers compensation appears in its own section on the right side of the form, separate from general liability and auto coverage. Verify that the policy number is present and that the effective and expiration dates cover your contract period. The statutory limits field should show "X" in the box next to each applicable state, indicating the policy meets that state's statutory requirements. Employers liability limits are listed directly below as E.L. Each Accident, E.L. Disease – Each Employee, and E.L. Disease – Policy Limit — confirm these meet your minimums. Check the "SUBR WVD" (Subrogation Waived) checkbox in the workers comp section to confirm the waiver of subrogation endorsement is in place.`,
+      },
+      {
+        id: 'disclaimer',
+        title: 'Coverage Recommendations Disclaimer',
+        content: `These coverage recommendations are based on common industry benchmarks and should not be considered insurance advice. Every property has unique risk characteristics, and the appropriate coverage requirements for your vendors and tenants depend on factors including your property type, location, lease terms, and risk tolerance. Consult with your insurance broker or risk management professional to determine appropriate requirements for your specific situation.`,
+      },
+    ],
+    relatedGuides: [
+      { slug: 'general-liability', name: 'General Liability' },
+      { slug: 'auto-liability', name: 'Auto Liability' },
+      { slug: 'umbrella-excess-liability', name: 'Umbrella & Excess Liability' },
+      { slug: 'professional-liability', name: 'Professional Liability' },
+      { slug: 'property-inland-marine', name: 'Property & Inland Marine' },
+    ],
+  },
 ];
 
 export function getCoverageGuide(slug: string): CoverageGuide | undefined {
