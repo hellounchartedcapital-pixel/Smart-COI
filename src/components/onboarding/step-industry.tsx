@@ -46,10 +46,10 @@ export function StepIndustry({ selected, onNext, onSkip, saving }: StepIndustryP
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+        <h2 className="text-[24px] font-bold text-[#111827]">
           Welcome to SmartCOI
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-[#6B7280]">
           What industry are you in? This helps us tailor the experience for you.
         </p>
       </div>
@@ -63,20 +63,21 @@ export function StepIndustry({ selected, onNext, onSkip, saving }: StepIndustryP
               key={option.value}
               type="button"
               onClick={() => setIndustry(option.value)}
-              className={`flex flex-col items-center gap-2.5 rounded-xl border-2 bg-white p-5 transition-all ${
+              className={`flex flex-col items-center gap-2.5 rounded-xl border bg-white p-5 transition-all ${
                 isSelected
-                  ? 'border-brand bg-emerald-50 shadow-sm'
-                  : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  ? 'border-brand bg-[#E8FAF0]'
+                  : 'border-[#E5E7EB] hover:border-[#D1D5DB] hover:bg-[#F9FAFB]'
               }`}
             >
               <Icon
-                className={`h-7 w-7 ${
-                  isSelected ? 'text-emerald-600' : 'text-slate-500'
+                className={`h-6 w-6 ${
+                  isSelected ? 'text-brand-dark' : 'text-[#9CA3AF]'
                 }`}
+                strokeWidth={1.5}
               />
               <span
                 className={`text-sm font-medium text-center leading-tight ${
-                  isSelected ? 'text-emerald-800' : 'text-foreground'
+                  isSelected ? 'text-[#111827]' : 'text-[#374151]'
                 }`}
               >
                 {option.label}

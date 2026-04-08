@@ -419,10 +419,9 @@ export default function OnboardingSetupPage() {
   const progressPercent = (currentStep / TOTAL_STEPS) * 100;
 
   return (
-    <div className="space-y-8">
-      {/* Step indicator with named stepper */}
+    <div className="space-y-10">
+      {/* Step indicator — dots connected by lines */}
       <div className="space-y-3">
-        {/* Step labels — connector lines are siblings, not children of step items */}
         <div className="flex items-center justify-between">
           {STEP_LABELS.map((label, idx) => {
             const stepNum = idx + 1;
@@ -432,12 +431,12 @@ export default function OnboardingSetupPage() {
               <React.Fragment key={label}>
                 <div className="flex items-center gap-2">
                   <div
-                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
                       isComplete
                         ? 'bg-brand text-white'
                         : isActive
                           ? 'bg-brand text-white'
-                          : 'bg-slate-200 text-slate-500'
+                          : 'border-2 border-[#D1D5DB] bg-white text-[#9CA3AF]'
                     }`}
                   >
                     {isComplete ? (
@@ -449,16 +448,15 @@ export default function OnboardingSetupPage() {
                     )}
                   </div>
                   <span
-                    className={`hidden text-sm font-medium sm:inline ${
-                      isActive ? 'text-foreground' : isComplete ? 'text-brand' : 'text-muted-foreground'
+                    className={`hidden text-sm sm:inline ${
+                      isActive ? 'font-semibold text-[#111827]' : isComplete ? 'font-medium text-brand-dark' : 'font-medium text-[#9CA3AF]'
                     }`}
                   >
                     {label}
                   </span>
                 </div>
-                {/* Connector line as a sibling — flex-1 ensures even spacing */}
                 {idx < STEP_LABELS.length - 1 && (
-                  <div className="hidden h-px flex-1 bg-slate-200 sm:block mx-2" />
+                  <div className="hidden h-px flex-1 bg-[#E5E7EB] sm:block mx-2" />
                 )}
               </React.Fragment>
             );
@@ -466,7 +464,7 @@ export default function OnboardingSetupPage() {
         </div>
 
         {/* Progress bar */}
-        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+        <div className="h-1 w-full overflow-hidden rounded-full bg-[#F3F4F6]">
           <div
             className="h-full rounded-full bg-brand transition-all duration-500 ease-out"
             style={{ width: `${progressPercent}%` }}

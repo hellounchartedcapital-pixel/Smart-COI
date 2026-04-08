@@ -242,19 +242,19 @@ export function DashboardClient({
       {/* ---- Greeting + Actions ---- */}
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900 tracking-tight">
-            Hello{firstName ? `, ${firstName}` : stats.propertyCount > 0 ? '' : ' there'}
+          <h1 className="text-[30px] font-bold text-[#111827]">
+            Hello{firstName ? `, ${firstName}` : ''}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-[#6B7280]">
             Here&apos;s your compliance overview.
           </p>
         </div>
-        <div className="flex gap-2.5">
-          <Button variant="ghost" size="sm" onClick={startTutorial} className="text-xs text-slate-500 hover:text-slate-700">
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={startTutorial} className="text-xs text-[#6B7280] hover:text-[#111827] hover:bg-[#F3F4F6]">
             Take a Tour
           </Button>
           <ExportReportButton />
-          <Button onClick={() => setUploadOpen(true)} data-tour="upload-coi" className="rounded-lg">
+          <Button onClick={() => setUploadOpen(true)} data-tour="upload-coi" className="rounded-lg bg-brand text-white font-semibold hover:bg-brand-dark">
             <Upload className="mr-2 h-4 w-4" />
             Upload COI
           </Button>
@@ -289,24 +289,22 @@ export function DashboardClient({
       <div className="grid items-start gap-8 lg:grid-cols-[1fr_360px]">
         {/* Left column: Action items + Properties */}
         <div className="space-y-8">
-          {/* Portfolio Health Summary */}
-          <div className="rounded-2xl border border-slate-200/60 bg-white p-6" data-tour="health-pills">
+          {/* Compliance Health Summary */}
+          <div className="rounded-xl border border-[#E5E7EB] bg-white p-6" data-tour="health-pills">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-5">
-                <div>
-                  <div className="flex items-baseline gap-2">
-                    <span className={`text-4xl font-bold tracking-tight ${rateColor}`}>
-                      {stats.complianceRate != null ? `${stats.complianceRate}%` : '—'}
-                    </span>
-                    <span className={`text-base font-medium ${rateColor}`}>Compliant</span>
-                  </div>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {stats.propertyCount > 0 && (
-                      <>{stats.propertyCount} {stats.propertyCount === 1 ? 'location' : 'locations'}, </>
-                    )}
-                    {stats.entityCount} {stats.entityCount === 1 ? 'entity' : 'entities'}
-                  </p>
+              <div>
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-4xl font-bold tracking-tight ${rateColor}`}>
+                    {stats.complianceRate != null ? `${stats.complianceRate}%` : '—'}
+                  </span>
+                  <span className={`text-sm font-medium ${rateColor}`}>Compliant</span>
                 </div>
+                <p className="mt-1 text-[13px] text-[#6B7280]">
+                  {stats.propertyCount > 0 && (
+                    <>{stats.propertyCount} {stats.propertyCount === 1 ? 'location' : 'locations'}, </>
+                  )}
+                  {stats.entityCount} {stats.entityCount === 1 ? 'entity' : 'entities'}
+                </p>
               </div>
             </div>
 
@@ -439,13 +437,13 @@ function PropertyCard({ property }: { property: PropertyOverview }) {
 
   return (
     <Link href={`/dashboard/properties/${property.id}`} className="group block">
-      <div className="rounded-2xl border border-slate-200/60 bg-white p-5 transition-all hover:shadow-md hover:border-slate-200">
+      <div className="rounded-xl border border-[#E5E7EB] bg-white p-5 transition-all hover:border-[#D1D5DB]">
         <div className="flex items-start justify-between">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors">
+            <p className="truncate text-sm font-semibold text-[#111827] group-hover:text-brand-dark transition-colors">
               {property.name}
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-[13px] text-[#6B7280]">
               {property.vendorCount + property.tenantCount} {(property.vendorCount + property.tenantCount) === 1 ? 'entity' : 'entities'}
             </p>
           </div>
@@ -492,11 +490,11 @@ function PropertyCard({ property }: { property: PropertyOverview }) {
 function AddPropertyCard({ label }: { label: string }) {
   return (
     <Link href="/dashboard/properties" className="group block">
-      <div className="flex h-full min-h-[120px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white p-5 transition-all hover:border-emerald-300 hover:bg-emerald-50/30">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 group-hover:bg-emerald-100/50 transition-colors">
-          <Plus className="h-5 w-5 text-slate-400 group-hover:text-emerald-600" />
+      <div className="flex h-full min-h-[120px] flex-col items-center justify-center rounded-xl border border-dashed border-[#D1D5DB] bg-white p-5 transition-all hover:border-brand hover:bg-[#E8FAF0]/30">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#F3F4F6] group-hover:bg-[#E8FAF0] transition-colors">
+          <Plus className="h-5 w-5 text-[#9CA3AF] group-hover:text-brand-dark" />
         </div>
-        <p className="mt-2.5 text-xs font-medium text-slate-500 group-hover:text-emerald-700">
+        <p className="mt-2.5 text-xs font-medium text-[#6B7280] group-hover:text-brand-dark">
           Add {label}
         </p>
       </div>
