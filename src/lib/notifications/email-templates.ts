@@ -1,7 +1,7 @@
 // ============================================================================
 // SmartCOI — Email Templates
-// Friendly, professional notification emails that maximize vendor/tenant
-// response rates. Tone scales with urgency.
+// Clean, premium design inspired by Dock (dock.io).
+// Single-column, generous spacing, one CTA per email.
 // ============================================================================
 
 /** Escape HTML special characters to prevent XSS in email templates. */
@@ -15,16 +15,16 @@ function escapeHtml(str: string): string {
 }
 
 export interface EmailMergeFields {
-  entity_name: string; // entity company name
-  contact_name?: string; // optional contact person name
-  entity_type: string; // vendor, tenant, subcontractor, carrier, supplier
+  entity_name: string;
+  contact_name?: string;
+  entity_type: string;
   property_name: string;
   organization_name: string;
-  gaps_summary: string; // HTML list of compliance gaps
+  gaps_summary: string;
   portal_link: string;
-  expiration_date: string; // formatted date string
+  expiration_date: string;
   days_until_expiration: number;
-  is_expired?: boolean; // true when the certificate has expired coverage
+  is_expired?: boolean;
   /** @deprecated Use admin_name instead */
   pm_name: string;
   /** @deprecated Use admin_email instead */
@@ -39,25 +39,41 @@ interface EmailTemplate {
 }
 
 // ============================================================================
-// Shared layout
+// Shared layout — clean white, single column, centered
 // ============================================================================
 
-function emailWrapper(body: string, fields: Pick<EmailMergeFields, 'organization_name'>): string {
+const FONT_STACK = "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://smartcoi.io';
+
+function emailShell(body: string): string {
   return `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px;">
-<tr><td align="center">
-<table width="100%" style="max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-  <tr><td style="background:#059669;padding:20px 24px;">
-    <span style="color:#ffffff;font-size:18px;font-weight:700;">SmartCOI</span>
-    <span style="color:#d1fae5;font-size:12px;margin-left:8px;">${escapeHtml(fields.organization_name)}</span>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#ffffff;font-family:${FONT_STACK};">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+<tr><td align="center" style="padding:40px 20px;">
+<table width="100%" style="max-width:600px;" cellpadding="0" cellspacing="0">
+  <!-- Logo -->
+  <tr><td align="center" style="padding-bottom:32px;">
+    <span style="font-size:24px;font-weight:700;color:#111827;letter-spacing:-0.3px;">SmartCOI</span>
   </td></tr>
-  <tr><td style="padding:24px;">${body}</td></tr>
-  <tr><td style="padding:16px 24px;background:#f1f5f9;font-size:11px;color:#64748b;text-align:center;">
-    Powered by <a href="https://smartcoi.io" style="color:#059669;text-decoration:none;font-weight:600;">SmartCOI</a> — Automated COI compliance tracking<br>
-    <span style="color:#94a3b8;">This is an automated message. Please do not reply directly to this email.</span>
+
+  <!-- Content -->
+  <tr><td style="padding:0 20px;">
+    ${body}
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="padding:40px 20px 0;text-align:center;border-top:1px solid #F3F4F6;margin-top:32px;">
+    <p style="margin:0 0 4px;font-size:13px;color:#9CA3AF;">
+      &copy; ${new Date().getFullYear()} SmartCOI. All rights reserved.
+    </p>
+    <p style="margin:0;font-size:13px;color:#9CA3AF;">
+      <a href="https://smartcoi.io" style="color:#9CA3AF;text-decoration:none;">smartcoi.io</a>
+    </p>
   </td></tr>
 </table>
 </td></tr>
@@ -66,30 +82,20 @@ function emailWrapper(body: string, fields: Pick<EmailMergeFields, 'organization
 </html>`;
 }
 
-function portalButton(link: string, label = 'Upload Your Certificate'): string {
-  return `<table cellpadding="0" cellspacing="0" style="margin:24px 0;">
-<tr><td style="background:#059669;border-radius:6px;padding:12px 24px;">
-  <a href="${link}" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">${label}</a>
+function ctaButton(href: string, label: string): string {
+  return `<table cellpadding="0" cellspacing="0" width="100%" style="margin:28px 0;">
+<tr><td align="center">
+  <!--[if mso]><v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="${href}" style="height:48px;v-text-anchor:middle;width:200px;" arcsize="17%" fillcolor="#73E2A7"><center style="color:#ffffff;font-family:${FONT_STACK};font-size:15px;font-weight:600;">${label}</center></v:roundrect><![endif]-->
+  <!--[if !mso]><!--><a href="${href}" style="display:inline-block;background:#73E2A7;color:#ffffff;font-family:${FONT_STACK};font-size:15px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:8px;">${label}</a><!--<![endif]-->
 </td></tr>
 </table>`;
 }
 
-function greeting(fields: Pick<EmailMergeFields, 'contact_name' | 'entity_name'>): string {
-  const name = escapeHtml(fields.contact_name || fields.entity_name);
-  return `<p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 16px;">Hi ${name},</p>`;
-}
-
-function contactBlock(fields: Pick<EmailMergeFields, 'pm_name' | 'pm_email' | 'admin_name' | 'admin_email'>): string {
+function contactLine(fields: Pick<EmailMergeFields, 'pm_name' | 'pm_email' | 'admin_name' | 'admin_email'>): string {
   const name = fields.admin_name ?? fields.pm_name;
   const email = fields.admin_email ?? fields.pm_email;
-  return `<p style="font-size:13px;color:#475569;margin-top:24px;">
-  Questions? Reach out to <strong>${escapeHtml(name)}</strong> at <a href="mailto:${encodeURI(email)}" style="color:#059669;">${escapeHtml(email)}</a>
-</p>`;
-}
-
-function brokerInstruction(): string {
-  return `<p style="font-size:14px;color:#334155;line-height:1.6;margin-top:16px;">
-  Please send this email to your insurance broker and ask them to issue an updated certificate with these changes. Then upload the new certificate using the button below.
+  return `<p style="font-size:14px;color:#6B7280;margin-top:28px;">
+  Questions? Reach out to <strong style="color:#374151;">${escapeHtml(name)}</strong> at <a href="mailto:${encodeURI(email)}" style="color:#4CC78A;text-decoration:none;">${escapeHtml(email)}</a>
 </p>`;
 }
 
@@ -99,30 +105,31 @@ function brokerInstruction(): string {
 
 export function expirationWarning(fields: EmailMergeFields): EmailTemplate {
   const days = fields.days_until_expiration;
-  const safeProperty = escapeHtml(fields.property_name);
+  const safeEntity = escapeHtml(fields.entity_name);
   const safeExpDate = escapeHtml(fields.expiration_date);
-  let message: string;
 
+  let headline: string;
+  let message: string;
   if (days > 45) {
-    // 60+ days: casual and friendly
-    message = `Just a heads up that your certificate of insurance for <strong>${safeProperty}</strong> expires on <strong>${safeExpDate}</strong>. No rush, but we wanted to give you plenty of time to get an updated certificate from your broker.`;
+    headline = `${safeEntity}'s COI expires on ${safeExpDate}`;
+    message = `This is an early reminder. No rush, but please start the renewal process with your broker to keep compliance current.`;
   } else if (days > 20) {
-    // ~30 days: friendly but clear
-    message = `Your certificate of insurance for <strong>${safeProperty}</strong> expires on <strong>${safeExpDate}</strong> — about ${days} days from now. Please start the renewal process with your insurance broker so we can keep your file up to date.`;
+    headline = `${safeEntity}'s COI expires in ${days} days`;
+    message = `The certificate expires on <strong>${safeExpDate}</strong>. Please reach out to your insurance broker to start the renewal process.`;
   } else {
-    // 14 days or less: direct
-    message = `Your certificate of insurance for <strong>${safeProperty}</strong> expires on <strong>${safeExpDate}</strong> — that\u2019s just <strong>${days} day${days !== 1 ? 's' : ''} away</strong>. Please upload an updated certificate as soon as possible to avoid a lapse in compliance.`;
+    headline = `${safeEntity}'s COI expires in ${days} day${days !== 1 ? 's' : ''}`;
+    message = `The certificate expires on <strong>${safeExpDate}</strong>. Please upload an updated certificate as soon as possible to avoid a lapse in compliance.`;
   }
 
   const body = `
-${greeting(fields)}
-<p style="font-size:14px;color:#334155;line-height:1.6;">${message}</p>
-${portalButton(fields.portal_link)}
-${contactBlock(fields)}`;
+<h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#111827;">${headline}</h1>
+<p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 20px;">${message}</p>
+${ctaButton(fields.portal_link, 'Upload Certificate')}
+${contactLine(fields)}`;
 
   return {
-    subject: `Insurance certificate expiring — ${fields.property_name}`,
-    html: emailWrapper(body, fields),
+    subject: `${fields.entity_name}'s COI expires in ${days} days`,
+    html: emailShell(body),
   };
 }
 
@@ -131,32 +138,29 @@ ${contactBlock(fields)}`;
 // ============================================================================
 
 export function gapNotification(fields: EmailMergeFields): EmailTemplate {
-  const safeProperty = escapeHtml(fields.property_name);
+  const safeEntity = escapeHtml(fields.entity_name);
   const safeExpDate = escapeHtml(fields.expiration_date);
-  const expirationLead = fields.is_expired
-    ? `<p style="font-size:14px;color:#dc2626;line-height:1.6;font-weight:600;margin-bottom:12px;">
-  Your certificate of insurance for <strong>${safeProperty}</strong> expired on <strong>${safeExpDate}</strong>. An updated certificate is needed immediately.
-</p>
-<p style="font-size:14px;color:#334155;line-height:1.6;">
-  In addition, we found the following items that need to be addressed:
+
+  const expiredNote = fields.is_expired
+    ? `<p style="font-size:16px;color:#EF4444;line-height:1.6;font-weight:600;margin:0 0 16px;">
+  The certificate expired on ${safeExpDate}. An updated certificate is needed immediately.
 </p>`
-    : `<p style="font-size:14px;color:#334155;line-height:1.6;">
-  We reviewed your certificate of insurance for <strong>${safeProperty}</strong> and found a few items that need to be updated:
-</p>`;
+    : '';
 
   const body = `
-${greeting(fields)}
-${expirationLead}
-<div style="background:#f8fafc;border-radius:6px;padding:14px 18px;margin:16px 0;">
+<h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#111827;">${safeEntity} has coverage gaps</h1>
+${expiredNote}
+<p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 20px;">We reviewed the certificate and found items that need to be updated:</p>
+<div style="background:#F9FAFB;border-radius:8px;padding:16px 20px;margin:0 0 20px;">
   ${fields.gaps_summary}
 </div>
-${brokerInstruction()}
-${portalButton(fields.portal_link)}
-${contactBlock(fields)}`;
+<p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 4px;">Please send this to your insurance broker and ask them to issue an updated certificate. Then upload the new certificate using the button below.</p>
+${ctaButton(fields.portal_link, 'Upload Certificate')}
+${contactLine(fields)}`;
 
   return {
-    subject: `Action needed: Insurance coverage gap — ${fields.property_name}`,
-    html: emailWrapper(body, fields),
+    subject: `Action needed: ${fields.entity_name} has coverage gaps`,
+    html: emailShell(body),
   };
 }
 
@@ -165,32 +169,28 @@ ${contactBlock(fields)}`;
 // ============================================================================
 
 export function followUpReminder(fields: EmailMergeFields): EmailTemplate {
-  const safeProperty = escapeHtml(fields.property_name);
+  const safeEntity = escapeHtml(fields.entity_name);
   const safeExpDate = escapeHtml(fields.expiration_date);
-  const expirationLead = fields.is_expired
-    ? `<p style="font-size:14px;color:#dc2626;line-height:1.6;font-weight:600;margin-bottom:12px;">
-  Your certificate of insurance for <strong>${safeProperty}</strong> expired on <strong>${safeExpDate}</strong>. An updated certificate is needed immediately.
-</p>
-<p style="font-size:14px;color:#334155;line-height:1.6;">
-  We still need an updated certificate that also addresses the following:
+
+  const expiredNote = fields.is_expired
+    ? `<p style="font-size:16px;color:#EF4444;line-height:1.6;font-weight:600;margin:0 0 16px;">
+  The certificate expired on ${safeExpDate}. An updated certificate is needed immediately.
 </p>`
-    : `<p style="font-size:14px;color:#334155;line-height:1.6;">
-  We wanted to follow up on your certificate of insurance for <strong>${safeProperty}</strong>. We still need an updated certificate that addresses the following:
-</p>`;
+    : '';
 
   const body = `
-${greeting(fields)}
-${expirationLead}
-<div style="background:#f8fafc;border-radius:6px;padding:14px 18px;margin:16px 0;">
+<h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#111827;">Reminder: ${safeEntity} still has coverage gaps</h1>
+${expiredNote}
+<p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 20px;">We're following up on items that still need to be addressed:</p>
+<div style="background:#F9FAFB;border-radius:8px;padding:16px 20px;margin:0 0 20px;">
   ${fields.gaps_summary}
 </div>
-${brokerInstruction()}
-${portalButton(fields.portal_link)}
-${contactBlock(fields)}`;
+${ctaButton(fields.portal_link, 'Upload Certificate')}
+${contactLine(fields)}`;
 
   return {
-    subject: `Insurance certificate required — ${fields.property_name}`,
-    html: emailWrapper(body, fields),
+    subject: `Reminder: ${fields.entity_name} — certificate update needed`,
+    html: emailShell(body),
   };
 }
 
@@ -199,37 +199,37 @@ ${contactBlock(fields)}`;
 // ============================================================================
 
 export function expiredNotice(fields: EmailMergeFields): EmailTemplate {
-  const safeProperty = escapeHtml(fields.property_name);
+  const safeEntity = escapeHtml(fields.entity_name);
   const safeExpDate = escapeHtml(fields.expiration_date);
+
   const body = `
-${greeting(fields)}
-<p style="font-size:14px;color:#334155;line-height:1.6;">
-  Your certificate of insurance for <strong>${safeProperty}</strong> expired on <strong>${safeExpDate}</strong>. Please upload a current certificate immediately to maintain compliance.
+<h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#111827;">${safeEntity}'s certificate has expired</h1>
+<p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 20px;">
+  The certificate expired on <strong>${safeExpDate}</strong>. Please upload a current certificate of insurance to maintain compliance.
 </p>
-<p style="font-size:14px;color:#334155;line-height:1.6;margin-top:12px;">
-  If you\u2019ve already renewed your policy, just ask your broker to send over the updated certificate and upload it using the button below.
+<p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 4px;">
+  If you've already renewed your policy, ask your broker to send the updated certificate and upload it below.
 </p>
-${portalButton(fields.portal_link)}
-${contactBlock(fields)}`;
+${ctaButton(fields.portal_link, 'Upload Certificate')}
+${contactLine(fields)}`;
 
   return {
-    subject: `URGENT: Insurance certificate expired — ${fields.property_name}`,
-    html: emailWrapper(body, fields),
+    subject: `${fields.entity_name}'s certificate has expired`,
+    html: emailShell(body),
   };
 }
 
 // ============================================================================
-// Format gap descriptions as a friendly HTML list
+// Format gap descriptions as HTML list
 // ============================================================================
 
 export function formatGapsAsHtml(gaps: string[]): string {
-  if (gaps.length === 0) return '<p style="font-size:13px;color:#475569;">Please provide an updated Certificate of Insurance.</p>';
-  return `<ul style="margin:0;padding:0 0 0 18px;font-size:13px;color:#334155;line-height:2;">
+  if (gaps.length === 0) return '<p style="font-size:14px;color:#6B7280;">Please provide an updated Certificate of Insurance.</p>';
+  return `<ul style="margin:0;padding:0 0 0 18px;font-size:14px;color:#374151;line-height:1.8;">
 ${gaps.map((g) => {
     const safe = escapeHtml(g);
-    // Style "Certificate expired" items with urgency
     if (g.startsWith('Certificate expired')) {
-      return `  <li style="color:#dc2626;font-weight:600;">${safe}</li>`;
+      return `  <li style="color:#EF4444;font-weight:600;">${safe}</li>`;
     }
     return `  <li>${safe}</li>`;
   }).join('\n')}
@@ -237,7 +237,7 @@ ${gaps.map((g) => {
 }
 
 // ============================================================================
-// Welcome / Onboarding Email
+// Welcome Email
 // ============================================================================
 
 interface WelcomeEmailFields {
@@ -248,121 +248,27 @@ interface WelcomeEmailFields {
 export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
   const name = escapeHtml(fields.user_name || 'there');
 
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-</head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 16px;">
-<tr><td align="center">
-<table width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0">
-  <!-- Logo -->
-  <tr><td align="center" style="padding-bottom:32px;">
-    <table cellpadding="0" cellspacing="0"><tr>
-      <td style="vertical-align:middle;padding-right:10px;">
-        <div style="display:inline-block;width:32px;height:32px;border-radius:7px;background:linear-gradient(135deg,#73E2A7,#5CC98E);text-align:center;line-height:32px;font-size:16px;color:#ffffff;">&#10003;</div>
-      </td>
-      <td style="vertical-align:middle;">
-        <span style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:#0f172a;">SmartCOI</span>
-      </td>
-    </tr></table>
-  </td></tr>
-
-  <!-- Card -->
-  <tr><td>
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08),0 4px 12px rgba(0,0,0,0.04);">
-    <!-- Green accent bar -->
-    <tr><td style="height:4px;background:linear-gradient(90deg,#4CC78A,#73E2A7);font-size:0;line-height:0;">&nbsp;</td></tr>
-
-    <!-- Content -->
-    <tr><td style="padding:40px 36px 32px;">
-      <h1 style="margin:0 0 8px;font-family:'DM Sans',sans-serif;font-size:24px;font-weight:700;color:#0f172a;">Welcome to SmartCOI!</h1>
-      <p style="margin:0 0 24px;font-size:15px;color:#475569;line-height:1.6;">
-        Hi ${name}, your account is confirmed and ready to go. You\u2019re just a few steps away from automating your COI compliance.
-      </p>
-
-      <!-- Steps -->
-      <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:28px;">
-        <tr>
-          <td style="width:44px;vertical-align:top;padding:14px 0;">
-            <div style="width:36px;height:36px;border-radius:50%;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-align:center;line-height:36px;">1</div>
-          </td>
-          <td style="vertical-align:top;padding:14px 0 14px 14px;">
-            <p style="margin:0 0 2px;font-family:'DM Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;">Set up your organization</p>
-            <p style="margin:0;font-size:13px;color:#64748b;line-height:1.5;">Name your company and configure your certificate holder entities.</p>
-          </td>
-        </tr>
-        <tr><td colspan="2" style="padding:0 0 0 50px;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
-        <tr>
-          <td style="width:44px;vertical-align:top;padding:14px 0;">
-            <div style="width:36px;height:36px;border-radius:50%;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-align:center;line-height:36px;">2</div>
-          </td>
-          <td style="vertical-align:top;padding:14px 0 14px 14px;">
-            <p style="margin:0 0 2px;font-family:'DM Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;">Add your first property</p>
-            <p style="margin:0;font-size:13px;color:#64748b;line-height:1.5;">Create a property and start associating vendors and tenants.</p>
-          </td>
-        </tr>
-        <tr><td colspan="2" style="padding:0 0 0 50px;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
-        <tr>
-          <td style="width:44px;vertical-align:top;padding:14px 0;">
-            <div style="width:36px;height:36px;border-radius:50%;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-align:center;line-height:36px;">3</div>
-          </td>
-          <td style="vertical-align:top;padding:14px 0 14px 14px;">
-            <p style="margin:0 0 2px;font-family:'DM Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;">Upload up to 50 COIs free</p>
-            <p style="margin:0;font-size:13px;color:#64748b;line-height:1.5;">Our AI extracts vendor names, coverages, limits, and dates automatically.</p>
-          </td>
-        </tr>
-        <tr><td colspan="2" style="padding:0 0 0 50px;"><div style="border-top:1px solid #e2e8f0;"></div></td></tr>
-        <tr>
-          <td style="width:44px;vertical-align:top;padding:14px 0;">
-            <div style="width:36px;height:36px;border-radius:50%;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-align:center;line-height:36px;">4</div>
-          </td>
-          <td style="vertical-align:top;padding:14px 0 14px 14px;">
-            <p style="margin:0 0 2px;font-family:'DM Sans',sans-serif;font-size:14px;color:#0f172a;font-weight:700;">Set compliance requirements</p>
-            <p style="margin:0;font-size:13px;color:#64748b;line-height:1.5;">Define the coverages and limits each vendor or tenant type must carry.</p>
-          </td>
-        </tr>
-      </table>
-
-      <!-- CTA Button -->
-      <table cellpadding="0" cellspacing="0" width="100%">
-      <tr><td align="center">
-        <a href="${fields.setup_link}" style="display:inline-block;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:12px;box-shadow:0 2px 8px rgba(115,226,167,0.3);">Get Started</a>
-      </td></tr>
-      </table>
-    </td></tr>
-  </table>
-  </td></tr>
-
-  <!-- Footer -->
-  <tr><td style="padding:28px 0;text-align:center;">
-    <p style="margin:0 0 4px;font-family:'DM Sans',sans-serif;font-size:12px;color:#94a3b8;">
-      \u00A9 ${new Date().getFullYear()} SmartCOI. All rights reserved.
-    </p>
-    <p style="margin:0;font-family:'DM Sans',sans-serif;font-size:12px;color:#94a3b8;">
-      Questions? <a href="mailto:support@smartcoi.io" style="color:#4CC78A;text-decoration:none;">support@smartcoi.io</a>
-    </p>
-  </td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const body = `
+<h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#111827;">Welcome to SmartCOI</h1>
+<p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 20px;">
+  Hi ${name}, your account is ready. Upload your first certificate and let our AI handle the extraction, compliance checking, and follow-ups.
+</p>
+<p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 4px;">
+  You have 14 days to try everything free — up to 50 certificates, no credit card required.
+</p>
+${ctaButton(fields.setup_link, 'Go to Dashboard')}
+<p style="font-size:14px;color:#6B7280;margin-top:28px;">
+  Questions? Just reply to this email.
+</p>`;
 
   return {
-    subject: "Welcome to SmartCOI \u2014 Let's Get You Set Up",
-    html,
+    subject: 'Welcome to SmartCOI',
+    html: emailShell(body),
   };
 }
 
 // ============================================================================
-// Email Confirmation Template
-// Branded template for Supabase email confirmation. To use this template,
-// copy the HTML from confirmationEmail({ confirmation_url: '{{ .ConfirmationURL }}' })
-// into Supabase Dashboard > Auth > Email Templates > Confirm signup.
+// Email Confirmation
 // ============================================================================
 
 interface ConfirmationEmailFields {
@@ -370,66 +276,18 @@ interface ConfirmationEmailFields {
 }
 
 export function confirmationEmail(fields: ConfirmationEmailFields): EmailTemplate {
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-</head>
-<body style="margin:0;padding:0;background:#f1f5f9;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 16px;">
-<tr><td align="center">
-<table width="100%" style="max-width:560px;" cellpadding="0" cellspacing="0">
-  <!-- Logo -->
-  <tr><td align="center" style="padding-bottom:32px;">
-    <img src="https://smartcoi.io/logo-email.png" alt="SmartCOI" width="60" height="60" style="display:block;width:60px;height:60px;border:0;" />
-  </td></tr>
-
-  <!-- Card -->
-  <tr><td>
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08),0 4px 12px rgba(0,0,0,0.04);">
-    <!-- Green accent bar -->
-    <tr><td style="height:4px;background:linear-gradient(90deg,#4CC78A,#73E2A7);font-size:0;line-height:0;">&nbsp;</td></tr>
-
-    <!-- Content -->
-    <tr><td style="padding:40px 36px 32px;text-align:center;">
-      <h1 style="margin:0 0 12px;font-family:'DM Sans',sans-serif;font-size:24px;font-weight:700;color:#0f172a;">Confirm your email</h1>
-      <p style="margin:0 0 28px;font-size:15px;color:#475569;line-height:1.6;">
-        Thanks for signing up for SmartCOI! Click the button below to confirm your email address and start automating your COI compliance.
-      </p>
-
-      <!-- CTA Button -->
-      <table cellpadding="0" cellspacing="0" width="100%">
-      <tr><td align="center">
-        <a href="${fields.confirmation_url}" style="display:inline-block;background:#73E2A7;color:#0f172a;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:12px;box-shadow:0 2px 8px rgba(115,226,167,0.3);">Confirm Email</a>
-      </td></tr>
-      </table>
-
-      <p style="margin:24px 0 0;font-size:13px;color:#94a3b8;line-height:1.6;">
-        If you didn\u2019t create an account, you can safely ignore this email.
-      </p>
-    </td></tr>
-  </table>
-  </td></tr>
-
-  <!-- Footer -->
-  <tr><td style="padding:28px 0;text-align:center;">
-    <p style="margin:0 0 4px;font-family:'DM Sans',sans-serif;font-size:12px;color:#94a3b8;">
-      \u00A9 ${new Date().getFullYear()} SmartCOI. All rights reserved.
-    </p>
-    <p style="margin:0;font-family:'DM Sans',sans-serif;font-size:12px;color:#94a3b8;">
-      <a href="https://smartcoi.io" style="color:#4CC78A;text-decoration:none;">smartcoi.io</a>
-    </p>
-  </td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+  const body = `
+<h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#111827;text-align:center;">Confirm your email</h1>
+<p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 20px;text-align:center;">
+  Click the button below to confirm your email address and get started with SmartCOI.
+</p>
+${ctaButton(fields.confirmation_url, 'Confirm Email')}
+<p style="font-size:14px;color:#9CA3AF;text-align:center;margin-top:20px;">
+  If you didn't create an account, you can safely ignore this email.
+</p>`;
 
   return {
     subject: 'Confirm your SmartCOI account',
-    html,
+    html: emailShell(body),
   };
 }
