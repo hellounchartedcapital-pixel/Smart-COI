@@ -135,6 +135,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Conditional PM-only features (lease extraction, tenant entity type)
 - Competitive comparison table on landing page ("Why teams switch to SmartCOI" — SmartCOI vs Typical COI Platform, 7 rows, no named competitors)
 - Risk quantification engine — calculates dollar-value exposure gaps per entity and per coverage type, with prioritized action items (`src/lib/compliance/risk-quantification.ts`)
+- Compliance audit PDF report generator — server-side PDF generation from risk quantification data with executive summary, portfolio overview, entity detail, expiration calendar, and recommendations (`src/lib/reports/compliance-audit-report.ts`)
 
 ### Features That DO NOT EXIST (never reference)
 
@@ -154,6 +155,18 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Compliance Audit PDF Report Generator (Apr 2026)
+
+- Created `src/lib/reports/compliance-audit-report.ts` — server-side PDF report generator using jsPDF + jspdf-autotable (Vercel-compatible, no headless browser required)
+- `generateComplianceAuditReport(result, meta)` takes a `RiskQuantificationResult` + `AuditReportOrgMetadata` and returns a `Buffer` containing a multi-page PDF
+- **Page 1 — Executive Summary:** Org name, audit date, large compliance score percentage, 6-stat grid (total entities, non-compliant, expired, expiring 30d, missing endorsements, fully compliant), estimated uninsured exposure in bold, explanatory paragraph
+- **Page 2 — Portfolio Overview:** Compliance status distribution table (compliant/non-compliant/expired/no certificate), gaps by coverage type table, expiration timeline (30/60/90 day counts)
+- **Pages 3+ — Entity Detail:** One section per non-compliant entity with name, type, property, coverage gap table (Required vs Found vs Gap vs Status), missing endorsements, risk level badge (Critical/Warning/Minor)
+- **Expiration Calendar:** Chronological list of all certificates expiring within 90 days with color-coded expired/expiring status
+- **Recommendations:** Top 5 priority actions from risk quantification data with numbered badges, exposure amounts, gap descriptions, and SmartCOI CTA footer
+- Design: white background, emerald (#059669) headers/accents, slate gray text, alternating row shading, page numbers ("Page X of Y"), confidential footer — consulting-firm aesthetic
+- Calculation-only utility — no server action, no UI components, no database writes
 
 #### Risk Quantification Engine (Apr 2026)
 
