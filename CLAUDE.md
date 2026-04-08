@@ -2,7 +2,7 @@
 
 *Last updated: March 31, 2026*
 
-SmartCOI — B2B SaaS platform automating Certificate of Insurance (COI) compliance tracking for commercial property managers. Automates COI collection, AI extraction, compliance verification, and vendor/tenant follow-up notifications.
+SmartCOI — B2B SaaS platform automating Certificate of Insurance (COI) compliance tracking. Supports Property Management, Construction, Logistics, Healthcare, Manufacturing, Hospitality, Retail, and Other industries. Automates COI collection, AI extraction, compliance verification, and vendor/tenant follow-up notifications.
 
 ## Product Name
 
@@ -37,6 +37,41 @@ Never deviate from these numbers. No enterprise tier. Fully self-serve.
 ## Current Status
 
 Product is feature-complete and launch-ready. All critical flows tested (7/7 PASS). P0 and P1 polish passes complete. Landing page updated to match current product.
+
+### Multi-Industry Architecture (Apr 2026)
+
+SmartCOI now supports 8 industries. Key architectural components:
+
+**Industry system:**
+- `organizations.industry` column (TEXT with CHECK constraint)
+- Industry type: `src/types/index.ts` — union type
+- Industry options: `src/lib/constants/industries.ts` — labels + icons for selection UI
+- Industry templates: `src/lib/constants/industry-templates.ts` — 28 default templates across 8 industries
+
+**Terminology mapping layer:**
+- Definition: `src/lib/constants/terminology.ts` — `TERMINOLOGY_MAP` (Record<Industry, Terminology>) with 12 fields per industry
+- Client hook: `src/hooks/useTerminology.ts` — use in React components
+- Server helper: `src/lib/terminology-server.ts` — use in server components and API routes
+- Helper functions: `getTerminology(industry)` and `formatTerm(template, terms)`
+
+**Terminology fields per industry:** location, locationPlural, entity, entityPlural, tenant, tenantPlural, hasTenants, locationDescription, entityDescription, tenantDescription, uploadPrompt
+
+**Key behaviors:**
+- Tenants only visible when `hasTenants === true` (PM only currently)
+- Locations are optional — non-PM industries can track compliance without creating locations
+- Lease extraction hidden for non-PM industries
+- AI template recommendations are industry-aware
+
+**Unified entity model:**
+- Merged vendors/tenants into `entities` table with `type` field
+- Legacy vendor/tenant tables still active via dual-writing (portal, notifications, detail pages still read from legacy)
+- Entity detail page redirects to legacy vendor/tenant pages (functional)
+
+**KNOWN GAPS (in progress):**
+- ~30 dashboard components still have hardcoded "Vendor"/"Tenant" strings instead of using terminology
+- Portal has zero industry awareness (hardcoded "property manager" in 4 places)
+- Email templates have zero industry awareness (no industry in EmailMergeFields)
+- Landing page is PM-specific (intentional for current marketing)
 
 ### Features That EXIST (reference these freely)
 
@@ -83,14 +118,22 @@ Product is feature-complete and launch-ready. All critical flows tested (7/7 PAS
 - Stripe billing with three tiers and trial enforcement
 - Archive, delete, and bulk actions for vendors/tenants
 - SEO content pages and blog (MDX)
-- 57 programmatic pages under /insurance-requirements/
+- 57 programmatic pages under /insurance-requirements/ (48 noindexed, 8 hub pages with unique content, 6 coverage guides)
 - 12 blog posts (MDX) with inline CTAs and bottom-of-post CTAs
 - 10 competitor comparison pages under /compare/ (TrustLayer, Certificial, Billy, SmartCompliance, PINS, CertFocus, BCS, Jones, MyCOI, Spreadsheets)
 - 7 vertical landing pages under /for/
+- 6 industry vertical pages under /for/ (Construction, Logistics, Healthcare, Manufacturing, Hospitality, Retail)
 - 2 alternatives pages under /alternatives/
 - www to non-www 301 redirect
 - Session expiration (24h standard / 7d with "Remember me") with cookie-based middleware gate
 - Real-time dashboard & reporting
+- Industry selector in onboarding (8 industries with icons)
+- Terminology mapping layer — dashboard labels adapt based on org industry
+- Unified entity model (entities table with type field, dual-writing to legacy tables)
+- Locations optional — COI tracking works without creating properties/projects
+- 28 industry-specific compliance templates across 8 industries
+- Industry-aware AI template recommendations
+- Conditional PM-only features (lease extraction, tenant entity type)
 
 ### Features That DO NOT EXIST (never reference)
 
@@ -110,6 +153,28 @@ Product is feature-complete and launch-ready. All critical flows tested (7/7 PAS
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Multi-Industry Expansion (Apr 2026)
+
+- Added industry selector to onboarding (Property Management, Construction, Logistics, Healthcare, Manufacturing, Hospitality, Retail, Other)
+- Created terminology mapping layer (`src/lib/constants/terminology.ts`) with client hook and server helper
+- Unified entity model — merged vendors/tenants into entities table with type field (dual-writing to legacy tables for backward compatibility)
+- Made locations optional for non-PM industries
+- Created 28 industry-specific compliance templates
+- Made AI recommendation system industry-aware
+- Hidden lease extraction and tenant features for non-PM industries
+- UI refresh: Inter font, clean white design
+- Redesigned 9 email templates (welcome, trial sequence, compliance alerts, portal requests)
+- Redesigned landing page with industry-agnostic positioning
+- Improved bulk upload reliability from 48% to 90%+ (sequential processing, removed retry amplification)
+
+#### SEO Overhaul (Apr 2026)
+
+- Noindexed 48 thin programmatic pages at /insurance-requirements/[property]/[coverage]
+- Improved 8 property hub pages with 300-500 words unique content
+- Created 6 coverage guide pages at /insurance-requirements/coverage/
+- Created 6 industry vertical pages at /for/ (Construction, Logistics, Healthcare, Manufacturing, Hospitality, Retail)
+- Updated internal linking and sitemap
 
 #### Added Instantly visitor tracking pixel (Apr 2026)
 
@@ -300,6 +365,8 @@ Notable columns:
 - `certificates.endorsement_data` — JSONB column for endorsement extraction results
 - `requirement_templates.source_type` — TEXT ('manual' | 'lease_extraction' | 'ai_recommended') indicating template origin
 - `requirement_templates.additional_insured_name` / `requirement_templates.certificate_holder_name` — entity names extracted from leases, persisted for compliance matching
+- `organizations.industry` — TEXT with CHECK constraint (property_management, construction, logistics, healthcare, manufacturing, hospitality, retail, other)
+- `entities` table — unified entity model with `type` field, replaces separate vendor/tenant creation flow
 
 ## Important Patterns
 
