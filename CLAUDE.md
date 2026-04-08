@@ -68,7 +68,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Entity detail page redirects to legacy vendor/tenant pages (functional)
 
 **KNOWN GAPS (in progress):**
-- ~30 dashboard components still have hardcoded "Vendor"/"Tenant" strings instead of using terminology
+- ~~\~30 dashboard components still have hardcoded "Vendor"/"Tenant" strings instead of using terminology~~ **FIXED** (Apr 2026)
 - Email templates have zero industry awareness (no industry in EmailMergeFields)
 - Landing page is PM-specific (intentional for current marketing)
 
@@ -152,6 +152,15 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Dynamic Terminology Strings (Apr 2026)
+
+- Replaced hardcoded "Vendor"/"Tenant" strings in ~14 dashboard components with dynamic terminology from `useTerminology()` hook
+- Components updated: entity-creation-wizard, simple-upload-coi-dialog, export-report-button, edit-vendor-dialog, edit-tenant-dialog, vendor-detail-client, tenant-detail-client, certificate-review-client, property-detail-client, certificates/upload page, dashboard-tutorial, template-assignment-nudge, extract-lease-dialog
+- Dialog titles, toast messages, breadcrumbs, labels, and error messages now use industry-specific terms (e.g., "Subcontractor" for construction, "Carrier" for logistics)
+- "Extract from Lease" option hidden for non-PM industries (where `hasTenants === false`)
+- Dashboard tutorial tour steps use dynamic entity/tenant names
+- Export report PDF uses dynamic type labels
 
 #### Portal Industry Awareness (Apr 2026)
 

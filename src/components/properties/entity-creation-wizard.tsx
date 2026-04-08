@@ -33,6 +33,7 @@ import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash } from '@/lib/utils/file-validation';
 import { isPlanInactiveError, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import { formatCurrency, toTitleCase } from '@/lib/utils';
+import { useTerminology } from '@/hooks/useTerminology';
 import type { RequirementTemplate, LimitType } from '@/types';
 import { Upload, FileText, X, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
@@ -144,6 +145,7 @@ export function EntityCreationWizard({
   initialCoiFile,
 }: EntityCreationWizardProps) {
   const { showUpgradeModal } = useUpgradeModal();
+  const { terminology: terms } = useTerminology();
   const leaseFileRef = useRef<HTMLInputElement>(null);
   const coiFileRef = useRef<HTMLInputElement>(null);
 
@@ -199,7 +201,7 @@ export function EntityCreationWizard({
   const [saving, setSaving] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
-  const entityLabel = mode === 'vendor' ? 'Vendor' : 'Tenant';
+  const entityLabel = mode === 'vendor' ? terms.entity : (terms.tenant ?? 'Tenant');
   const filteredTemplates = templates.filter((t) => t.category === mode);
   const typeSuggestions = mode === 'vendor' ? VENDOR_TYPE_SUGGESTIONS : TENANT_TYPE_SUGGESTIONS;
   const currentTypeValue = mode === 'vendor' ? vendorType : tenantType;
@@ -276,7 +278,7 @@ export function EntityCreationWizard({
   const handleAiRecommend = useCallback(async () => {
     const vType = aiVendorType.trim() || vendorType.trim();
     if (!vType) {
-      toast.error('Please enter a vendor type');
+      toast.error(`Please enter a ${terms.entity.toLowerCase()} type`);
       return;
     }
 
@@ -429,7 +431,7 @@ export function EntityCreationWizard({
         const included = aiRequirements.filter((r) => r.included);
         if (included.length > 0) {
           const tplResult = await createTemplateWithRequirements({
-            name: `${toTitleCase(companyName.trim())} — ${toTitleCase(vendorType.trim() || 'Vendor')} Requirements`,
+            name: `${toTitleCase(companyName.trim())} — ${toTitleCase(vendorType.trim() || terms.entity)} Requirements`,
             description: `AI-recommended template for ${vendorType.trim() || 'vendor'}`,
             category: 'vendor',
             risk_level: 'standard',
@@ -456,7 +458,7 @@ export function EntityCreationWizard({
         const included = leaseRequirements.filter((r) => r.included);
         if (included.length > 0) {
           const tplResult = await createTemplateWithRequirements({
-            name: `${toTitleCase(companyName.trim())} — Lease Requirements`,
+            name: `${toTitleCase(companyName.trim())} — ${terms.hasTenants ? 'Lease Requirements' : `${terms.entity} Requirements`}`,
             description: 'Extracted from uploaded lease document',
             category: 'tenant',
             risk_level: 'standard',
@@ -492,7 +494,7 @@ export function EntityCreationWizard({
           vendor_type: vendorType.trim() || undefined,
           template_id: templateId,
         });
-        if (handleActionResult(result, 'Failed to add vendor', showUpgradeModal)) {
+        if (handleActionResult(result, `Failed to add ${terms.entity.toLowerCase()}`, showUpgradeModal)) {
           setSaving(false);
           return null;
         }
@@ -508,7 +510,7 @@ export function EntityCreationWizard({
           tenant_type: tenantType.trim() || undefined,
           template_id: templateId,
         });
-        if (handleActionResult(result, 'Failed to add tenant', showUpgradeModal)) {
+        if (handleActionResult(result, `Failed to add ${(terms.tenant ?? 'tenant').toLowerCase()}`, showUpgradeModal)) {
           setSaving(false);
           return null;
         }
@@ -517,7 +519,7 @@ export function EntityCreationWizard({
 
       return entityId;
     } catch (err) {
-      handleActionError(err, `Failed to add ${mode}`, showUpgradeModal);
+      handleActionError(err, `Failed to add ${mode === 'vendor' ? terms.entity.toLowerCase() : (terms.tenant ?? 'tenant').toLowerCase()}`, showUpgradeModal);
       return null;
     } finally {
       setSaving(false);
@@ -881,7 +883,7 @@ export function EntityCreationWizard({
                   )}
                 </div>
                 <div className="relative space-y-2">
-                  <Label>{mode === 'vendor' ? 'Vendor type' : 'Tenant type'}</Label>
+                  <Label>{mode === 'vendor' ? `${terms.entity} type` : `${terms.tenant ?? 'Tenant'} type`}</Label>
                   <Input
                     value={currentTypeValue}
                     onChange={(e) => {
@@ -980,10 +982,10 @@ export function EntityCreationWizard({
                   >
                     <p className="text-sm font-medium">AI Recommended</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Generate based on vendor type
+                      Generate based on {terms.entity.toLowerCase()} type
                     </p>
                   </button>
-                ) : (
+                ) : terms.hasTenants ? (
                   <button
                     type="button"
                     className={`rounded-lg border-2 p-3 text-left transition-colors ${
@@ -996,6 +998,21 @@ export function EntityCreationWizard({
                     <p className="text-sm font-medium">Extract from Lease</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       Upload lease to extract requirements
+                    </p>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={`rounded-lg border-2 p-3 text-left transition-colors ${
+                      templateOption === 'ai'
+                        ? 'border-emerald-500 bg-emerald-50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                    onClick={() => setTemplateOption('ai')}
+                  >
+                    <p className="text-sm font-medium">AI Recommended</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Generate based on {terms.entity.toLowerCase()} type
                     </p>
                   </button>
                 )}
@@ -1046,7 +1063,7 @@ export function EntityCreationWizard({
                   {aiRequirements.length === 0 && !aiGenerating && (
                     <>
                       <div className="space-y-2">
-                        <Label>Vendor type</Label>
+                        <Label>{terms.entity} type</Label>
                         <Input
                           value={aiVendorType}
                           onChange={(e) => setAiVendorType(e.target.value)}

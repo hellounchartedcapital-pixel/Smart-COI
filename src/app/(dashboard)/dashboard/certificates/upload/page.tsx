@@ -26,6 +26,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useTerminology } from '@/hooks/useTerminology';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,6 +59,7 @@ export default function CertificateUploadPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showUpgradeModal } = useUpgradeModal();
+  const { terminology: terms } = useTerminology();
 
   const supabase = createClient();
 
@@ -389,7 +391,7 @@ export default function CertificateUploadPage() {
         <h1 className="text-2xl font-bold tracking-tight">Upload Certificate of Insurance</h1>
         {entityName && (
           <p className="text-sm text-muted-foreground">
-            {entityType === 'vendor' ? 'Vendor' : 'Tenant'}:{' '}
+            {entityType === 'vendor' ? terms.entity : (terms.tenant ?? 'Tenant')}:{' '}
             <span className="font-medium text-foreground">{entityName}</span>
             {propertyName && (
               <>
@@ -434,7 +436,7 @@ export default function CertificateUploadPage() {
             )}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Vendor or Tenant</label>
+              <label className="text-sm font-medium">{terms.hasTenants ? `${terms.entity} or ${terms.tenant}` : terms.entity}</label>
               {loadingEntities ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading…

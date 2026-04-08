@@ -5,6 +5,7 @@ import { FileDown, FileText, Table } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { generateComplianceCSV, getComplianceReportData } from '@/lib/actions/reports';
+import { useTerminology } from '@/hooks/useTerminology';
 import type { ComplianceReportData } from '@/lib/actions/reports';
 
 function formatReportDate(iso: string): string {
@@ -30,7 +31,7 @@ function statusColor(status: string): string {
   }
 }
 
-function generatePDFHtml(data: ComplianceReportData): string {
+function generatePDFHtml(data: ComplianceReportData, entityLabel: string, tenantLabel: string | null): string {
   const date = formatReportDate(data.generatedAt);
 
   const propertyRows = data.properties
@@ -46,7 +47,7 @@ function generatePDFHtml(data: ComplianceReportData): string {
         return `
         <tr>
           <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${e.name}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${e.type === 'vendor' ? 'Vendor' : 'Tenant'}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${e.type === 'vendor' ? entityLabel : (tenantLabel ?? 'Tenant')}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;">
             <span style="color:${statusColor(e.complianceStatus)};font-weight:600;">${statusLabel(e.complianceStatus)}</span>
           </td>
@@ -190,6 +191,7 @@ export function ExportReportButton() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState<'pdf' | 'csv' | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { terminology: terms } = useTerminology();
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -206,7 +208,7 @@ export function ExportReportButton() {
     setOpen(false);
     try {
       const data = await getComplianceReportData();
-      const html = generatePDFHtml(data);
+      const html = generatePDFHtml(data, terms.entity, terms.tenant);
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');

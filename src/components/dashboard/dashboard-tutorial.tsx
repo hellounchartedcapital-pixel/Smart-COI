@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useTerminology } from '@/hooks/useTerminology';
 
 const TUTORIAL_KEY = 'smartcoi_has_seen_tutorial';
 
@@ -15,44 +16,49 @@ interface TourStep {
   description: string;
 }
 
-const STEPS: TourStep[] = [
-  {
-    target: 'health-pills',
-    title: 'Portfolio Health',
-    description:
-      'Your overall compliance rate across all properties. Click the status pills to filter the action queue below.',
-  },
-  {
-    target: 'action-queue',
-    title: 'Action Queue',
-    description:
-      'Vendors and tenants that need your attention — expired certificates, missing coverage, and compliance gaps. Handle items directly from here.',
-  },
-  {
-    target: 'upload-coi',
-    title: 'Upload Certificates',
-    description:
-      'Upload certificates of insurance here. Our AI will automatically extract coverage details and match them to the right vendor.',
-  },
-  {
-    target: 'row-actions',
-    title: 'Quick Actions',
-    description:
-      'Request a certificate directly from a vendor via email, or upload one you\'ve already received — right from the action queue.',
-  },
-  {
-    target: 'portfolio-snapshot',
-    title: 'Compliance Overview',
-    description:
-      'A summary of your compliance status — total entities, compliance rate, and upcoming expirations.',
-  },
-  {
-    target: 'sidebar-nav',
-    title: 'Navigation',
-    description:
-      'Manage your locations and entities, set up requirement templates, and configure notifications from here.',
-  },
-];
+function buildSteps(entityPlural: string, tenantPlural: string | null, entity: string): TourStep[] {
+  const entitiesLabel = tenantPlural
+    ? `${entityPlural} and ${tenantPlural.toLowerCase()}`
+    : entityPlural.toLowerCase();
+  return [
+    {
+      target: 'health-pills',
+      title: 'Portfolio Health',
+      description:
+        'Your overall compliance rate across all properties. Click the status pills to filter the action queue below.',
+    },
+    {
+      target: 'action-queue',
+      title: 'Action Queue',
+      description:
+        `${entitiesLabel} that need your attention — expired certificates, missing coverage, and compliance gaps. Handle items directly from here.`,
+    },
+    {
+      target: 'upload-coi',
+      title: 'Upload Certificates',
+      description:
+        `Upload certificates of insurance here. Our AI will automatically extract coverage details and match them to the right ${entity.toLowerCase()}.`,
+    },
+    {
+      target: 'row-actions',
+      title: 'Quick Actions',
+      description:
+        `Request a certificate directly from a ${entity.toLowerCase()} via email, or upload one you've already received — right from the action queue.`,
+    },
+    {
+      target: 'portfolio-snapshot',
+      title: 'Compliance Overview',
+      description:
+        'A summary of your compliance status — total entities, compliance rate, and upcoming expirations.',
+    },
+    {
+      target: 'sidebar-nav',
+      title: 'Navigation',
+      description:
+        'Manage your locations and entities, set up requirement templates, and configure notifications from here.',
+    },
+  ];
+}
 
 // ============================================================================
 // Hook: useTutorial
@@ -96,6 +102,12 @@ interface DashboardTutorialProps {
 export function DashboardTutorial({ active, onClose }: DashboardTutorialProps) {
   const [step, setStep] = useState(0);
   const [mounted, setMounted] = useState(false);
+  const { terminology: terms } = useTerminology();
+
+  const STEPS = useMemo(
+    () => buildSteps(terms.entityPlural, terms.tenantPlural, terms.entity),
+    [terms.entityPlural, terms.tenantPlural, terms.entity]
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -111,7 +123,7 @@ export function DashboardTutorial({ active, onClose }: DashboardTutorialProps) {
     } else {
       setStep((s) => s + 1);
     }
-  }, [step, onClose]);
+  }, [step, onClose, STEPS.length]);
 
   const handlePrev = useCallback(() => {
     setStep((s) => Math.max(0, s - 1));

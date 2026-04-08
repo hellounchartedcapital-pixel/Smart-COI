@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { updateTenant } from '@/lib/actions/properties';
 import { toast } from 'sonner';
+import { useTerminology } from '@/hooks/useTerminology';
 import type { Tenant, RequirementTemplate } from '@/types';
 
 const TENANT_TYPE_SUGGESTIONS = [
@@ -43,6 +44,7 @@ export function EditTenantDialog({
   onArchive,
   onDelete,
 }: EditTenantDialogProps) {
+  const { terminology: terms } = useTerminology();
   const [saving, setSaving] = useState(false);
   const [companyName, setCompanyName] = useState(tenant.company_name);
   const [contactName, setContactName] = useState(tenant.contact_name ?? '');
@@ -69,10 +71,10 @@ export function EditTenantDialog({
         tenant_type: tenantType.trim() || undefined,
         template_id: templateId || undefined,
       });
-      toast.success('Tenant updated');
+      toast.success(`${terms.tenant ?? 'Tenant'} updated`);
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update tenant');
+      toast.error(err instanceof Error ? err.message : `Failed to update ${(terms.tenant ?? 'tenant').toLowerCase()}`);
     } finally {
       setSaving(false);
     }
@@ -86,8 +88,8 @@ export function EditTenantDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit Tenant</DialogTitle>
-          <DialogDescription>Update tenant details and template assignment.</DialogDescription>
+          <DialogTitle>Edit {terms.tenant ?? 'Tenant'}</DialogTitle>
+          <DialogDescription>Update {(terms.tenant ?? 'tenant').toLowerCase()} details and template assignment.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -116,7 +118,7 @@ export function EditTenantDialog({
               <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
             </div>
             <div className="relative space-y-2">
-              <Label>Tenant type</Label>
+              <Label>{terms.tenant ?? 'Tenant'} type</Label>
               <Input
                 value={tenantType}
                 onChange={(e) => { setTenantType(e.target.value); setShowSuggestions(true); }}
