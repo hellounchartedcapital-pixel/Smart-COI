@@ -153,6 +153,15 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Dashboard Edge Case Audit — No Locations & "Other" Industry (Apr 2026)
+
+- **Health bar terminology:** Replaced hardcoded "location"/"locations" in compliance health summary (`dashboard-client.tsx`) with dynamic `terms.location`/`terms.locationPlural` from terminology system
+- **Upload dialog terminology:** Replaced hardcoded "Property" label and "no property filter" placeholder in `simple-upload-coi-dialog.tsx` with dynamic `terms.location`
+- **Upload dialog New Entity button:** Removed `!effectivePropertyId` guard that blocked creating entities when 0 locations exist — backend accepts `propertyId: null`, and locations are optional for non-PM industries
+- **Properties page ComplianceSummary:** Replaced hardcoded "vendors"/"tenants" labels with `terms.entityPlural`/`terms.tenantPlural`; tenant summary now hidden when `hasTenants === false`
+- **"Other" industry audit (no changes needed):** Verified neutral terminology ("Location"/"Vendor"/"compliance team"), sensible GENERIC templates (GL, WC, Auto, Umbrella, E&O), AI recommendations handle "other" gracefully, onboarding skips lease/tenant steps
+- **No-location compliance audit (no calculation changes):** Confirmed health bar, status pills, and action queue all work correctly with 0 locations — compliance rate is computed from entities regardless of property association
+
 #### Email Template Industry Awareness (Apr 2026)
 
 - Added `location_label`, `entity_label`, `requester_label` fields to `EmailMergeFields` interface in `src/lib/notifications/email-templates.ts`

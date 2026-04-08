@@ -301,7 +301,7 @@ export function DashboardClient({
                 </div>
                 <p className="mt-1 text-[13px] text-[#6B7280]">
                   {stats.propertyCount > 0 && (
-                    <>{stats.propertyCount} {stats.propertyCount === 1 ? 'location' : 'locations'}, </>
+                    <>{stats.propertyCount} {stats.propertyCount === 1 ? terms.location.toLowerCase() : terms.locationPlural.toLowerCase()}, </>
                   )}
                   {stats.entityCount} {stats.entityCount === 1 ? 'entity' : 'entities'}
                 </p>

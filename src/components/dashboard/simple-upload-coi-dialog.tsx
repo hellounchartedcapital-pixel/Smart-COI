@@ -235,7 +235,7 @@ export function SimpleUploadCOIDialog({
               {/* Property dropdown (optional) */}
               {properties.length > 0 && (
               <div className="space-y-1.5">
-                <Label className="text-xs">Property <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Label className="text-xs">{terms.location} <span className="text-muted-foreground font-normal">(optional)</span></Label>
                 {properties.length === 1 ? (
                   <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-foreground">
                     {properties[0].name}
@@ -246,10 +246,10 @@ export function SimpleUploadCOIDialog({
                     onValueChange={handlePropertyChange}
                   >
                     <SelectTrigger className="text-sm">
-                      <SelectValue placeholder="All — no property filter" />
+                      <SelectValue placeholder={`All — no ${terms.location.toLowerCase()} filter`} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__all__">All — no property filter</SelectItem>
+                      <SelectItem value="__all__">All — no {terms.location.toLowerCase()} filter</SelectItem>
                       {properties.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name}
@@ -316,7 +316,7 @@ export function SimpleUploadCOIDialog({
                     <button
                       type="button"
                       onClick={handleAddNew}
-                      disabled={!effectivePropertyId || !onOpenWizard}
+                      disabled={!onOpenWizard}
                       className="flex flex-col items-center gap-1.5 rounded-lg border-2 border-slate-200 p-3 text-center transition-colors hover:border-emerald-400 hover:bg-emerald-50/50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <UserPlus className="h-5 w-5 text-slate-400" />

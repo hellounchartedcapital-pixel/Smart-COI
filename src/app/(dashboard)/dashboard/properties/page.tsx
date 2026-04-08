@@ -326,20 +326,24 @@ export default async function PropertiesPage() {
                       })()}
                       <div className="space-y-1 mt-2">
                         <ComplianceSummary
-                          label="vendors"
+                          label={terms.entityPlural.toLowerCase()}
                           total={prop.vendor_count}
                           compliant={prop.vendor_compliant}
                           expiring={prop.vendor_expiring}
                           nonCompliant={prop.vendor_non_compliant}
                         />
-                        <br />
-                        <ComplianceSummary
-                          label="tenants"
-                          total={prop.tenant_count}
-                          compliant={prop.tenant_compliant}
-                          expiring={prop.tenant_expiring}
-                          nonCompliant={prop.tenant_non_compliant}
-                        />
+                        {terms.hasTenants && (
+                          <>
+                            <br />
+                            <ComplianceSummary
+                              label={(terms.tenantPlural ?? 'tenants').toLowerCase()}
+                              total={prop.tenant_count}
+                              compliant={prop.tenant_compliant}
+                              expiring={prop.tenant_expiring}
+                              nonCompliant={prop.tenant_non_compliant}
+                            />
+                          </>
+                        )}
                       </div>
                     </div>
                   </CardContent>
