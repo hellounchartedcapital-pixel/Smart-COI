@@ -523,4 +523,346 @@ export const verticals: VerticalData[] = [
     ],
     insuranceRequirementsSlug: null,
   },
+  {
+    slug: 'construction',
+    name: 'Construction',
+    headline: 'COI Tracking Built for Construction',
+    description:
+      'Verify subcontractor insurance before they step on site. SmartCOI automates COI collection and compliance verification for general contractors managing dozens of subs per project.',
+    metaDescription:
+      'Automate subcontractor insurance verification with AI-powered COI tracking built for construction.',
+    painPoints: [
+      {
+        title: 'Tracking dozens of subs per project',
+        description:
+          'Each project brings a new roster of subcontractors, each requiring verified insurance before they can start work.',
+      },
+      {
+        title: 'Different requirements per trade',
+        description:
+          'Electricians, roofers, and excavation contractors all carry different coverage types and limits. One template doesn\'t fit all.',
+      },
+      {
+        title: 'Chasing renewals across job sites',
+        description:
+          'With subs working across multiple projects, expired certificates go unnoticed until someone catches them on-site.',
+      },
+    ],
+    solutions: [
+      {
+        title: 'Bulk upload sub COIs, AI extracts instantly',
+        description:
+          'Drop a stack of subcontractor certificates and get structured data in seconds — no manual entry required.',
+      },
+      {
+        title: 'Pre-built templates for standard and high-risk subs',
+        description:
+          'Use trade-specific compliance templates with the right limits for each subcontractor type.',
+      },
+      {
+        title: 'Automated alerts and self-service portal for renewals',
+        description:
+          'Subs get notified before certificates expire and upload renewals directly through a portal link.',
+      },
+    ],
+    vendors: [
+      'Electrical',
+      'Plumbing',
+      'HVAC',
+      'Roofing',
+      'Concrete',
+      'Framing',
+      'Drywall',
+      'Painting',
+      'Excavation',
+      'Landscaping',
+    ],
+    testimonials: [],
+    insuranceRequirementsSlug: null,
+  },
+  {
+    slug: 'logistics',
+    name: 'Logistics & Transportation',
+    headline: 'COI Tracking for Logistics & Transportation',
+    description:
+      'Ensure every carrier meets your coverage requirements. SmartCOI automates insurance verification across your carrier network.',
+    metaDescription:
+      'Track carrier insurance compliance automatically. Verify auto liability, cargo coverage, and more with AI-powered COI tracking.',
+    painPoints: [
+      {
+        title: 'Verifying carrier insurance before dispatching loads',
+        description:
+          'Every load needs a compliant carrier, but manually checking certificates slows down dispatch operations.',
+      },
+      {
+        title: 'Tracking auto liability and cargo coverage across networks',
+        description:
+          'Carriers require multiple coverage types — auto, cargo, GL — and each needs to meet your minimums.',
+      },
+      {
+        title: 'Certificate renewals falling through the cracks',
+        description:
+          'With hundreds of carriers in your network, expired certificates are easy to miss without automated tracking.',
+      },
+    ],
+    solutions: [
+      {
+        title: 'AI extracts auto, cargo, and GL coverage from carrier COIs',
+        description:
+          'Upload carrier certificates and SmartCOI reads every coverage line, limit, and date automatically.',
+      },
+      {
+        title: 'Carrier-specific templates with MCS-90 and cargo requirements',
+        description:
+          'Pre-built templates include interstate carrier requirements like MCS-90 endorsements and cargo minimums.',
+      },
+      {
+        title: 'Automated expiration tracking across your carrier network',
+        description:
+          'Get alerts before any carrier\'s coverage lapses and let them renew through a self-service portal.',
+      },
+    ],
+    vendors: [
+      'Freight Carriers',
+      'LTL Carriers',
+      'Drayage',
+      'Warehousing',
+      'Last Mile Delivery',
+      'Intermodal',
+      'Customs Brokers',
+      'Moving Companies',
+      'Couriers',
+      'Fleet Maintenance',
+    ],
+    testimonials: [],
+    insuranceRequirementsSlug: null,
+  },
+  {
+    slug: 'healthcare',
+    name: 'Healthcare',
+    headline: 'COI Tracking for Healthcare Organizations',
+    description:
+      'Manage vendor insurance compliance across facilities. SmartCOI automates COI verification for the complex vendor ecosystems healthcare organizations manage.',
+    metaDescription:
+      'Manage vendor insurance compliance across healthcare facilities with AI-powered COI tracking.',
+    painPoints: [
+      {
+        title: 'Managing 1000+ vendor relationships per facility',
+        description:
+          'Hospitals and health systems work with enormous vendor networks, each requiring current insurance documentation.',
+      },
+      {
+        title: 'Verifying professional liability and malpractice coverage',
+        description:
+          'Clinical vendors and staffing agencies carry specialized coverage types that standard COI reviews often miss.',
+      },
+      {
+        title: 'Meeting Joint Commission and CMS compliance standards',
+        description:
+          'Accreditation bodies require documented proof of vendor insurance compliance — spreadsheets don\'t cut it.',
+      },
+    ],
+    solutions: [
+      {
+        title: 'AI extracts all coverage types including professional liability',
+        description:
+          'SmartCOI reads professional liability, malpractice, and standard coverage lines from any certificate format.',
+      },
+      {
+        title: 'Healthcare-specific templates for clinical and facility vendors',
+        description:
+          'Pre-built templates with the coverage requirements healthcare organizations need for different vendor categories.',
+      },
+      {
+        title: 'Automated monitoring with compliance dashboard',
+        description:
+          'Track compliance across all facilities from one dashboard with automated alerts for gaps and expirations.',
+      },
+    ],
+    vendors: [
+      'Medical Equipment',
+      'Staffing Agencies',
+      'IT/EHR Vendors',
+      'Janitorial',
+      'Food Service',
+      'Biomedical',
+      'Linen Service',
+      'Waste Management',
+      'Construction',
+      'Security',
+    ],
+    testimonials: [],
+    insuranceRequirementsSlug: null,
+  },
+  {
+    slug: 'manufacturing',
+    name: 'Manufacturing',
+    headline: 'COI Tracking for Manufacturing',
+    description:
+      'Track supplier and contractor insurance across your plants. SmartCOI automates compliance verification for the vendors and suppliers manufacturing operations depend on.',
+    metaDescription:
+      'Track supplier and contractor insurance automatically with AI-powered COI tracking built for manufacturing.',
+    painPoints: [
+      {
+        title: 'Verifying product liability from suppliers',
+        description:
+          'Suppliers providing raw materials and components need adequate product liability coverage to protect your operations.',
+      },
+      {
+        title: 'Managing contractors in hazardous environments',
+        description:
+          'Plant environments require higher coverage limits and specialized policies that standard verification workflows miss.',
+      },
+      {
+        title: 'Tracking pollution and environmental coverage',
+        description:
+          'Environmental liability and pollution coverage are critical for manufacturing but rarely verified systematically.',
+      },
+    ],
+    solutions: [
+      {
+        title: 'AI reads supplier COIs and flags coverage gaps instantly',
+        description:
+          'Upload supplier certificates and SmartCOI identifies missing or insufficient coverage immediately.',
+      },
+      {
+        title: 'Templates for standard and high-risk suppliers',
+        description:
+          'Set different compliance requirements for chemical suppliers, maintenance contractors, and general service vendors.',
+      },
+      {
+        title: 'Multi-plant compliance tracking from one dashboard',
+        description:
+          'See vendor compliance status across all plant locations in a single view.',
+      },
+    ],
+    vendors: [
+      'Raw Material Suppliers',
+      'Equipment Vendors',
+      'Maintenance Contractors',
+      'Chemical Suppliers',
+      'Waste Disposal',
+      'Logistics Providers',
+      'Staffing Agencies',
+      'IT Services',
+      'Construction',
+      'Calibration Services',
+    ],
+    testimonials: [],
+    insuranceRequirementsSlug: null,
+  },
+  {
+    slug: 'hospitality',
+    name: 'Hospitality',
+    headline: 'COI Tracking for Hospitality',
+    description:
+      'Keep vendor compliance current across your properties. SmartCOI automates insurance verification for the diverse vendor mix hospitality operations require.',
+    metaDescription:
+      'Manage vendor insurance compliance across hotel properties with AI-powered COI tracking.',
+    painPoints: [
+      {
+        title: 'Managing vendor access across 24/7 operations',
+        description:
+          'Hotels and resorts operate around the clock with vendors coming and going — compliance can\'t wait for office hours.',
+      },
+      {
+        title: 'Tracking liquor liability for food and beverage vendors',
+        description:
+          'F&B vendors and caterers need liquor liability coverage that standard compliance checks often overlook.',
+      },
+      {
+        title: 'Seasonal and event vendors with unique coverage needs',
+        description:
+          'Holiday events, conferences, and seasonal activities bring temporary vendors who need fast insurance verification.',
+      },
+    ],
+    solutions: [
+      {
+        title: 'Upload vendor COIs and verify coverage in seconds',
+        description:
+          'AI extracts all coverage types from vendor certificates instantly — no manual review required.',
+      },
+      {
+        title: 'Hospitality-specific templates including liquor liability',
+        description:
+          'Pre-built templates cover F&B, event, and facility vendor requirements including liquor liability.',
+      },
+      {
+        title: 'Automated renewals and vendor portal for self-service uploads',
+        description:
+          'Vendors upload their own renewals through a portal link. SmartCOI verifies and alerts you only when something needs attention.',
+      },
+    ],
+    vendors: [
+      'Food & Beverage',
+      'Catering',
+      'Event Planning',
+      'Housekeeping',
+      'Maintenance',
+      'Landscaping',
+      'Valet',
+      'Pool Service',
+      'AV/Entertainment',
+      'Security',
+    ],
+    testimonials: [],
+    insuranceRequirementsSlug: null,
+  },
+  {
+    slug: 'retail',
+    name: 'Retail',
+    headline: 'COI Tracking for Retail',
+    description:
+      'Verify vendor insurance from delivery to renovation. SmartCOI automates compliance tracking for the vendors that keep your stores running.',
+    metaDescription:
+      'Verify vendor insurance across retail locations with AI-powered COI tracking.',
+    painPoints: [
+      {
+        title: 'Tracking diverse vendor types across multiple locations',
+        description:
+          'Retail operations use delivery services, contractors, IT vendors, and maintenance crews — each with different insurance needs.',
+      },
+      {
+        title: 'Verifying coverage for renovation and construction projects',
+        description:
+          'Store build-outs and renovations bring contractors who need proper insurance before work begins.',
+      },
+      {
+        title: 'Managing compliance for delivery and logistics vendors',
+        description:
+          'Frequent deliveries mean frequent certificate checks — manual tracking doesn\'t scale across locations.',
+      },
+    ],
+    solutions: [
+      {
+        title: 'Bulk upload vendor COIs across all store locations',
+        description:
+          'Upload certificates from every location at once and let AI extract the data automatically.',
+      },
+      {
+        title: 'Templates for delivery, construction, and maintenance vendors',
+        description:
+          'Pre-built templates with the right requirements for each vendor category in retail operations.',
+      },
+      {
+        title: 'Automated alerts before certificates expire',
+        description:
+          'Get notified before any vendor\'s coverage lapses, with automated follow-ups to keep compliance current.',
+      },
+    ],
+    vendors: [
+      'Delivery Services',
+      'Construction Contractors',
+      'HVAC',
+      'Cleaning Services',
+      'Signage',
+      'IT/POS Vendors',
+      'Security',
+      'Pest Control',
+      'Landscaping',
+      'Fixture Installation',
+    ],
+    testimonials: [],
+    insuranceRequirementsSlug: null,
+  },
 ];
