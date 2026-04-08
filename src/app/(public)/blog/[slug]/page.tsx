@@ -69,6 +69,11 @@ const relatedResources: Record<string, { href: string; label: string }[]> = {
     { href: '/compare', label: 'Compare All COI Tracking Platforms' },
     { href: '/blog/coi-compliance-guide-property-managers', label: 'The Complete Guide to COI Compliance' },
   ],
+  'subcontractor-insurance-requirements': [
+    { href: '/blog/what-is-additional-insured-commercial-real-estate', label: 'What Is Additional Insured?' },
+    { href: '/blog/acord-25-certificate-explained', label: 'ACORD 25 Certificate of Insurance Guide' },
+    { href: '/for/construction', label: 'SmartCOI for Construction' },
+  ],
 };
 
 /** FAQ structured data (JSON-LD) per blog post slug. */
@@ -170,6 +175,52 @@ const faqData: Record<string, any> = {
         acceptedAnswer: {
           '@type': 'Answer',
           text: 'The property owner or management company that requires proof of coverage should be listed as the certificate holder. If there\'s a mortgage, the lender should be listed as loss payee or mortgagee. The exact entities and designations should match what\'s specified in the lease or loan agreement.',
+        },
+      },
+    ],
+  },
+  'subcontractor-insurance-requirements': {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'What insurance should I require from all subcontractors?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'At minimum, require commercial general liability ($1M per occurrence / $2M aggregate), workers\' compensation (statutory limits), commercial auto liability ($1M combined single limit), and umbrella/excess liability ($1M-$5M depending on project size). Higher-risk trades should carry higher limits.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How do I verify a subcontractor\'s additional insured status?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Don\'t rely on the checkbox on the ACORD 25 certificate alone. Request the actual endorsement pages — specifically the CG 20 10 or CG 20 37 forms — and verify that your company is named as an additional insured. The endorsement is what provides coverage, not the certificate.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'How often should subcontractor certificates be renewed?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Certificates should be renewed when the underlying policy renews, typically annually. Best practice is to track expiration dates and request updated certificates 30 days before expiration. For long-duration projects, verify coverage remains active throughout the project, not just at onboarding.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'What happens if a subcontractor\'s insurance lapses during a project?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'If a sub\'s coverage lapses and an incident occurs, the liability exposure falls back to the general contractor. Most subcontract agreements include provisions requiring the sub to maintain coverage throughout the project and allowing the GC to suspend work or withhold payment for non-compliance. The key is catching the lapse before an incident occurs.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Should subcontractors pay for COI tracking software?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'No. Requiring subcontractors to pay fees to upload their certificates creates friction and slows down compliance. SmartCOI\'s portal is free for subcontractors — no login required, no fees. The GC bears the software cost, and the subcontractor simply uploads their certificate through a link.',
         },
       },
     ],

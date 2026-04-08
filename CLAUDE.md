@@ -118,7 +118,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Archive, delete, and bulk actions for vendors/tenants
 - SEO content pages and blog (MDX)
 - 57 programmatic pages under /insurance-requirements/ (48 noindexed, 8 hub pages with unique content, 6 coverage guides)
-- 12 blog posts (MDX) with inline CTAs and bottom-of-post CTAs
+- 13 blog posts (MDX) with inline CTAs and bottom-of-post CTAs
 - 10 competitor comparison pages under /compare/ (TrustLayer, Certificial, Billy, SmartCompliance, PINS, CertFocus, BCS, Jones, MyCOI, Spreadsheets)
 - 7 vertical landing pages under /for/
 - 6 industry vertical pages under /for/ (Construction, Logistics, Healthcare, Manufacturing, Hospitality, Retail)
@@ -268,6 +268,14 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Pages updated: homepage, /compare (index + 4 individual), /coi-tracking-software, /certificate-of-insurance-tracking, /ai-coi-extraction, /tenant-insurance-tracking, 2 blog posts
 - Added "(2026)" year tags to comparison and feature page titles
 - Both `metadata.title`/`description` and `openGraph` title/description updated in sync
+
+#### Blog: Subcontractor Insurance Requirements Post (Apr 2026)
+
+- Created `/blog/subcontractor-insurance-requirements` — GC-focused guide to subcontractor COI compliance (~1,800 words of MDX)
+- Covers standard coverage requirements by trade (baseline, higher-risk, lower-risk, specialty), insurance requirements matrix approach, 6 common compliance gaps, COI tracking progression, SmartCOI workflow
+- FAQPage JSON-LD (5 Q&As) added to blog page component: required insurance, additional insured verification, renewal frequency, lapse consequences, portal cost
+- Related resources added: Additional Insured guide, ACORD 25 guide, Construction vertical page
+- Internal links to additional insured guide, COI expiration tracking, COI tracking software, ACORD 25 guide
 
 #### SEO: ACORD 25 Post Upgrade (Apr 2026)
 
