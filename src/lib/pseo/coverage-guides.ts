@@ -226,6 +226,64 @@ A certificate that shows adequate limits but has an unchecked additional insured
       { slug: 'property-inland-marine', name: 'Property & Inland Marine' },
     ],
   },
+  {
+    slug: 'auto-liability',
+    title:
+      'Commercial Auto Liability Insurance Requirements for Vendors',
+    metaDescription:
+      'What commercial auto insurance to require from vendors. Covers CSL limits, hired and non-owned auto, MCS-90 for trucking, and ACORD 25 verification.',
+    headline:
+      'Commercial Auto Liability Insurance Requirements for Vendors',
+    intro:
+      'Commercial auto liability insurance covers bodily injury and property damage caused by vehicles used in a vendor\'s business operations. For property managers collecting COIs, auto coverage matters whenever vendors drive onto your property or use vehicles as part of their work — delivery services, landscaping crews, construction contractors, and any vendor with a fleet. This guide covers combined single limits, hired and non-owned auto, trucking endorsements, and how to verify auto coverage on an ACORD 25.',
+    sections: [
+      {
+        id: 'what-auto-covers',
+        title: 'What Commercial Auto Liability Covers',
+        content: `Commercial auto liability insurance pays for bodily injury and property damage that the insured causes to third parties while operating owned, hired, or non-owned vehicles for business purposes. Unlike personal auto policies, commercial auto covers vehicles titled to the business, rented or borrowed vehicles, and employee-owned vehicles used for work. Most commercial auto policies are written with a Combined Single Limit (CSL) — a single dollar amount that applies to all bodily injury and property damage from one accident — rather than the split limits (per-person / per-accident / property damage) common on personal policies.`,
+      },
+      {
+        id: 'standard-limits',
+        title: 'Standard Limits',
+        content: `The standard commercial auto liability requirement for most vendors is $1,000,000 CSL. This is adequate for general service vendors such as cleaning crews, HVAC technicians, and landscapers whose vehicle exposure is limited to driving to and from your property. Vendors in logistics, trucking, and heavy transport should carry significantly higher limits due to the severity of accidents involving large vehicles.
+
+| Industry | CSL Limit | Notes |
+|---|---|---|
+| General service vendors | $1,000,000 | Cleaning, landscaping, maintenance, HVAC |
+| Construction contractors | $1,000,000 – $2,000,000 | Heavy equipment transport increases exposure |
+| Delivery & courier services | $1,000,000 | Frequent trips increase accident frequency |
+| Long-haul trucking & logistics | $5,000,000+ | Federal minimums apply; severity of loss is high |
+| Waste hauling | $2,000,000 – $5,000,000 | Environmental liability from spills compounds claims |`,
+      },
+      {
+        id: 'hired-non-owned',
+        title: 'Hired and Non-Owned Auto Coverage',
+        content: `Hired auto coverage (symbol 8) covers vehicles the vendor rents or borrows for business use, while non-owned auto coverage (symbol 9) covers employee-owned vehicles used for business purposes. These coverages matter because a vendor who rents a truck for a job or whose employee drives a personal car to your property creates liability exposure that a standard owned-auto-only policy will not cover. Require symbols 8 and 9 — or symbol 1 (any auto), which includes both — from any vendor whose employees may use non-company vehicles for work on your property.`,
+      },
+      {
+        id: 'mcs-90-cargo',
+        title: 'MCS-90 and Motor Truck Cargo',
+        content: `The MCS-90 endorsement is a federal requirement for motor carriers transporting property across state lines in vehicles over 10,001 pounds. It guarantees a minimum level of financial responsibility — $750,000 for general freight and $1,000,000 for hazardous materials — and applies even if the underlying policy would otherwise deny the claim. If you hire trucking or freight vendors, confirm the MCS-90 endorsement is listed on their certificate. Motor truck cargo insurance is a separate coverage that protects the goods being transported, not third-party liability — it is typically carried on an inland marine policy rather than the auto policy, so do not confuse cargo coverage with auto liability limits.`,
+      },
+      {
+        id: 'verify-acord-25',
+        title: 'How to Verify on an ACORD 25',
+        content: `On the ACORD 25 form, automobile liability has its own section between general liability and umbrella/excess liability. Verify the policy number, effective and expiration dates, and confirm the Combined Single Limit field shows the required amount — this is the primary limit to check for auto coverage. Look at the coverage symbols indicated on the form: symbol 1 (any auto) provides the broadest coverage, while symbols 2 through 9 indicate more specific categories such as owned autos only, hired, or non-owned. If the vendor does not carry symbol 1, confirm that the combination of symbols listed covers owned (symbol 2), hired (symbol 8), and non-owned (symbol 9) vehicles. Check the "ADDL INSD" and "SUBR WVD" checkboxes in the auto section to verify additional insured status and waiver of subrogation have been granted on the auto policy, not just on the GL policy.`,
+      },
+      {
+        id: 'disclaimer',
+        title: 'Coverage Recommendations Disclaimer',
+        content: `These coverage recommendations are based on common industry benchmarks and should not be considered insurance advice. Every property has unique risk characteristics, and the appropriate coverage requirements for your vendors and tenants depend on factors including your property type, location, lease terms, and risk tolerance. Consult with your insurance broker or risk management professional to determine appropriate requirements for your specific situation.`,
+      },
+    ],
+    relatedGuides: [
+      { slug: 'general-liability', name: 'General Liability' },
+      { slug: 'workers-compensation', name: 'Workers\' Compensation' },
+      { slug: 'umbrella-excess-liability', name: 'Umbrella & Excess Liability' },
+      { slug: 'professional-liability', name: 'Professional Liability' },
+      { slug: 'property-inland-marine', name: 'Property & Inland Marine' },
+    ],
+  },
 ];
 
 export function getCoverageGuide(slug: string): CoverageGuide | undefined {
