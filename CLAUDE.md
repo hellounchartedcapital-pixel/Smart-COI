@@ -1,6 +1,6 @@
 # SmartCOI
 
-*Last updated: March 31, 2026*
+*Last updated: April 8, 2026*
 
 SmartCOI — B2B SaaS platform automating Certificate of Insurance (COI) compliance tracking. Supports Property Management, Construction, Logistics, Healthcare, Manufacturing, Hospitality, Retail, and Other industries. Automates COI collection, AI extraction, compliance verification, and vendor/tenant follow-up notifications.
 
@@ -69,7 +69,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 **KNOWN GAPS (in progress):**
 - ~~\~30 dashboard components still have hardcoded "Vendor"/"Tenant" strings instead of using terminology~~ **FIXED** (Apr 2026)
-- Email templates have zero industry awareness (no industry in EmailMergeFields)
+- ~~Email templates have zero industry awareness (no industry in EmailMergeFields)~~ **FIXED** (Apr 2026)
 - Landing page is PM-specific (intentional for current marketing)
 
 ### Features That EXIST (reference these freely)
@@ -152,6 +152,16 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Email Template Industry Awareness (Apr 2026)
+
+- Added `location_label`, `entity_label`, `requester_label` fields to `EmailMergeFields` interface in `src/lib/notifications/email-templates.ts`
+- Notification scheduler (`src/lib/notifications/scheduler.ts`) now fetches `organizations.industry`, resolves terminology via `getTerminology()`, and populates industry-aware merge fields
+- Manual follow-up action (`src/lib/actions/notifications.ts`) now fetches org industry and includes terminology in merge fields
+- `contactLine()` in email templates now renders requester role label (e.g., "Questions? Reach out to your project manager, John, at john@co.com")
+- Old `src/lib/emailTemplates.ts`: `propertyBadge()` now accepts dynamic `locationLabel` parameter (was hardcoded "Location"); `EmailTemplateParams` extended with `locationLabel`
+- Trial lifecycle emails (`src/lib/emails/trial-lifecycle.ts`): added `getIndustryValueProp()` for industry-specific value prop lines in day1 welcome and day3 feature emails (PM → vendor/tenant, Construction → subcontractor, Logistics → carrier, others → generic with entity term)
+- Trial lifecycle now fetches `organizations.industry` and passes it through `buildEmail()`
 
 #### Dynamic Terminology Strings (Apr 2026)
 

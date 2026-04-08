@@ -11,6 +11,8 @@ export interface EmailTemplateParams {
   issues?: string[];
   daysUntilExpiration?: number;
   expirationDate?: string;
+  /** Industry-aware label for the location (e.g., "Property", "Project", "Facility"). Defaults to "Location". */
+  locationLabel?: string;
 }
 
 // ============================================
@@ -98,8 +100,8 @@ function issuesList(issues: string[]): string {
               </div>`;
 }
 
-function propertyBadge(propertyName: string): string {
-  return `<p style="margin:0 0 4px;font-size:12px;font-weight:500;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;">Location</p>
+function propertyBadge(propertyName: string, locationLabel = 'Location'): string {
+  return `<p style="margin:0 0 4px;font-size:12px;font-weight:500;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;">${escapeHtml(locationLabel)}</p>
               <p style="margin:0 0 20px;font-size:15px;color:#111827;font-weight:500;">${escapeHtml(propertyName)}</p>`;
 }
 
@@ -108,14 +110,14 @@ function propertyBadge(propertyName: string): string {
 // ============================================
 
 export function expiringEmail(params: EmailTemplateParams): string {
-  const { entityName, propertyName, uploadUrl, daysUntilExpiration, expirationDate } = params;
+  const { entityName, propertyName, uploadUrl, daysUntilExpiration, expirationDate, locationLabel } = params;
   const days = daysUntilExpiration ?? 30;
   const urgencyColor = days <= 7 ? '#dc2626' : '#f59e0b';
   const urgencyBg = days <= 7 ? '#fef2f2' : '#fffbeb';
   const urgencyBorder = days <= 7 ? '#fecaca' : '#fde68a';
   const urgencyLabel = days <= 7 ? 'Expiring Soon' : 'Expiration Notice';
 
-  const content = `${propertyBadge(propertyName)}
+  const content = `${propertyBadge(propertyName, locationLabel)}
 
               <p style="margin: 0 0 16px 0; font-size: 16px; color: #111827; line-height: 1.6;">
                 Hello,
@@ -148,9 +150,9 @@ export function expiringEmail(params: EmailTemplateParams): string {
 // ============================================
 
 export function expiredEmail(params: EmailTemplateParams): string {
-  const { entityName, propertyName, uploadUrl, expirationDate } = params;
+  const { entityName, propertyName, uploadUrl, expirationDate, locationLabel } = params;
 
-  const content = `${propertyBadge(propertyName)}
+  const content = `${propertyBadge(propertyName, locationLabel)}
 
               <p style="margin: 0 0 16px 0; font-size: 16px; color: #111827; line-height: 1.6;">
                 Hello,
@@ -183,9 +185,9 @@ export function expiredEmail(params: EmailTemplateParams): string {
 // ============================================
 
 export function nonCompliantEmail(params: EmailTemplateParams): string {
-  const { entityName, propertyName, uploadUrl, issues: issueItems } = params;
+  const { entityName, propertyName, uploadUrl, issues: issueItems, locationLabel } = params;
 
-  const content = `${propertyBadge(propertyName)}
+  const content = `${propertyBadge(propertyName, locationLabel)}
 
               <p style="margin: 0 0 16px 0; font-size: 16px; color: #111827; line-height: 1.6;">
                 Hello,
@@ -219,9 +221,9 @@ export function nonCompliantEmail(params: EmailTemplateParams): string {
 // ============================================
 
 export function followUpEmail(params: EmailTemplateParams): string {
-  const { entityName, propertyName, uploadUrl, issues: issueItems, expirationDate } = params;
+  const { entityName, propertyName, uploadUrl, issues: issueItems, expirationDate, locationLabel } = params;
 
-  const content = `${propertyBadge(propertyName)}
+  const content = `${propertyBadge(propertyName, locationLabel)}
 
               <p style="margin: 0 0 16px 0; font-size: 16px; color: #111827; line-height: 1.6;">
                 Hello,
@@ -260,9 +262,9 @@ export function followUpEmail(params: EmailTemplateParams): string {
 // ============================================
 
 export function compliantConfirmedEmail(params: EmailTemplateParams): string {
-  const { entityName, propertyName, expirationDate } = params;
+  const { entityName, propertyName, expirationDate, locationLabel } = params;
 
-  const content = `${propertyBadge(propertyName)}
+  const content = `${propertyBadge(propertyName, locationLabel)}
 
               <p style="margin: 0 0 16px 0; font-size: 16px; color: #111827; line-height: 1.6;">
                 Hello,

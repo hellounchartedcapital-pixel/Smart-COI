@@ -13,6 +13,8 @@ import {
   type EmailMergeFields,
 } from '@/lib/notifications/email-templates';
 import { formatDate } from '@/lib/utils';
+import { getTerminology } from '@/lib/constants/terminology';
+import type { Industry } from '@/types';
 
 // ============================================================================
 // Helpers
@@ -34,9 +36,11 @@ async function getAuthContext() {
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('name')
+    .select('name, industry')
     .eq('id', profile.organization_id)
     .single();
+
+  const terms = getTerminology((org?.industry as Industry) ?? null);
 
   return {
     supabase,
@@ -45,6 +49,7 @@ async function getAuthContext() {
     pmName: profile.full_name ?? profile.email,
     pmEmail: profile.email,
     orgName: org?.name ?? 'Your Organization',
+    terms,
   };
 }
 
@@ -113,7 +118,7 @@ export async function sendManualFollowUp(
 ): Promise<{ devMode?: boolean } | { error: string }> {
   const planCheck = await checkActivePlan('Subscribe to send notifications.');
   if ('error' in planCheck) return { error: planCheck.error };
-  const { supabase, userId, orgId, pmName, pmEmail, orgName } = await getAuthContext();
+  const { supabase, userId, orgId, pmName, pmEmail, orgName, terms } = await getAuthContext();
 
   // Fetch entity
   const table = entityType === 'vendor' ? 'vendors' : 'tenants';
@@ -217,6 +222,9 @@ export async function sendManualFollowUp(
     days_until_expiration: 0,
     pm_name: pmName,
     pm_email: pmEmail,
+    location_label: terms.location,
+    entity_label: terms.entity,
+    requester_label: terms.requesterLabel,
   };
 
   // Choose template based on status

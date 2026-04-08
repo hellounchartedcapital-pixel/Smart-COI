@@ -14,6 +14,8 @@ import {
   type EmailMergeFields,
 } from './email-templates';
 import { formatDate } from '@/lib/utils';
+import { getTerminology } from '@/lib/constants/terminology';
+import type { Industry } from '@/types';
 
 // Threshold days at which expiration warnings are sent
 const EXPIRATION_THRESHOLDS = [60, 30, 14, 0, -7];
@@ -29,7 +31,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
   // Fetch all active entities with their org, property, and template info
   const { data: entitiesData } = await supabase
     .from('entities')
-    .select('id, name, entity_type, contact_name, contact_email, property_id, organization_id, compliance_status, notifications_paused, properties(name), organizations(name)')
+    .select('id, name, entity_type, contact_name, contact_email, property_id, organization_id, compliance_status, notifications_paused, properties(name), organizations(name, industry)')
     .is('deleted_at', null)
     .is('archived_at', null)
     .or('notifications_paused.eq.false,notifications_paused.is.null')
@@ -132,6 +134,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
     const pm = orgPmMap.get(entity.organization_id) ?? { name: 'Your Administrator', email: '' };
     const orgName = entity.organizations?.name ?? 'Your Organization';
     const propName = entity.properties?.name ?? 'N/A';
+    const terms = getTerminology((entity.organizations?.industry as Industry) ?? null);
 
     // ---- Expiration-based notifications ----
     if (earliestExp) {
@@ -174,6 +177,9 @@ export async function checkAndScheduleNotifications(): Promise<number> {
             days_until_expiration: Math.max(daysUntil, 0),
             pm_name: pm.name,
             pm_email: pm.email,
+            location_label: terms.location,
+            entity_label: terms.entity,
+            requester_label: terms.requesterLabel,
           };
 
           const template = daysUntil < 0 ? expiredNotice(fields) : expirationWarning(fields);
@@ -284,6 +290,9 @@ export async function checkAndScheduleNotifications(): Promise<number> {
             is_expired: isExpired,
             pm_name: pm.name,
             pm_email: pm.email,
+            location_label: terms.location,
+            entity_label: terms.entity,
+            requester_label: terms.requesterLabel,
           };
 
           const template = lastGapNotif ? followUpReminder(fields) : gapNotification(fields);
