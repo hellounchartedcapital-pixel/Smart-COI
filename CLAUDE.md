@@ -70,6 +70,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 **KNOWN GAPS (in progress):**
 - ~~\~30 dashboard components still have hardcoded "Vendor"/"Tenant" strings instead of using terminology~~ **FIXED** (Apr 2026)
 - ~~Email templates have zero industry awareness (no industry in EmailMergeFields)~~ **FIXED** (Apr 2026)
+- ~~Entity unification data flow broken — certificates, compliance, dashboard queries only checked one side of dual tables~~ **FIXED** (Apr 2026)
 - Landing page is PM-specific (intentional for current marketing)
 
 ### Features That EXIST (reference these freely)
@@ -155,6 +156,106 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Fix: Entity Unification Full Regression Fix (Apr 2026)
+
+Complete end-to-end audit and fix of entity unification regressions. The multi-industry expansion merged vendors/tenants into an `entities` table but many parts of the codebase still only queried/wrote to one side, breaking certificate display, compliance calculation, dashboard stats, and notifications.
+
+**Data Creation Fixes (dual-write everywhere):**
+- **`createEntity()`** now dual-writes to legacy `vendors`/`tenants` table with the SAME ID
+- **`createVendor()`/`createTenant()`** now dual-writes to unified `entities` table with the SAME ID
+- **`assignCertificateToEntity()`** (bulk upload) now sets `entity_id` AND `vendor_id`/`tenant_id` on certificates, and updates BOTH `entities` and legacy tables for compliance status
+- **`assignTemplateToEntity()`** (both `entities.ts` and `properties.ts` versions) now dual-writes to both tables
+- **`updateEntity()`** now syncs key fields (name, contact, template) to legacy tables
+- **Bulk archive/delete** in both `entities.ts` and `properties.ts` now dual-writes to both tables
+- **Portal upload** now sets `entity_id` on certificates, updates `entities` table status, and falls back to `entities` table for org lookup
+
+**Data Query Fixes (check all 3 ID columns):**
+- **Dashboard certificate queries** (`dashboard/page.tsx`) now use `.or()` to check `entity_id`, `vendor_id`, AND `tenant_id` — fixes 0% health bar and empty action queue
+- **Properties detail page** (`properties/[id]/page.tsx`) certificate expiration queries now check all 3 ID columns
+- **Certificate review page** (`certificates/[id]/review/page.tsx`) now resolves entity from `entities` table first, falls back to legacy — fixes blank entity info
+- **Notification scheduler** (`scheduler.ts`) certificate queries now check all 3 ID columns via 3-part parallel query with deduplication
+- **Portal page** (`portal/[token]/page.tsx`) certificate query now uses `.or()` for all 3 columns
+- **Portal extract route** ownership check now considers `entity_id` in addition to legacy columns; entity info lookup falls back to `entities` table
+- **Portal upload route** duplicate check now uses `.or()` for all 3 ID columns
+
+**Compliance Pipeline Fixes:**
+- **`runAutoCompliance()`** (`certificates.ts`) now falls back to legacy `vendors`/`tenants` tables when entity not in `entities` table, and syncs `template_id` from legacy to entities when found
+- **`saveAndRerunCompliance()`** now resolves entity via `entity_id` first, then legacy columns, and looks up entity type from entities table
+
+**Activity Log Fixes:**
+- Certificate extraction API route (`certificates/extract/route.ts`) now includes `entity_id` in activity log entries
+- Portal extract route now includes `entity_id` in activity log entries
+
+**Data Fix SQL:** Created `supabase/migrations/20260408_fix_entity_unification_data.sql` — idempotent migration that:
+1. Creates missing `entities` records for orphaned `vendors`/`tenants`
+2. Creates missing `vendors`/`tenants` records for orphaned `entities`
+3. Syncs `template_id` bidirectionally between tables
+4. Syncs `compliance_status` (prefers most specific status)
+5. Sets `entity_id` on certificates that only have `vendor_id`/`tenant_id`
+6. Sets `vendor_id`/`tenant_id` on certificates that only have `entity_id`
+7. Outputs verification counts (all should be 0)
+
+⚠️ ACTION REQUIRED: Run `supabase/migrations/20260408_fix_entity_unification_data.sql` in Supabase SQL Editor to fix existing broken data.
+
+**Complete Data Flow Trace (reference for future changes):**
+
+```
+COI UPLOAD → EXTRACTION → COMPLIANCE — FULL DATA FLOW
+======================================================
+
+1. USER UPLOADS COI (single upload: certificates/upload/page.tsx)
+   INSERT certificates: { entity_id, vendor_id, tenant_id, organization_id, file_path, file_hash, upload_source, processing_status: 'processing' }
+   All 3 ID columns set at creation time.
+
+2. AI EXTRACTION (api/certificates/extract/route.ts)
+   INSERT extracted_coverages: { certificate_id, coverage_type, limits, dates, ... }
+   INSERT extracted_entities: { certificate_id, entity_name, entity_type, ... }
+   UPDATE certificates: { processing_status: 'extracted', insured_name }
+   CALLS runAutoCompliance(certificateId, orgId)
+
+3. AUTO-COMPLIANCE (lib/actions/certificates.ts → runAutoCompliance)
+   a. Resolve entity: cert.entity_id ?? cert.vendor_id ?? cert.tenant_id
+   b. Look up entity: entities table first → fallback to vendors/tenants
+   c. Look up template: entity.template_id (sync from legacy if null)
+   d. Fetch: extracted_coverages, extracted_entities, template_coverage_requirements, property_entities
+   e. calculateCompliance() → overallStatus
+   f. DELETE + INSERT compliance_results (per coverage requirement)
+   g. DELETE + INSERT entity_compliance_results (per property entity)
+   h. UPDATE entities SET compliance_status = result
+   i. UPDATE vendors/tenants SET compliance_status = result (best-effort)
+   j. INSERT activity_log: 'compliance_checked'
+
+4. DASHBOARD LOADS (dashboard/page.tsx)
+   SELECT entities WHERE org_id AND NOT deleted AND NOT archived
+   → status counts, compliance rate, property overviews
+   SELECT certificates WHERE entity_id/vendor_id/tenant_id IN (entity IDs) — OR filter
+   → action queue items, gap counts, expirations
+
+5. ENTITY DETAIL PAGE (vendors/[id]/page.tsx, tenants/[id]/page.tsx)
+   SELECT vendors/tenants WHERE id — fallback to entities WHERE id
+   SELECT certificates WHERE entity_id.eq.id OR vendor_id.eq.id (OR tenant_id.eq.id)
+   → latest cert, all certs, notifications, waivers
+
+6. ENTITY CREATION (lib/actions/entities.ts → createEntity)
+   INSERT entities: { id, name, entity_type, template_id, ... }
+   INSERT vendors/tenants: { id (SAME), company_name, template_id, ... } (dual-write)
+
+7. TEMPLATE ASSIGNMENT (lib/actions/properties.ts → assignTemplateToEntity)
+   UPDATE vendors/tenants SET template_id
+   UPDATE entities SET template_id (dual-write)
+   CALL runComplianceForEntity → recalculates compliance
+
+8. BULK UPLOAD ASSIGNMENT (lib/actions/properties.ts → assignCertificateToEntity)
+   UPDATE certificates SET entity_id, vendor_id/tenant_id (ALL 3 columns)
+   UPDATE vendors/tenants SET compliance_status = 'under_review'
+   UPDATE entities SET compliance_status = 'under_review'
+   CALL runComplianceForEntity
+
+KEY INVARIANT: Every entity MUST exist in BOTH the entities table AND
+the appropriate legacy table (vendors or tenants) with the SAME ID.
+Every certificate MUST have entity_id AND vendor_id/tenant_id set.
+```
 
 #### Fix: Entity Detail Page 404 + Delete/Archive for Unified Entities (Apr 2026)
 

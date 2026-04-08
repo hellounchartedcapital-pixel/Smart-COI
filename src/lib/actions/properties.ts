@@ -285,10 +285,26 @@ export async function createVendor(input: CreateVendorInput) {
 
   if (error) throw new Error(error.message);
 
+  // Dual-write to unified entities table with the SAME ID
+  await supabase.from('entities').insert({
+    id: data.id,
+    organization_id: orgId,
+    property_id: input.property_id,
+    name: input.company_name,
+    entity_type: 'vendor',
+    entity_category: input.vendor_type || null,
+    contact_name: input.contact_name || null,
+    contact_email: input.contact_email || null,
+    contact_phone: input.contact_phone || null,
+    template_id: input.template_id || null,
+    compliance_status: 'pending',
+  }).then(() => { /* best-effort sync */ });
+
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     property_id: input.property_id,
     vendor_id: data.id,
+    entity_id: data.id,
     action: 'vendor_created',
     description: `Vendor "${input.company_name}" added`,
     performed_by: userId,
@@ -488,10 +504,27 @@ export async function createTenant(input: CreateTenantInput) {
 
   if (error) throw new Error(error.message);
 
+  // Dual-write to unified entities table with the SAME ID
+  await supabase.from('entities').insert({
+    id: data.id,
+    organization_id: orgId,
+    property_id: input.property_id,
+    name: input.company_name,
+    entity_type: 'tenant',
+    entity_category: input.tenant_type || null,
+    contact_name: input.contact_name || null,
+    contact_email: input.contact_email || null,
+    contact_phone: input.contact_phone || null,
+    unit_suite: input.unit_suite || null,
+    template_id: input.template_id || null,
+    compliance_status: 'pending',
+  }).then(() => { /* best-effort sync */ });
+
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     property_id: input.property_id,
     tenant_id: data.id,
+    entity_id: data.id,
     action: 'tenant_created',
     description: `Tenant "${input.company_name}" added`,
     performed_by: userId,
@@ -662,6 +695,9 @@ export async function bulkArchiveVendors(vendorIds: string[], propertyId: string
 
   if (error) throw new Error(error.message);
 
+  // Dual-write to entities table
+  await supabase.from('entities').update({ archived_at: now }).in('id', vendorIds).eq('organization_id', orgId).then(() => {});
+
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     property_id: propertyId,
@@ -685,6 +721,9 @@ export async function bulkDeleteVendors(vendorIds: string[], propertyId: string)
     .eq('organization_id', orgId);
 
   if (error) throw new Error(error.message);
+
+  // Dual-write to entities table
+  await supabase.from('entities').update({ deleted_at: now }).in('id', vendorIds).eq('organization_id', orgId).then(() => {});
 
   await supabase.from('activity_log').insert({
     organization_id: orgId,
@@ -710,6 +749,9 @@ export async function bulkArchiveTenants(tenantIds: string[], propertyId: string
 
   if (error) throw new Error(error.message);
 
+  // Dual-write to entities table
+  await supabase.from('entities').update({ archived_at: now }).in('id', tenantIds).eq('organization_id', orgId).then(() => {});
+
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     property_id: propertyId,
@@ -733,6 +775,9 @@ export async function bulkDeleteTenants(tenantIds: string[], propertyId: string)
     .eq('organization_id', orgId);
 
   if (error) throw new Error(error.message);
+
+  // Dual-write to entities table
+  await supabase.from('entities').update({ deleted_at: now }).in('id', tenantIds).eq('organization_id', orgId).then(() => {});
 
   await supabase.from('activity_log').insert({
     organization_id: orgId,
@@ -927,6 +972,7 @@ export async function assignTemplateToEntity(
 ) {
   const { supabase, userId, orgId } = await getAuthContext();
 
+  // Write to legacy table
   const tableName = entityType === 'vendor' ? 'vendors' : 'tenants';
   const { error } = await supabase
     .from(tableName)
@@ -936,8 +982,17 @@ export async function assignTemplateToEntity(
 
   if (error) throw new Error(error.message);
 
+  // Also sync to unified entities table
+  await supabase
+    .from('entities')
+    .update({ template_id: templateId })
+    .eq('id', entityId)
+    .eq('organization_id', orgId)
+    .then(() => { /* best-effort sync */ });
+
   await supabase.from('activity_log').insert({
     organization_id: orgId,
+    entity_id: entityId,
     [entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
     action: 'status_changed',
     description: `Requirements template assigned`,
@@ -1217,15 +1272,20 @@ export async function assignCertificateToEntity(input: {
 }) {
   const { supabase, userId, orgId } = await getAuthContext();
 
-  const updateField =
-    input.entityType === 'vendor'
-      ? { vendor_id: input.entityId }
-      : { tenant_id: input.entityId };
+  // Set BOTH entity_id and the legacy vendor_id/tenant_id on the certificate
+  const updateFields: Record<string, unknown> = {
+    entity_id: input.entityId,
+  };
+  if (input.entityType === 'vendor') {
+    updateFields.vendor_id = input.entityId;
+  } else {
+    updateFields.tenant_id = input.entityId;
+  }
 
   // Use .select() to verify the update actually matched a row
   const { data: updated, error } = await supabase
     .from('certificates')
-    .update(updateField)
+    .update(updateFields)
     .eq('id', input.certificateId)
     .eq('organization_id', orgId)
     .select('id')
@@ -1242,18 +1302,25 @@ export async function assignCertificateToEntity(input: {
     );
   }
 
-  // Update entity status to under_review (has COI, not yet confirmed)
+  // Update entity status to under_review in BOTH entities and legacy tables
   const entityTable = input.entityType === 'vendor' ? 'vendors' : 'tenants';
   await supabase
     .from(entityTable)
     .update({ compliance_status: 'under_review' })
     .eq('id', input.entityId)
     .eq('organization_id', orgId);
+  await supabase
+    .from('entities')
+    .update({ compliance_status: 'under_review' })
+    .eq('id', input.entityId)
+    .eq('organization_id', orgId)
+    .then(() => { /* best-effort */ });
 
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     certificate_id: input.certificateId,
     property_id: input.propertyId,
+    entity_id: input.entityId,
     [input.entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: input.entityId,
     action: 'coi_uploaded',
     description: `COI "${input.fileName}" assigned to ${input.entityType} "${input.entityName}" via bulk upload`,

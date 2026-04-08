@@ -167,6 +167,7 @@ export async function POST(req: NextRequest) {
       await serviceClient.from('activity_log').insert({
         organization_id: orgId,
         certificate_id: certificateId,
+        entity_id: cert.entity_id ?? cert.vendor_id ?? cert.tenant_id,
         vendor_id: cert.vendor_id,
         tenant_id: cert.tenant_id,
         action: 'coi_processed',
@@ -248,6 +249,7 @@ export async function POST(req: NextRequest) {
     await serviceClient.from('activity_log').insert({
       organization_id: orgId,
       certificate_id: certificateId,
+      entity_id: cert.entity_id ?? cert.vendor_id ?? cert.tenant_id,
       vendor_id: cert.vendor_id,
       tenant_id: cert.tenant_id,
       action: 'coi_processed',

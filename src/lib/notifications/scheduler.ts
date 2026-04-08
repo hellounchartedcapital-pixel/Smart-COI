@@ -48,18 +48,45 @@ export async function checkAndScheduleNotifications(): Promise<number> {
   const entityIds = allEntities.map((e) => e.id);
   if (entityIds.length === 0) return 0;
 
-  // Get latest confirmed cert for each entity via entity_id
-  const { data: allCerts } = await supabase
-    .from('certificates')
-    .select('id, entity_id, uploaded_at')
-    .in('entity_id', entityIds)
-    .in('processing_status', ['extracted', 'review_confirmed'])
-    .order('uploaded_at', { ascending: false });
+  // Get latest confirmed cert for each entity — check ALL 3 ID columns (entity_id, vendor_id, tenant_id)
+  const [entityCertsRes, vendorCertsRes, tenantCertsRes] = await Promise.all([
+    supabase
+      .from('certificates')
+      .select('id, entity_id, vendor_id, tenant_id, uploaded_at')
+      .in('entity_id', entityIds)
+      .in('processing_status', ['extracted', 'review_confirmed'])
+      .order('uploaded_at', { ascending: false }),
+    supabase
+      .from('certificates')
+      .select('id, entity_id, vendor_id, tenant_id, uploaded_at')
+      .in('vendor_id', entityIds)
+      .in('processing_status', ['extracted', 'review_confirmed'])
+      .order('uploaded_at', { ascending: false }),
+    supabase
+      .from('certificates')
+      .select('id, entity_id, vendor_id, tenant_id, uploaded_at')
+      .in('tenant_id', entityIds)
+      .in('processing_status', ['extracted', 'review_confirmed'])
+      .order('uploaded_at', { ascending: false }),
+  ]);
+  const allCertsRaw = [
+    ...(entityCertsRes.data ?? []),
+    ...(vendorCertsRes.data ?? []),
+    ...(tenantCertsRes.data ?? []),
+  ];
+
+  // Deduplicate by cert id
+  const seenCertIds = new Set<string>();
+  const allCerts = allCertsRaw.filter(c => {
+    if (seenCertIds.has(c.id)) return false;
+    seenCertIds.add(c.id);
+    return true;
+  });
 
   // Map entity -> latest confirmed cert
   const entityCertMap = new Map<string, string>();
-  for (const cert of allCerts ?? []) {
-    const eid = cert.entity_id;
+  for (const cert of allCerts) {
+    const eid = cert.entity_id ?? cert.vendor_id ?? cert.tenant_id;
     if (eid && !entityCertMap.has(eid)) {
       entityCertMap.set(eid, cert.id);
     }

@@ -134,16 +134,24 @@ export async function saveAndRerunCompliance(
 
   const { supabase, orgId } = await getAuthContext();
 
-  // Get entity info for redirect
+  // Get entity info for redirect — check entity_id first, then legacy columns
   const { data: cert } = await supabase
     .from('certificates')
-    .select('vendor_id, tenant_id')
+    .select('entity_id, vendor_id, tenant_id')
     .eq('id', certificateId)
     .single();
 
-  const entityType = cert?.vendor_id ? 'vendor' : 'tenant';
-  const entityId = cert?.vendor_id ?? cert?.tenant_id;
+  const entityId = cert?.entity_id ?? cert?.vendor_id ?? cert?.tenant_id;
   if (!entityId) throw new Error('Certificate not assigned to a vendor or tenant');
+
+  // Determine entity type — check entities table first, then infer from legacy columns
+  let entityType: string = 'vendor';
+  if (cert?.entity_id) {
+    const { data: entityData } = await supabase.from('entities').select('entity_type').eq('id', entityId).single();
+    entityType = entityData?.entity_type === 'tenant' ? 'tenant' : 'vendor';
+  } else {
+    entityType = cert?.vendor_id ? 'vendor' : 'tenant';
+  }
 
   // Run compliance
   await runAutoCompliance(certificateId, orgId);
@@ -190,11 +198,50 @@ export async function runAutoCompliance(
   const entityId = cert.entity_id ?? cert.vendor_id ?? cert.tenant_id;
   if (!entityId) return; // Certificate not assigned to an entity yet
 
-  const { data: entity } = await supabase
+  // Query entities table first, fall back to legacy vendors/tenants if not found
+  let entity: { template_id: string | null; property_id: string | null; entity_type: string } | null = null;
+  const { data: unifiedEntity } = await supabase
     .from('entities')
     .select('template_id, property_id, entity_type')
     .eq('id', entityId)
     .single();
+
+  if (unifiedEntity) {
+    entity = unifiedEntity;
+    // If unified entity has no template, check legacy table
+    if (!entity.template_id) {
+      const legacyTable = entity.entity_type === 'tenant' ? 'tenants' : 'vendors';
+      const { data: legacyEntity } = await supabase
+        .from(legacyTable)
+        .select('template_id')
+        .eq('id', entityId)
+        .single();
+      if (legacyEntity?.template_id) {
+        entity = { ...entity, template_id: legacyEntity.template_id };
+        // Sync template_id to entities table for future lookups
+        await supabase.from('entities').update({ template_id: legacyEntity.template_id }).eq('id', entityId);
+      }
+    }
+  } else {
+    // Fall back to legacy tables for entities not yet in unified model
+    const { data: legacyVendor } = await supabase
+      .from('vendors')
+      .select('template_id, property_id')
+      .eq('id', entityId)
+      .single();
+    if (legacyVendor) {
+      entity = { ...legacyVendor, entity_type: 'vendor' };
+    } else {
+      const { data: legacyTenant } = await supabase
+        .from('tenants')
+        .select('template_id, property_id')
+        .eq('id', entityId)
+        .single();
+      if (legacyTenant) {
+        entity = { ...legacyTenant, entity_type: 'tenant' };
+      }
+    }
+  }
 
   let requirements: RequirementInput[] = [];
   if (entity?.template_id) {

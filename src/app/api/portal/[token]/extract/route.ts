@@ -93,7 +93,7 @@ export async function POST(
     // Verify the certificate belongs to this entity
     const { data: cert, error: certError } = await supabase
       .from('certificates')
-      .select('id, file_path, organization_id, vendor_id, tenant_id, processing_status')
+      .select('id, file_path, organization_id, entity_id, vendor_id, tenant_id, processing_status')
       .eq('id', certificate_id)
       .single();
 
@@ -105,7 +105,8 @@ export async function POST(
     }
 
     // Verify the certificate belongs to the entity associated with this token
-    const certEntityId = entityType === 'vendor' ? cert.vendor_id : cert.tenant_id;
+    // Check entity_id first (unified), then fall back to legacy vendor_id/tenant_id
+    const certEntityId = cert.entity_id ?? (entityType === 'vendor' ? cert.vendor_id : cert.tenant_id);
     if (certEntityId !== entityId) {
       return NextResponse.json(
         { error: 'Certificate not found.' },
@@ -255,17 +256,31 @@ export async function POST(
       })
       .eq('id', certificate_id);
 
-    // Fetch entity info for activity log and PM notification
-    const { data: entityInfo } = await supabase
+    // Fetch entity info for activity log and PM notification — try legacy, fall back to entities
+    let entityInfo: { company_name: string; organization_id: string; property_id: string | null } | null = null;
+    const { data: legacyInfo } = await supabase
       .from(entityType === 'vendor' ? 'vendors' : 'tenants')
       .select('company_name, organization_id, property_id')
       .eq('id', entityId)
       .single();
+    entityInfo = legacyInfo;
+
+    if (!entityInfo) {
+      const { data: unifiedInfo } = await supabase
+        .from('entities')
+        .select('name, organization_id, property_id')
+        .eq('id', entityId)
+        .single();
+      if (unifiedInfo) {
+        entityInfo = { company_name: unifiedInfo.name, organization_id: unifiedInfo.organization_id, property_id: unifiedInfo.property_id };
+      }
+    }
     const entityName = entityInfo?.company_name ?? entityType;
 
     // Log processing activity — include entity name since portal is unauthenticated
     await supabase.from('activity_log').insert({
       organization_id: cert.organization_id,
+      entity_id: entityId,
       [entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
       certificate_id,
       action: 'coi_processed',

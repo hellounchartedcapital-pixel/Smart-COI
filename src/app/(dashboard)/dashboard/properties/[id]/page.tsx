@@ -91,49 +91,36 @@ export default async function PropertyDetailPage({ params }: Props) {
   ]);
 
   // Batch fetch latest COI expiration dates for all vendors and tenants
+  // Use OR filter to check entity_id, vendor_id, AND tenant_id so we find certs linked via any column
   const vendorIds = (vendors ?? []).map((v) => v.id);
   const tenantIds = (tenants ?? []).map((t) => t.id);
+  const allIds = [...vendorIds, ...tenantIds];
 
-  const [{ data: vendorCerts }, { data: tenantCerts }] = await Promise.all([
-    vendorIds.length > 0
-      ? supabase
-          .from('certificates')
-          .select('vendor_id, extracted_coverages(expiration_date)')
-          .in('vendor_id', vendorIds)
-          .order('uploaded_at', { ascending: false })
-      : Promise.resolve({ data: [] as { vendor_id: string; extracted_coverages: { expiration_date: string | null }[] }[] }),
-    tenantIds.length > 0
-      ? supabase
-          .from('certificates')
-          .select('tenant_id, extracted_coverages(expiration_date)')
-          .in('tenant_id', tenantIds)
-          .order('uploaded_at', { ascending: false })
-      : Promise.resolve({ data: [] as { tenant_id: string; extracted_coverages: { expiration_date: string | null }[] }[] }),
-  ]);
+  type CertWithCov = { entity_id: string | null; vendor_id: string | null; tenant_id: string | null; extracted_coverages: { expiration_date: string | null }[] };
+  let allPropertyCerts: CertWithCov[] = [];
+  if (allIds.length > 0) {
+    const { data } = await supabase
+      .from('certificates')
+      .select('entity_id, vendor_id, tenant_id, extracted_coverages(expiration_date)')
+      .or(allIds.map(id => `entity_id.eq.${id},vendor_id.eq.${id},tenant_id.eq.${id}`).join(','))
+      .order('uploaded_at', { ascending: false });
+    allPropertyCerts = (data ?? []) as CertWithCov[];
+  }
 
   // Map entity_id -> latest expiration date (latest cert, then max expiration across coverages)
-  const vendorLatestExpiration = new Map<string, string>();
-  for (const c of vendorCerts ?? []) {
-    if (c.vendor_id && !vendorLatestExpiration.has(c.vendor_id)) {
-      const coverages = (c as { vendor_id: string; extracted_coverages: { expiration_date: string | null }[] }).extracted_coverages ?? [];
-      const dates = coverages.map((cov) => cov.expiration_date).filter(Boolean) as string[];
-      if (dates.length > 0) {
-        dates.sort();
-        vendorLatestExpiration.set(c.vendor_id, dates[dates.length - 1]);
-      }
+  const entityLatestExpiration = new Map<string, string>();
+  for (const c of allPropertyCerts) {
+    const eid = c.entity_id ?? c.vendor_id ?? c.tenant_id;
+    if (!eid || entityLatestExpiration.has(eid)) continue;
+    const coverages = c.extracted_coverages ?? [];
+    const dates = coverages.map((cov) => cov.expiration_date).filter(Boolean) as string[];
+    if (dates.length > 0) {
+      dates.sort();
+      entityLatestExpiration.set(eid, dates[dates.length - 1]);
     }
   }
-  const tenantLatestExpiration = new Map<string, string>();
-  for (const c of tenantCerts ?? []) {
-    if (c.tenant_id && !tenantLatestExpiration.has(c.tenant_id)) {
-      const coverages = (c as { tenant_id: string; extracted_coverages: { expiration_date: string | null }[] }).extracted_coverages ?? [];
-      const dates = coverages.map((cov) => cov.expiration_date).filter(Boolean) as string[];
-      if (dates.length > 0) {
-        dates.sort();
-        tenantLatestExpiration.set(c.tenant_id, dates[dates.length - 1]);
-      }
-    }
-  }
+  const vendorLatestExpiration = entityLatestExpiration;
+  const tenantLatestExpiration = entityLatestExpiration;
 
   const vendorList = (vendors ?? []).map((v) => ({
     ...v,

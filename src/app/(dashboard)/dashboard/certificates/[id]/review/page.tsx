@@ -62,35 +62,54 @@ export default async function CertificateReviewPage({ params }: Props) {
     .order('entity_name');
   const extractedEntities = (ents ?? []) as ExtractedEntity[];
 
-  // Determine vendor or tenant
-  const entityType = certificate.vendor_id ? 'vendor' : 'tenant';
-  const entityId = certificate.vendor_id ?? certificate.tenant_id;
+  // Determine vendor or tenant — check entity_id first (unified), then legacy columns
+  const resolvedEntityId = certificate.entity_id ?? certificate.vendor_id ?? certificate.tenant_id;
 
+  let entityType: 'vendor' | 'tenant' = certificate.vendor_id ? 'vendor' : 'tenant';
   let entityName = '';
   let propertyId: string | null = null;
   let templateId: string | null = null;
 
-  if (entityType === 'vendor' && entityId) {
-    const { data: v } = await supabase
-      .from('vendors')
-      .select('company_name, property_id, template_id')
-      .eq('id', entityId)
+  // Try entities table first (unified model)
+  if (resolvedEntityId) {
+    const { data: unifiedEntity } = await supabase
+      .from('entities')
+      .select('name, entity_type, property_id, template_id')
+      .eq('id', resolvedEntityId)
       .single();
-    if (v) {
-      entityName = (v as Vendor).company_name;
-      propertyId = v.property_id;
-      templateId = v.template_id;
+    if (unifiedEntity) {
+      entityName = unifiedEntity.name;
+      entityType = (unifiedEntity.entity_type === 'tenant' ? 'tenant' : 'vendor') as 'vendor' | 'tenant';
+      propertyId = unifiedEntity.property_id;
+      templateId = unifiedEntity.template_id;
     }
-  } else if (entityType === 'tenant' && entityId) {
-    const { data: t } = await supabase
-      .from('tenants')
-      .select('company_name, property_id, template_id')
-      .eq('id', entityId)
-      .single();
-    if (t) {
-      entityName = (t as Tenant).company_name;
-      propertyId = t.property_id;
-      templateId = t.template_id;
+  }
+
+  // Fall back to legacy tables if unified lookup didn't return data
+  const entityId = resolvedEntityId;
+  if (!entityName && entityId) {
+    if (entityType === 'vendor') {
+      const { data: v } = await supabase
+        .from('vendors')
+        .select('company_name, property_id, template_id')
+        .eq('id', entityId)
+        .single();
+      if (v) {
+        entityName = (v as Vendor).company_name;
+        propertyId = v.property_id;
+        templateId = v.template_id;
+      }
+    } else {
+      const { data: t } = await supabase
+        .from('tenants')
+        .select('company_name, property_id, template_id')
+        .eq('id', entityId)
+        .single();
+      if (t) {
+        entityName = (t as Tenant).company_name;
+        propertyId = t.property_id;
+        templateId = t.template_id;
+      }
     }
   }
 
