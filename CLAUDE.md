@@ -1,6 +1,6 @@
 # SmartCOI
 
-*Last updated: April 8, 2026*
+*Last updated: April 9, 2026*
 
 SmartCOI — B2B SaaS platform automating Certificate of Insurance (COI) compliance tracking. Supports Property Management, Construction, Logistics, Healthcare, Manufacturing, Hospitality, Retail, and Other industries. Automates COI collection, AI extraction, compliance verification, and vendor/tenant follow-up notifications.
 
@@ -269,16 +269,18 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Added "(2026)" year tags to comparison and feature page titles
 - Both `metadata.title`/`description` and `openGraph` title/description updated in sync
 
-#### SEO: ACORD 25 Post Upgrade (Apr 2026)
+#### SEO: ACORD 25 Post Comprehensive Expansion (Apr 2026)
 
-- Expanded `/blog/acord-25-certificate-explained` from ~190 lines to ~300+ lines for deeper content and better rankings
-- Updated meta title to "ACORD 25 Certificate of Insurance Explained (2026 Guide)" and description for SEO
-- Added anchor-linked table of contents below intro
-- Expanded "ACORD 25 vs ACORD 28" section with when-to-request guidance
-- Added new "What Property Managers Need to Check on Every ACORD 25" section (8-point verification)
-- Expanded "Common Mistakes" section with 8 specific liability gaps (entity name errors, blanket AI without endorsement, umbrella gaps)
-- Added FAQ section (5 Q&As) with FAQPage JSON-LD structured data (in blog page component)
-- Added internal links to ACORD 28, Additional Insured, COI compliance, expiration tracking, and COI tracking software pages
+- Expanded `/blog/acord-25-certificate-explained` to ~3,100 words (from ~2,200) targeting "acord 25", "acord 25 certificate of liability insurance", "acord 25 form" queries
+- Restructured as field-by-field guide with H2/H3 hierarchy: "How to Read an ACORD 25: Section by Section" parent H2 with H3s for each form section (Header, Insured, Insurers, GL, Auto, WC, Umbrella, Description of Operations, Certificate Holder)
+- Added new "Who Uses the ACORD 25?" section broadening audience beyond property managers (construction, logistics, healthcare, etc.)
+- Added new "How to Verify Coverage Limits on an ACORD 25" section (5-step systematic approach)
+- Converted FAQ questions from bold to H3 headings (7 Q&As) for better SEO
+- Added 2 new FAQs: "Is an ACORD 25 the same as a certificate of insurance?" and "How do you request an ACORD 25 from a vendor?"
+- Updated frontmatter description for SEO with CTA language
+- Added internal links to /coi-tracking-software, /compare, /compare/smartcoi-vs-spreadsheets, plus existing ACORD 28, Additional Insured, COI expiration, waiver of subrogation links
+- Consolidated "What to Check" section into enriched 10-point checklist to eliminate content overlap
+- FAQPage JSON-LD in page component needs update to match new H3-format FAQ questions (2 new Q&As to add)
 
 #### QA Warning Fixes (Apr 2026)
 
