@@ -133,6 +133,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - 28 industry-specific compliance templates across 8 industries
 - Industry-aware AI template recommendations
 - Conditional PM-only features (lease extraction, tenant entity type)
+- Competitive comparison table on landing page ("Why teams switch to SmartCOI" — SmartCOI vs Typical COI Platform, 7 rows, no named competitors)
 
 ### Features That DO NOT EXIST (never reference)
 
@@ -152,6 +153,15 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Landing Page Comparison Table (Apr 2026)
+
+- Created `src/components/landing/comparison-table.tsx` — "Why teams switch to SmartCOI" section with 7-row comparison (SmartCOI vs Typical COI Platform)
+- Rows: setup time, time to first result, pricing, free trial, portal fees, feature inclusion, contract terms
+- Desktop: clean table layout with emerald/green SmartCOI column and neutral gray "Typical" column
+- Mobile: stacked card layout for each comparison row
+- Positioned after features grid and before pricing section on the landing page (`src/app/page.tsx`)
+- No specific competitors named — focuses on category-level differentiation
 
 #### Dashboard Edge Case Audit — No Locations & "Other" Industry (Apr 2026)
 
