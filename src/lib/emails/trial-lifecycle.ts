@@ -6,6 +6,8 @@
 
 import { createServiceClient } from '@/lib/supabase/service';
 import { sendNotificationEmail } from '@/lib/notifications/email-sender';
+import { getTerminology } from '@/lib/constants/terminology';
+import type { Industry } from '@/types';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.smartcoi.io';
 const SITE_URL = 'https://smartcoi.io';
@@ -24,6 +26,7 @@ interface OrgTrialData {
   trial_ends_at: string;
   trial_emails_sent: TrialEmailsSent | null;
   created_at: string;
+  industry: string | null;
 }
 
 interface OrgUser {
@@ -55,7 +58,7 @@ export async function processTrialLifecycleEmails(): Promise<{
   // Fetch all trial orgs (active or recently expired — within 1 day of expiry)
   const { data: orgs, error: orgError } = await supabase
     .from('organizations')
-    .select('id, plan, trial_ends_at, trial_emails_sent, created_at')
+    .select('id, plan, trial_ends_at, trial_emails_sent, created_at, industry')
     .eq('plan', 'trial')
     .not('trial_ends_at', 'is', null);
 
@@ -67,7 +70,7 @@ export async function processTrialLifecycleEmails(): Promise<{
   // Also fetch recently expired trials that haven't received the expired email
   const { data: expiredOrgs } = await supabase
     .from('organizations')
-    .select('id, plan, trial_ends_at, trial_emails_sent, created_at')
+    .select('id, plan, trial_ends_at, trial_emails_sent, created_at, industry')
     .eq('plan', 'trial')
     .not('trial_ends_at', 'is', null)
     .lt('trial_ends_at', new Date().toISOString());
@@ -139,7 +142,8 @@ export async function processTrialLifecycleEmails(): Promise<{
     }
 
     // Build the email
-    const template = buildEmail(emailToSend, firstName, stats);
+    const industry = (org.industry as Industry) ?? null;
+    const template = buildEmail(emailToSend, firstName, stats, industry);
     if (!template) {
       skipped++;
       continue;
@@ -233,16 +237,31 @@ async function getOrgStats(
 // Email templates — personal tone, from Tony
 // ============================================================================
 
+function getIndustryValueProp(industry: Industry | null): string {
+  const terms = getTerminology(industry);
+  switch (industry) {
+    case 'property_management':
+      return `Track ${terms.entity.toLowerCase()} and ${terms.tenant?.toLowerCase() ?? 'tenant'} insurance across your ${terms.locationPlural.toLowerCase()}`;
+    case 'construction':
+      return `Track ${terms.entity.toLowerCase()} insurance across your ${terms.locationPlural.toLowerCase()}`;
+    case 'logistics':
+      return `Track ${terms.entity.toLowerCase()} insurance certificates at scale`;
+    default:
+      return `Track ${terms.entity.toLowerCase()} insurance compliance automatically`;
+  }
+}
+
 function buildEmail(
   emailId: TrialEmailId,
   firstName: string,
-  stats: OrgStats | null
+  stats: OrgStats | null,
+  industry: Industry | null
 ): { subject: string; html: string } | null {
   switch (emailId) {
     case 'day1_welcome':
-      return day1Welcome(firstName);
+      return day1Welcome(firstName, industry);
     case 'day3_feature':
-      return day3Feature(firstName);
+      return day3Feature(firstName, industry);
     case 'day7_checkin':
       return day7Checkin(firstName, stats!);
     case 'day12_ending':
@@ -286,13 +305,14 @@ function trialCtaButton(href: string, label: string): string {
 </table>`;
 }
 
-function day1Welcome(firstName: string): { subject: string; html: string } {
+function day1Welcome(firstName: string, industry: Industry | null): { subject: string; html: string } {
+  const valueProp = getIndustryValueProp(industry);
   const body = `
 <p style="margin:0 0 20px;">Hi ${firstName},</p>
 
 <p style="margin:0 0 20px;">I'm Tony, the founder of SmartCOI. Welcome aboard.</p>
 
-<p style="margin:0 0 20px;">I built SmartCOI because I got tired of chasing people for updated certificates. If that sounds familiar, you're in the right place.</p>
+<p style="margin:0 0 20px;">I built SmartCOI because I got tired of chasing people for updated certificates. ${valueProp} — without the spreadsheets and manual follow-ups.</p>
 
 <p style="margin:0 0 20px;">Quick question — what's the biggest COI headache you're hoping to solve? Reply and let me know. It helps me make sure you get the most out of your trial.</p>
 
@@ -306,11 +326,12 @@ ${trialCtaButton(APP_URL + '/dashboard', 'Go to Dashboard')}
   };
 }
 
-function day3Feature(firstName: string): { subject: string; html: string } {
+function day3Feature(firstName: string, industry: Industry | null): { subject: string; html: string } {
+  const terms = getTerminology(industry);
   const body = `
 <p style="margin:0 0 20px;">Hi ${firstName},</p>
 
-<p style="margin:0 0 20px;">How's it going? Most teams start with the bulk upload — drag and drop up to 50 certificate PDFs at once, and the AI builds your compliance roster automatically.</p>
+<p style="margin:0 0 20px;">How's it going? Most teams start with the bulk upload — drag and drop up to 50 certificate PDFs at once, and the AI builds your ${terms.entity.toLowerCase()} compliance roster automatically.</p>
 
 <p style="margin:0 0 20px;">No typing names or coverage limits. Most teams have everything loaded in about 10 minutes.</p>
 

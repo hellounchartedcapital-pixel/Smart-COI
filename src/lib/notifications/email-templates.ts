@@ -31,6 +31,10 @@ export interface EmailMergeFields {
   pm_email: string;
   admin_name?: string;
   admin_email?: string;
+  /** Industry-aware terminology labels */
+  location_label?: string;
+  entity_label?: string;
+  requester_label?: string;
 }
 
 interface EmailTemplate {
@@ -91,11 +95,12 @@ function ctaButton(href: string, label: string): string {
 </table>`;
 }
 
-function contactLine(fields: Pick<EmailMergeFields, 'pm_name' | 'pm_email' | 'admin_name' | 'admin_email'>): string {
+function contactLine(fields: Pick<EmailMergeFields, 'pm_name' | 'pm_email' | 'admin_name' | 'admin_email' | 'requester_label'>): string {
   const name = fields.admin_name ?? fields.pm_name;
   const email = fields.admin_email ?? fields.pm_email;
+  const rolePrefix = fields.requester_label ? `your ${escapeHtml(fields.requester_label)}, ` : '';
   return `<p style="font-size:14px;color:#6B7280;margin-top:28px;">
-  Questions? Reach out to <strong style="color:#374151;">${escapeHtml(name)}</strong> at <a href="mailto:${encodeURI(email)}" style="color:#4CC78A;text-decoration:none;">${escapeHtml(email)}</a>
+  Questions? Reach out to ${rolePrefix}<strong style="color:#374151;">${escapeHtml(name)}</strong> at <a href="mailto:${encodeURI(email)}" style="color:#4CC78A;text-decoration:none;">${escapeHtml(email)}</a>
 </p>`;
 }
 
