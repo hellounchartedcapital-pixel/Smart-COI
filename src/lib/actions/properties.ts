@@ -855,49 +855,62 @@ export async function runComplianceForEntity(
 ) {
   const { supabase, userId, orgId } = await getAuthContext();
 
-  const tableName = entityType === 'vendor' ? 'vendors' : 'tenants';
-  const { data: entity } = await supabase
-    .from(tableName)
+  // Query the entities table (unified model) first, fall back to legacy tables
+  const legacyTable = entityType === 'tenant' ? 'tenants' : 'vendors';
+  let entity: { template_id: string | null; property_id: string | null } | null = null;
+
+  const { data: unifiedEntity } = await supabase
+    .from('entities')
     .select('template_id, property_id')
     .eq('id', entityId)
     .eq('organization_id', orgId)
     .single();
 
+  if (unifiedEntity) {
+    entity = unifiedEntity;
+  } else {
+    // Fall back to legacy table for older entities not yet in unified model
+    const { data: legacyEntity } = await supabase
+      .from(legacyTable)
+      .select('template_id, property_id')
+      .eq('id', entityId)
+      .eq('organization_id', orgId)
+      .single();
+    entity = legacyEntity;
+  }
+
   if (!entity?.template_id) {
     // No template assigned — can't calculate compliance, set under_review if cert exists
-    const certFilter = entityType === 'vendor'
-      ? { vendor_id: entityId }
-      : { tenant_id: entityId };
     const { data: anyCert } = await supabase
       .from('certificates')
       .select('id')
-      .match(certFilter)
+      .or(`entity_id.eq.${entityId},vendor_id.eq.${entityId},tenant_id.eq.${entityId}`)
       .eq('organization_id', orgId)
       .in('processing_status', ['extracted', 'review_confirmed'])
       .limit(1)
       .maybeSingle();
 
     if (anyCert) {
+      // Update both entities table and legacy table
       await supabase
-        .from(tableName)
+        .from('entities')
+        .update({ compliance_status: 'under_review' })
+        .eq('id', entityId);
+      await supabase
+        .from(legacyTable)
         .update({ compliance_status: 'under_review' })
         .eq('id', entityId);
     }
     return;
   }
 
-  // Find most recent certificate (prefer confirmed, fall back to extracted)
-  const certFilter = entityType === 'vendor'
-    ? { vendor_id: entityId }
-    : { tenant_id: entityId };
-
+  // Find most recent certificate — check entity_id first, then legacy vendor_id/tenant_id
   let cert: { id: string } | null = null;
 
-  // Try confirmed first
   const { data: confirmedCert } = await supabase
     .from('certificates')
     .select('id')
-    .match(certFilter)
+    .or(`entity_id.eq.${entityId},vendor_id.eq.${entityId},tenant_id.eq.${entityId}`)
     .eq('organization_id', orgId)
     .in('processing_status', ['extracted', 'review_confirmed'])
     .order('uploaded_at', { ascending: false })
@@ -911,7 +924,7 @@ export async function runComplianceForEntity(
     const { data: extractedCert } = await supabase
       .from('certificates')
       .select('id')
-      .match(certFilter)
+      .or(`entity_id.eq.${entityId},vendor_id.eq.${entityId},tenant_id.eq.${entityId}`)
       .eq('organization_id', orgId)
       .eq('processing_status', 'extracted')
       .order('uploaded_at', { ascending: false })
@@ -1029,16 +1042,22 @@ export async function runComplianceForEntity(
     await supabase.from('entity_compliance_results').insert(rows);
   }
 
-  // Update entity compliance status
+  // Update entity compliance status in both entities table and legacy table
   await supabase
-    .from(tableName)
+    .from('entities')
     .update({ compliance_status: result.overallStatus })
     .eq('id', entityId);
+  await supabase
+    .from(legacyTable)
+    .update({ compliance_status: result.overallStatus })
+    .eq('id', entityId)
+    .then(() => { /* best-effort legacy sync */ });
 
   // Log
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     certificate_id: cert.id,
+    entity_id: entityId,
     [entityType === 'vendor' ? 'vendor_id' : 'tenant_id']: entityId,
     action: 'compliance_checked',
     description: `Compliance calculated: ${result.overallStatus}`,
