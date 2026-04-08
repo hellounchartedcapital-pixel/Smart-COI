@@ -311,25 +311,42 @@ export async function permanentlyDeleteVendor(vendorId: string, propertyId: stri
     .eq('id', vendorId)
     .single();
 
-  const { error } = await supabase
+  // Delete in both legacy and entities tables
+  await supabase
     .from('vendors')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', vendorId)
     .eq('organization_id', orgId);
+  await supabase
+    .from('entities')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', vendorId)
+    .eq('organization_id', orgId);
 
-  if (error) throw new Error(error.message);
+  // Get name for activity log (may come from either table)
+  let name = vendor?.company_name;
+  if (!name) {
+    const { data: entity } = await supabase
+      .from('entities')
+      .select('name')
+      .eq('id', vendorId)
+      .single();
+    name = entity?.name ?? vendorId;
+  }
 
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     property_id: propertyId,
     vendor_id: vendorId,
+    entity_id: vendorId,
     action: 'status_changed',
-    description: `Vendor "${vendor?.company_name ?? vendorId}" deleted`,
+    description: `Vendor "${name}" deleted`,
     performed_by: userId,
   });
 
   revalidatePath(`/dashboard/properties/${propertyId}`);
   revalidatePath(`/dashboard/vendors/${vendorId}`);
+  revalidatePath('/dashboard');
   return { success: true };
 }
 
@@ -342,25 +359,42 @@ export async function archiveVendor(vendorId: string, propertyId: string) {
     .eq('id', vendorId)
     .single();
 
-  const { error } = await supabase
+  // Archive in both legacy and entities tables
+  const now = new Date().toISOString();
+  await supabase
     .from('vendors')
-    .update({ archived_at: new Date().toISOString() })
+    .update({ archived_at: now })
+    .eq('id', vendorId)
+    .eq('organization_id', orgId);
+  await supabase
+    .from('entities')
+    .update({ archived_at: now })
     .eq('id', vendorId)
     .eq('organization_id', orgId);
 
-  if (error) throw new Error(error.message);
+  let name = vendor?.company_name;
+  if (!name) {
+    const { data: entity } = await supabase
+      .from('entities')
+      .select('name')
+      .eq('id', vendorId)
+      .single();
+    name = entity?.name ?? vendorId;
+  }
 
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     property_id: propertyId,
     vendor_id: vendorId,
+    entity_id: vendorId,
     action: 'status_changed',
-    description: `Vendor "${vendor?.company_name ?? vendorId}" archived`,
+    description: `Vendor "${name}" archived`,
     performed_by: userId,
   });
 
   revalidatePath(`/dashboard/properties/${propertyId}`);
   revalidatePath(`/dashboard/vendors/${vendorId}`);
+  revalidatePath('/dashboard');
   return { success: true };
 }
 
@@ -373,25 +407,41 @@ export async function restoreVendor(vendorId: string, propertyId: string) {
     .eq('id', vendorId)
     .single();
 
-  const { error } = await supabase
+  // Restore in both legacy and entities tables
+  await supabase
     .from('vendors')
     .update({ archived_at: null })
     .eq('id', vendorId)
     .eq('organization_id', orgId);
+  await supabase
+    .from('entities')
+    .update({ archived_at: null })
+    .eq('id', vendorId)
+    .eq('organization_id', orgId);
 
-  if (error) throw new Error(error.message);
+  let name = vendor?.company_name;
+  if (!name) {
+    const { data: entity } = await supabase
+      .from('entities')
+      .select('name')
+      .eq('id', vendorId)
+      .single();
+    name = entity?.name ?? vendorId;
+  }
 
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     property_id: propertyId,
     vendor_id: vendorId,
+    entity_id: vendorId,
     action: 'status_changed',
-    description: `Vendor "${vendor?.company_name ?? vendorId}" restored`,
+    description: `Vendor "${name}" restored`,
     performed_by: userId,
   });
 
   revalidatePath(`/dashboard/properties/${propertyId}`);
   revalidatePath(`/dashboard/vendors/${vendorId}`);
+  revalidatePath('/dashboard');
   return { success: true };
 }
 
@@ -464,25 +514,41 @@ export async function permanentlyDeleteTenant(tenantId: string, propertyId: stri
     .eq('id', tenantId)
     .single();
 
-  const { error } = await supabase
+  // Delete in both legacy and entities tables
+  await supabase
     .from('tenants')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', tenantId)
     .eq('organization_id', orgId);
+  await supabase
+    .from('entities')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', tenantId)
+    .eq('organization_id', orgId);
 
-  if (error) throw new Error(error.message);
+  let name = tenant?.company_name;
+  if (!name) {
+    const { data: entity } = await supabase
+      .from('entities')
+      .select('name')
+      .eq('id', tenantId)
+      .single();
+    name = entity?.name ?? tenantId;
+  }
 
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     property_id: propertyId,
     tenant_id: tenantId,
+    entity_id: tenantId,
     action: 'status_changed',
-    description: `Tenant "${tenant?.company_name ?? tenantId}" deleted`,
+    description: `Tenant "${name}" deleted`,
     performed_by: userId,
   });
 
   revalidatePath(`/dashboard/properties/${propertyId}`);
   revalidatePath(`/dashboard/tenants/${tenantId}`);
+  revalidatePath('/dashboard');
   return { success: true };
 }
 
@@ -495,25 +561,42 @@ export async function archiveTenant(tenantId: string, propertyId: string) {
     .eq('id', tenantId)
     .single();
 
-  const { error } = await supabase
+  // Archive in both legacy and entities tables
+  const now = new Date().toISOString();
+  await supabase
     .from('tenants')
-    .update({ archived_at: new Date().toISOString() })
+    .update({ archived_at: now })
+    .eq('id', tenantId)
+    .eq('organization_id', orgId);
+  await supabase
+    .from('entities')
+    .update({ archived_at: now })
     .eq('id', tenantId)
     .eq('organization_id', orgId);
 
-  if (error) throw new Error(error.message);
+  let name = tenant?.company_name;
+  if (!name) {
+    const { data: entity } = await supabase
+      .from('entities')
+      .select('name')
+      .eq('id', tenantId)
+      .single();
+    name = entity?.name ?? tenantId;
+  }
 
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     property_id: propertyId,
     tenant_id: tenantId,
+    entity_id: tenantId,
     action: 'status_changed',
-    description: `Tenant "${tenant?.company_name ?? tenantId}" archived`,
+    description: `Tenant "${name}" archived`,
     performed_by: userId,
   });
 
   revalidatePath(`/dashboard/properties/${propertyId}`);
   revalidatePath(`/dashboard/tenants/${tenantId}`);
+  revalidatePath('/dashboard');
   return { success: true };
 }
 
@@ -526,20 +609,35 @@ export async function restoreTenant(tenantId: string, propertyId: string) {
     .eq('id', tenantId)
     .single();
 
-  const { error } = await supabase
+  // Restore in both legacy and entities tables
+  await supabase
     .from('tenants')
     .update({ archived_at: null })
     .eq('id', tenantId)
     .eq('organization_id', orgId);
+  await supabase
+    .from('entities')
+    .update({ archived_at: null })
+    .eq('id', tenantId)
+    .eq('organization_id', orgId);
 
-  if (error) throw new Error(error.message);
+  let name = tenant?.company_name;
+  if (!name) {
+    const { data: entity } = await supabase
+      .from('entities')
+      .select('name')
+      .eq('id', tenantId)
+      .single();
+    name = entity?.name ?? tenantId;
+  }
 
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     property_id: propertyId,
     tenant_id: tenantId,
+    entity_id: tenantId,
     action: 'status_changed',
-    description: `Tenant "${tenant?.company_name ?? tenantId}" restored`,
+    description: `Tenant "${name}" restored`,
     performed_by: userId,
   });
 

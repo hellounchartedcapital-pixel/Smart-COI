@@ -36,8 +36,9 @@ export default async function VendorDetailPage({ params }: Props) {
   if (!profile?.organization_id) redirect('/login');
   const orgId = profile.organization_id;
 
-  // Fetch vendor
-  const { data: vendor, error: vendorError } = await supabase
+  // Fetch vendor — try legacy table first, fall back to entities table
+  let v: Vendor;
+  const { data: vendor } = await supabase
     .from('vendors')
     .select('*')
     .eq('id', id)
@@ -45,8 +46,37 @@ export default async function VendorDetailPage({ params }: Props) {
     .is('deleted_at', null)
     .single();
 
-  if (vendorError || !vendor) notFound();
-  const v = vendor as Vendor;
+  if (vendor) {
+    v = vendor as Vendor;
+  } else {
+    // Entity may only exist in unified entities table (created via entity creation wizard)
+    const { data: entity } = await supabase
+      .from('entities')
+      .select('*')
+      .eq('id', id)
+      .eq('organization_id', orgId)
+      .is('deleted_at', null)
+      .single();
+    if (!entity) notFound();
+    // Map Entity fields to Vendor shape for the client component
+    v = {
+      id: entity.id,
+      property_id: entity.property_id,
+      organization_id: entity.organization_id,
+      company_name: entity.name,
+      contact_name: entity.contact_name,
+      contact_email: entity.contact_email,
+      contact_phone: entity.contact_phone,
+      vendor_type: entity.entity_category,
+      template_id: entity.template_id,
+      compliance_status: entity.compliance_status,
+      notifications_paused: entity.notifications_paused,
+      created_at: entity.created_at,
+      updated_at: entity.updated_at,
+      deleted_at: entity.deleted_at,
+      archived_at: entity.archived_at,
+    } as Vendor;
+  }
 
   // Fetch property
   let property: Property | null = null;
@@ -80,19 +110,19 @@ export default async function VendorDetailPage({ params }: Props) {
     }
   }
 
-  // Fetch most recent certificate (prefer confirmed, fall back to extracted)
+  // Fetch most recent certificate — check entity_id and legacy vendor_id
   let extractedCoverages: ExtractedCoverage[] = [];
   let complianceResults: ComplianceResult[] = [];
   let entityResults: EntityComplianceResult[] = [];
   let hasCertificate = false;
 
-  // Try confirmed first
   let latestCert: { id: string } | null = null;
   const { data: confirmedCert } = await supabase
     .from('certificates')
     .select('id')
-    .eq('vendor_id', v.id)
-    .eq('processing_status', 'review_confirmed')
+    .or(`entity_id.eq.${id},vendor_id.eq.${id}`)
+    .eq('organization_id', orgId)
+    .in('processing_status', ['extracted', 'review_confirmed'])
     .order('uploaded_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -100,11 +130,11 @@ export default async function VendorDetailPage({ params }: Props) {
   if (confirmedCert) {
     latestCert = confirmedCert;
   } else {
-    // Fall back to extracted certificate
     const { data: extractedCert } = await supabase
       .from('certificates')
       .select('id')
-      .eq('vendor_id', v.id)
+      .or(`entity_id.eq.${id},vendor_id.eq.${id}`)
+      .eq('organization_id', orgId)
       .eq('processing_status', 'extracted')
       .order('uploaded_at', { ascending: false })
       .limit(1)
@@ -139,7 +169,7 @@ export default async function VendorDetailPage({ params }: Props) {
     const { count } = await supabase
       .from('certificates')
       .select('id', { count: 'exact', head: true })
-      .eq('vendor_id', v.id);
+      .or(`entity_id.eq.${id},vendor_id.eq.${id}`);
     if ((count ?? 0) > 0) hasCertificate = true;
   }
 
@@ -159,7 +189,8 @@ export default async function VendorDetailPage({ params }: Props) {
   const { data: allCerts } = await supabase
     .from('certificates')
     .select('*, compliance_results(*)')
-    .eq('vendor_id', v.id)
+    .or(`entity_id.eq.${id},vendor_id.eq.${id}`)
+    .eq('organization_id', orgId)
     .order('uploaded_at', { ascending: false });
   const certificates = (allCerts ?? []) as (Certificate & { compliance_results?: ComplianceResult[] })[];
 
@@ -167,7 +198,7 @@ export default async function VendorDetailPage({ params }: Props) {
   const { data: notifs } = await supabase
     .from('notifications')
     .select('*')
-    .eq('vendor_id', v.id)
+    .or(`entity_id.eq.${id},vendor_id.eq.${id}`)
     .eq('organization_id', orgId)
     .order('scheduled_date', { ascending: false });
   const notifications = (notifs ?? []) as Notification[];
@@ -183,7 +214,7 @@ export default async function VendorDetailPage({ params }: Props) {
     supabase
       .from('compliance_waivers')
       .select('*')
-      .eq('vendor_id', id)
+      .or(`entity_id.eq.${id},vendor_id.eq.${id}`)
       .eq('organization_id', orgId)
       .is('revoked_at', null)
       .gt('expires_at', new Date().toISOString())
@@ -193,7 +224,7 @@ export default async function VendorDetailPage({ params }: Props) {
     supabase
       .from('compliance_waivers')
       .select('*')
-      .eq('vendor_id', id)
+      .or(`entity_id.eq.${id},vendor_id.eq.${id}`)
       .eq('organization_id', orgId)
       .order('created_at', { ascending: false }),
   ]);
