@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 import { FAQSection } from '@/components/landing/faq-section';
+import { ComparisonTable } from '@/components/landing/comparison-table';
 import {
   Building2,
   HardHat,
@@ -247,6 +248,11 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {/* ================================================================ */}
+        {/* COMPARISON TABLE                                                 */}
+        {/* ================================================================ */}
+        <ComparisonTable />
 
         {/* ================================================================ */}
         {/* PRICING                                                          */}
