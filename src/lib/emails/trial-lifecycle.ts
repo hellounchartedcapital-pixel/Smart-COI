@@ -254,20 +254,22 @@ function buildEmail(
   }
 }
 
+const FONT_STACK = "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+
 function personalWrapper(body: string): string {
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#ffffff;">
-<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px;">
+<body style="margin:0;padding:0;font-family:${FONT_STACK};background:#ffffff;">
+<table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
 <tr><td align="center">
 <table width="100%" style="max-width:560px;text-align:left;">
-  <tr><td style="font-size:14px;line-height:1.7;color:#334155;">
+  <tr><td style="font-size:16px;line-height:1.6;color:#374151;">
 ${body}
   </td></tr>
-  <tr><td style="padding-top:24px;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;margin-top:24px;">
+  <tr><td style="padding-top:32px;font-size:13px;color:#9CA3AF;border-top:1px solid #F3F4F6;margin-top:32px;">
     You're receiving this because you signed up for a SmartCOI trial.<br>
-    <a href="${SITE_URL}" style="color:#94a3b8;">SmartCOI</a> · AI-powered COI compliance tracking
+    <a href="${SITE_URL}" style="color:#9CA3AF;text-decoration:none;">smartcoi.io</a>
   </td></tr>
 </table>
 </td></tr>
@@ -276,52 +278,50 @@ ${body}
 </html>`;
 }
 
+function trialCtaButton(href: string, label: string): string {
+  return `<table cellpadding="0" cellspacing="0" style="margin:24px 0;">
+<tr><td>
+  <a href="${href}" style="display:inline-block;background:#73E2A7;color:#ffffff;font-family:${FONT_STACK};font-size:15px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:8px;">${label}</a>
+</td></tr>
+</table>`;
+}
+
 function day1Welcome(firstName: string): { subject: string; html: string } {
   const body = `
-<p>Hi ${firstName},</p>
+<p style="margin:0 0 20px;">Hi ${firstName},</p>
 
-<p>I'm Tony, the founder of SmartCOI. I built this because I manage properties myself and got tired of chasing vendors for updated certificates.</p>
+<p style="margin:0 0 20px;">I'm Tony, the founder of SmartCOI. Welcome aboard.</p>
 
-<p>I wanted to personally welcome you and ask — what's the biggest COI headache you're hoping SmartCOI solves? Understanding your situation helps me make sure you get the most out of your trial.</p>
+<p style="margin:0 0 20px;">I built SmartCOI because I got tired of chasing people for updated certificates. If that sounds familiar, you're in the right place.</p>
 
-<p>A few things to try first:</p>
-<ul style="padding-left:20px;margin:12px 0;">
-  <li style="margin-bottom:6px;">Upload a certificate PDF and watch the AI extract everything in seconds</li>
-  <li style="margin-bottom:6px;">Check out the compliance templates — they're pre-built for standard vendor and tenant requirements</li>
-  <li style="margin-bottom:6px;">Try the bulk upload if you have a folder of COIs ready to go</li>
-</ul>
+<p style="margin:0 0 20px;">Quick question — what's the biggest COI headache you're hoping to solve? Reply and let me know. It helps me make sure you get the most out of your trial.</p>
 
-<p>If you have any questions, just reply to this email. It comes straight to me.</p>
+${trialCtaButton(APP_URL + '/dashboard', 'Go to Dashboard')}
 
-<p>Tony<br>Founder, SmartCOI</p>`;
+<p style="margin:0;">Tony<br><span style="color:#6B7280;">Founder, SmartCOI</span></p>`;
 
   return {
-    subject: 'Welcome to SmartCOI — quick question',
+    subject: 'Welcome to SmartCOI',
     html: personalWrapper(body),
   };
 }
 
 function day3Feature(firstName: string): { subject: string; html: string } {
   const body = `
-<p>Hi ${firstName},</p>
+<p style="margin:0 0 20px;">Hi ${firstName},</p>
 
-<p>Most teams who try SmartCOI start with the bulk upload — drag and drop up to 50 certificate PDFs at once, and the AI builds your compliance roster automatically. No typing names or coverage limits.</p>
+<p style="margin:0 0 20px;">How's it going? Most teams start with the bulk upload — drag and drop up to 50 certificate PDFs at once, and the AI builds your compliance roster automatically.</p>
 
-<p>If you have a folder of COIs on your computer or in a shared drive, give it a try:</p>
-<ol style="padding-left:20px;margin:12px 0;">
-  <li style="margin-bottom:6px;">Log in to <a href="${APP_URL}/dashboard" style="color:#059669;">SmartCOI</a></li>
-  <li style="margin-bottom:6px;">Click "Upload COI" on your dashboard</li>
-  <li style="margin-bottom:6px;">Select your files — the AI does the rest</li>
-</ol>
+<p style="margin:0 0 20px;">No typing names or coverage limits. Most teams have everything loaded in about 10 minutes.</p>
 
-<p>Most teams have everything loaded in about 10 minutes.</p>
+${trialCtaButton(APP_URL + '/dashboard', 'Upload Your First COI')}
 
-<p>If you've already started uploading — great, ignore this email. If you need help getting set up, just reply and I'll walk you through it.</p>
+<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">Already started? Great — ignore this. Need help? Just reply.</p>
 
-<p>Tony</p>`;
+<p style="margin:0;">Tony</p>`;
 
   return {
-    subject: 'The fastest way to get started with SmartCOI',
+    subject: "How's it going?",
     html: personalWrapper(body),
   };
 }
@@ -331,87 +331,83 @@ function day7Checkin(firstName: string, stats: OrgStats): { subject: string; htm
 
   let statsBlock: string;
   if (hasActivity) {
-    const complianceStr = stats.complianceRate != null ? `${stats.complianceRate}%` : '—';
+    const complianceStr = stats.complianceRate != null ? `${stats.complianceRate}%` : '\u2014';
     statsBlock = `
-<p>Here's a quick snapshot of your account:</p>
-<ul style="padding-left:20px;margin:12px 0;">
-  <li style="margin-bottom:4px;"><strong>${stats.certificateCount}</strong> certificates uploaded</li>
-  <li style="margin-bottom:4px;"><strong>${stats.vendorCount}</strong> entities tracked</li>
-  <li style="margin-bottom:4px;"><strong>${complianceStr}</strong> compliance rate</li>
-</ul>
-<p>The two things that save the most time are the automated follow-ups (expiring vendors get reminded automatically) and the vendor portal (vendors upload their own certificates through a link — no login required).</p>`;
+<p style="margin:0 0 16px;">Here's your compliance snapshot:</p>
+<table cellpadding="0" cellspacing="0" style="margin:0 0 20px;font-size:15px;color:#374151;">
+  <tr><td style="padding:4px 16px 4px 0;"><strong>${stats.certificateCount}</strong></td><td style="padding:4px 0;color:#6B7280;">certificates uploaded</td></tr>
+  <tr><td style="padding:4px 16px 4px 0;"><strong>${stats.vendorCount}</strong></td><td style="padding:4px 0;color:#6B7280;">entities tracked</td></tr>
+  <tr><td style="padding:4px 16px 4px 0;"><strong>${complianceStr}</strong></td><td style="padding:4px 0;color:#6B7280;">compliance rate</td></tr>
+</table>`;
   } else {
     statsBlock = `
-<p>It looks like you haven't had a chance to upload certificates yet. Want me to help you get started? I can do a quick 10-minute walkthrough — just reply with a time that works.</p>`;
+<p style="margin:0 0 20px;">It looks like you haven't uploaded certificates yet. Want me to help? I can do a quick 10-minute walkthrough — just reply with a time that works.</p>`;
   }
 
   const body = `
-<p>Hi ${firstName},</p>
+<p style="margin:0 0 20px;">Hi ${firstName},</p>
 
-<p>You're halfway through your trial — how's it going?</p>
+<p style="margin:0 0 20px;">You're halfway through your trial — how's it going?</p>
 
 ${statsBlock}
 
-<p>You still have 7 days of full access. Questions? Just reply.</p>
+${trialCtaButton(APP_URL + '/dashboard', 'View Dashboard')}
 
-<p>Tony</p>`;
+<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">You still have 7 days of full access. Questions? Just reply.</p>
+
+<p style="margin:0;">Tony</p>`;
 
   return {
-    subject: "How's your first week with SmartCOI?",
+    subject: 'Your compliance snapshot',
     html: personalWrapper(body),
   };
 }
 
 function day12Ending(firstName: string): { subject: string; html: string } {
   const body = `
-<p>Hi ${firstName},</p>
+<p style="margin:0 0 20px;">Hi ${firstName},</p>
 
-<p>Just a heads up — your SmartCOI trial wraps up in 2 days.</p>
+<p style="margin:0 0 20px;">Your SmartCOI trial ends in 2 days.</p>
 
-<p>If SmartCOI is saving you time, you can upgrade to keep everything running:</p>
+<p style="margin:0 0 16px;">If it's saving you time, upgrade to keep everything running:</p>
 
-<table cellpadding="0" cellspacing="0" style="margin:16px 0;">
-<tr><td style="background:#059669;border-radius:6px;padding:10px 20px;">
-  <a href="${APP_URL}/dashboard/settings/billing" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Upgrade Now</a>
-</td></tr>
-</table>
+<ul style="padding-left:20px;margin:0 0 20px;color:#374151;line-height:1.8;">
+  <li>Automated COI collection and follow-ups</li>
+  <li>AI-powered compliance checking</li>
+  <li>Self-service portal for your third parties</li>
+  <li>All your data, templates, and settings carry over</li>
+</ul>
 
-<p>Plans start at $63/month (annual) and all your data, templates, and settings carry over instantly. No re-uploading, no reconfiguring.</p>
+<p style="margin:0 0 20px;">Plans start at $79/month.</p>
 
-<p>If it's not the right fit, no hard feelings — your account will simply deactivate after the trial. Your data stays on file for 30 days in case you change your mind.</p>
+${trialCtaButton(APP_URL + '/dashboard/settings/billing', 'See Plans')}
 
-<p>If you're on the fence, reply and tell me what's holding you back. I'd rather fix a real problem than lose you.</p>
+<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">Need more time or want to discuss? Just reply to this email.</p>
 
-<p>Tony</p>`;
+<p style="margin:0;">Tony</p>`;
 
   return {
-    subject: 'Your SmartCOI trial ends in 2 days',
+    subject: 'Your trial ends soon',
     html: personalWrapper(body),
   };
 }
 
 function day14Expired(firstName: string): { subject: string; html: string } {
   const body = `
-<p>Hi ${firstName},</p>
+<p style="margin:0 0 20px;">Hi ${firstName},</p>
 
-<p>Your 14-day trial has ended and your account is now inactive.</p>
+<p style="margin:0 0 20px;">Your 14-day trial has ended.</p>
 
-<p>Your data is still saved — if you upgrade within 30 days, everything picks up right where you left off. Same vendors, same templates, same compliance status.</p>
+<p style="margin:0 0 20px;">Your data is saved for 30 days. Upgrade to pick up right where you left off — same entities, same templates, same compliance status.</p>
 
-<table cellpadding="0" cellspacing="0" style="margin:16px 0;">
-<tr><td style="background:#059669;border-radius:6px;padding:10px 20px;">
-  <a href="${APP_URL}/dashboard/settings/billing" style="color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;">Upgrade Now</a>
-</td></tr>
-</table>
+${trialCtaButton(APP_URL + '/dashboard/settings/billing', 'Upgrade Now')}
 
-<p>If SmartCOI wasn't the right fit, I'd really appreciate knowing why. Just reply with a sentence or two — it helps me build a better product.</p>
+<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">Not the right fit? I'd appreciate knowing why — just reply with a sentence or two.</p>
 
-<p>Thanks for giving it a try.</p>
-
-<p>Tony</p>`;
+<p style="margin:0;">Tony</p>`;
 
   return {
-    subject: 'Your SmartCOI trial has ended',
+    subject: 'Your trial has ended',
     html: personalWrapper(body),
   };
 }
