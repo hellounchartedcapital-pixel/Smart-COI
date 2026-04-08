@@ -180,22 +180,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.7,
     },
-    // Insurance requirements — per property type
+    // Insurance requirements — per property type (hub pages)
     ...propertyTypes.map((pt) => ({
       url: `${BASE_URL}/insurance-requirements/${pt.slug}`,
       lastModified: new Date(),
       changeFrequency: 'monthly' as const,
       priority: 0.6,
     })),
-    // Insurance requirements — property × coverage niche pages
-    ...propertyTypes.flatMap((pt) =>
-      coverageTypes.map((ct) => ({
-        url: `${BASE_URL}/insurance-requirements/${pt.slug}/${ct.slug}`,
-        lastModified: new Date(),
-        changeFrequency: 'monthly' as const,
-        priority: 0.5,
-      }))
-    ),
     // Insurance requirements — coverage guides
     ...coverageGuides.map((g) => ({
       url: `${BASE_URL}/insurance-requirements/coverage/${g.slug}`,
