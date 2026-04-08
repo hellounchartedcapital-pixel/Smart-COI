@@ -115,14 +115,14 @@ export async function POST(
       .update(Buffer.from(arrayBuffer))
       .digest('hex');
 
-    // Check for duplicate upload
+    // Check for duplicate upload — check all 3 ID columns
     const { data: existing } = await supabase
       .from('certificates')
       .select('id')
-      .eq(entityType === 'vendor' ? 'vendor_id' : 'tenant_id', entityId)
+      .or(`entity_id.eq.${entityId},vendor_id.eq.${entityId},tenant_id.eq.${entityId}`)
       .eq('file_hash', fileHash)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return NextResponse.json(
@@ -131,14 +131,25 @@ export async function POST(
       );
     }
 
-    // Get organization_id from the vendor/tenant
-    const { data: entityData, error: entityError } = await supabase
+    // Get organization_id from the vendor/tenant — try legacy table first, fall back to entities
+    let entityData: { organization_id: string } | null = null;
+    const { data: legacyEntityData } = await supabase
       .from(entityType === 'vendor' ? 'vendors' : 'tenants')
       .select('organization_id')
       .eq('id', entityId)
       .single();
+    entityData = legacyEntityData;
 
-    if (entityError || !entityData) {
+    if (!entityData) {
+      const { data: unifiedEntityData } = await supabase
+        .from('entities')
+        .select('organization_id')
+        .eq('id', entityId)
+        .single();
+      entityData = unifiedEntityData;
+    }
+
+    if (!entityData) {
       return NextResponse.json(
         { error: `Unable to process your upload. Please contact your ${getTerminology(null).requesterLabel}.` },
         { status: 500 }
@@ -184,8 +195,10 @@ export async function POST(
 
     // Create certificate record — store the relative storage path (not the public URL)
     // so signed URL generation works consistently for both PM and portal uploads
+    // Set BOTH entity_id and legacy vendor_id/tenant_id for unified + legacy query compatibility
     const certRecord: Record<string, unknown> = {
       organization_id: organizationId,
+      entity_id: entityId,
       file_path: filePath,
       file_hash: fileHash,
       upload_source: 'portal_upload',
@@ -210,24 +223,41 @@ export async function POST(
       );
     }
 
-    // Update vendor/tenant compliance status to under_review
+    // Update compliance status to under_review in BOTH legacy and entities tables
     await supabase
       .from(entityType === 'vendor' ? 'vendors' : 'tenants')
       .update({ compliance_status: 'under_review', updated_at: new Date().toISOString() })
       .eq('id', entityId);
+    await supabase
+      .from('entities')
+      .update({ compliance_status: 'under_review' })
+      .eq('id', entityId)
+      .then(() => { /* best-effort */ });
 
     // Log activity — include entity name in description for audit trail
     // since portal uploads are unauthenticated (no performed_by)
     const entityField = entityType === 'vendor' ? 'vendor_id' : 'tenant_id';
+    let entityName = entityType;
     const { data: entityNameData } = await supabase
       .from(entityType === 'vendor' ? 'vendors' : 'tenants')
       .select('company_name')
       .eq('id', entityId)
       .single();
-    const entityName = entityNameData?.company_name ?? entityType;
+    if (entityNameData?.company_name) {
+      entityName = entityNameData.company_name;
+    } else {
+      // Fallback to entities table
+      const { data: unifiedNameData } = await supabase
+        .from('entities')
+        .select('name')
+        .eq('id', entityId)
+        .single();
+      if (unifiedNameData?.name) entityName = unifiedNameData.name;
+    }
 
     await supabase.from('activity_log').insert({
       organization_id: organizationId,
+      entity_id: entityId,
       [entityField]: entityId,
       certificate_id: certificate.id,
       action: 'portal_upload_received',

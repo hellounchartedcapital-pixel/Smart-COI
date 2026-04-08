@@ -195,23 +195,16 @@ async function getDashboardData(orgId: string) {
   const vendorIds = needsAttention.filter((e) => e.type === 'vendor').map((e) => e.id);
   const tenantIds = needsAttention.filter((e) => e.type === 'tenant').map((e) => e.id);
 
-  // Fetch certificates for action-item entities
+  // Fetch certificates for action-item entities — check ALL 3 ID columns (entity_id, vendor_id, tenant_id)
+  const allEntityIds = [...vendorIds, ...tenantIds];
   const certQueries = [];
-  if (vendorIds.length > 0) {
+  if (allEntityIds.length > 0) {
+    // Use OR filter to find certificates linked via any of the 3 ID columns
     certQueries.push(
       supabase
         .from('certificates')
-        .select('id, vendor_id, tenant_id, processing_status')
-        .in('vendor_id', vendorIds)
-        .order('uploaded_at', { ascending: false })
-    );
-  }
-  if (tenantIds.length > 0) {
-    certQueries.push(
-      supabase
-        .from('certificates')
-        .select('id, vendor_id, tenant_id, processing_status')
-        .in('tenant_id', tenantIds)
+        .select('id, entity_id, vendor_id, tenant_id, processing_status')
+        .or(allEntityIds.map(id => `entity_id.eq.${id},vendor_id.eq.${id},tenant_id.eq.${id}`).join(','))
         .order('uploaded_at', { ascending: false })
     );
   }
@@ -220,9 +213,10 @@ async function getDashboardData(orgId: string) {
   const allCerts = certResults.flatMap((r) => r.data ?? []) as any[];
 
   // Map entityId → cert info (extracted or review_confirmed both count as having compliance data)
+  // Deduplicate: a cert might match on entity_id AND vendor_id for the same entity
   const entityCertMap = new Map<string, { hasCert: boolean; certId: string | null }>();
   for (const cert of allCerts) {
-    const eid = cert.vendor_id ?? cert.tenant_id;
+    const eid = cert.entity_id ?? cert.vendor_id ?? cert.tenant_id;
     if (!eid) continue;
     const existing = entityCertMap.get(eid);
     const hasCompliance = cert.processing_status === 'extracted' || cert.processing_status === 'review_confirmed';

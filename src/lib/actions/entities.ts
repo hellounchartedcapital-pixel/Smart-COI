@@ -96,10 +96,42 @@ export async function createEntity(input: CreateEntityInput) {
 
   if (error) throw new Error(error.message);
 
+  // Dual-write to legacy vendors/tenants table with the SAME ID so all queries find this entity
+  const legacyType = input.entity_type === 'tenant' ? 'tenant' : 'vendor';
+  if (legacyType === 'vendor') {
+    await supabase.from('vendors').insert({
+      id: data.id,
+      organization_id: orgId,
+      property_id: input.property_id,
+      company_name: input.name,
+      contact_name: input.contact_name || null,
+      contact_email: input.contact_email || null,
+      contact_phone: input.contact_phone || null,
+      vendor_type: input.entity_category || null,
+      template_id: input.template_id || null,
+      compliance_status: 'pending',
+    }).then(() => { /* best-effort legacy sync */ });
+  } else {
+    await supabase.from('tenants').insert({
+      id: data.id,
+      organization_id: orgId,
+      property_id: input.property_id,
+      company_name: input.name,
+      contact_name: input.contact_name || null,
+      contact_email: input.contact_email || null,
+      contact_phone: input.contact_phone || null,
+      unit_suite: input.unit_suite || null,
+      tenant_type: input.entity_category || null,
+      template_id: input.template_id || null,
+      compliance_status: 'pending',
+    }).then(() => { /* best-effort legacy sync */ });
+  }
+
   await supabase.from('activity_log').insert({
     organization_id: orgId,
     property_id: input.property_id,
     entity_id: data.id,
+    [legacyType === 'vendor' ? 'vendor_id' : 'tenant_id']: data.id,
     action: 'entity_created',
     description: `${input.entity_type} "${input.name}" created`,
     performed_by: userId,
@@ -134,6 +166,20 @@ export async function updateEntity(entityId: string, input: UpdateEntityInput) {
 
   if (error) throw new Error(error.message);
 
+  // Dual-write key fields to legacy tables
+  const legacyUpdate: Record<string, unknown> = {};
+  if (input.name !== undefined) legacyUpdate.company_name = input.name;
+  if (input.contact_name !== undefined) legacyUpdate.contact_name = input.contact_name || null;
+  if (input.contact_email !== undefined) legacyUpdate.contact_email = input.contact_email || null;
+  if (input.contact_phone !== undefined) legacyUpdate.contact_phone = input.contact_phone || null;
+  if (input.template_id !== undefined) legacyUpdate.template_id = input.template_id || null;
+  if (Object.keys(legacyUpdate).length > 0) {
+    await supabase.from('vendors').update(legacyUpdate).eq('id', entityId).eq('organization_id', orgId)
+      .then(() => { /* best-effort */ });
+    await supabase.from('tenants').update(legacyUpdate).eq('id', entityId).eq('organization_id', orgId)
+      .then(() => { /* best-effort */ });
+  }
+
   revalidatePath('/dashboard');
   return { success: true };
 }
@@ -141,14 +187,19 @@ export async function updateEntity(entityId: string, input: UpdateEntityInput) {
 /** Soft-archive an entity */
 export async function archiveEntity(entityId: string) {
   const { supabase, orgId } = await getAuthContext();
+  const now = new Date().toISOString();
 
   const { error } = await supabase
     .from('entities')
-    .update({ archived_at: new Date().toISOString() })
+    .update({ archived_at: now })
     .eq('id', entityId)
     .eq('organization_id', orgId);
 
   if (error) throw new Error(error.message);
+
+  // Dual-write to legacy tables
+  await supabase.from('vendors').update({ archived_at: now }).eq('id', entityId).eq('organization_id', orgId).then(() => {});
+  await supabase.from('tenants').update({ archived_at: now }).eq('id', entityId).eq('organization_id', orgId).then(() => {});
 
   revalidatePath('/dashboard');
   return { success: true };
@@ -166,6 +217,10 @@ export async function restoreEntity(entityId: string) {
 
   if (error) throw new Error(error.message);
 
+  // Dual-write to legacy tables
+  await supabase.from('vendors').update({ archived_at: null }).eq('id', entityId).eq('organization_id', orgId).then(() => {});
+  await supabase.from('tenants').update({ archived_at: null }).eq('id', entityId).eq('organization_id', orgId).then(() => {});
+
   revalidatePath('/dashboard');
   return { success: true };
 }
@@ -173,14 +228,19 @@ export async function restoreEntity(entityId: string) {
 /** Soft-delete an entity */
 export async function deleteEntity(entityId: string) {
   const { supabase, orgId } = await getAuthContext();
+  const now = new Date().toISOString();
 
   const { error } = await supabase
     .from('entities')
-    .update({ deleted_at: new Date().toISOString() })
+    .update({ deleted_at: now })
     .eq('id', entityId)
     .eq('organization_id', orgId);
 
   if (error) throw new Error(error.message);
+
+  // Dual-write to legacy tables
+  await supabase.from('vendors').update({ deleted_at: now }).eq('id', entityId).eq('organization_id', orgId).then(() => {});
+  await supabase.from('tenants').update({ deleted_at: now }).eq('id', entityId).eq('organization_id', orgId).then(() => {});
 
   revalidatePath('/dashboard');
   return { success: true };
@@ -197,6 +257,10 @@ export async function permanentlyDeleteEntity(entityId: string) {
     .eq('organization_id', orgId);
 
   if (error) throw new Error(error.message);
+
+  // Dual-write to legacy tables
+  await supabase.from('vendors').delete().eq('id', entityId).eq('organization_id', orgId).then(() => {});
+  await supabase.from('tenants').delete().eq('id', entityId).eq('organization_id', orgId).then(() => {});
 
   revalidatePath('/dashboard');
   return { success: true };
@@ -292,14 +356,19 @@ export async function getEntitiesByOrg(filters?: EntityFilters) {
 /** Archive multiple entities */
 export async function bulkArchiveEntities(entityIds: string[]) {
   const { supabase, orgId } = await getAuthContext();
+  const now = new Date().toISOString();
 
   const { error } = await supabase
     .from('entities')
-    .update({ archived_at: new Date().toISOString() })
+    .update({ archived_at: now })
     .in('id', entityIds)
     .eq('organization_id', orgId);
 
   if (error) throw new Error(error.message);
+
+  // Dual-write to legacy tables
+  await supabase.from('vendors').update({ archived_at: now }).in('id', entityIds).eq('organization_id', orgId).then(() => {});
+  await supabase.from('tenants').update({ archived_at: now }).in('id', entityIds).eq('organization_id', orgId).then(() => {});
 
   revalidatePath('/dashboard');
   return { success: true };
@@ -308,14 +377,19 @@ export async function bulkArchiveEntities(entityIds: string[]) {
 /** Delete multiple entities */
 export async function bulkDeleteEntities(entityIds: string[]) {
   const { supabase, orgId } = await getAuthContext();
+  const now = new Date().toISOString();
 
   const { error } = await supabase
     .from('entities')
-    .update({ deleted_at: new Date().toISOString() })
+    .update({ deleted_at: now })
     .in('id', entityIds)
     .eq('organization_id', orgId);
 
   if (error) throw new Error(error.message);
+
+  // Dual-write to legacy tables
+  await supabase.from('vendors').update({ deleted_at: now }).in('id', entityIds).eq('organization_id', orgId).then(() => {});
+  await supabase.from('tenants').update({ deleted_at: now }).in('id', entityIds).eq('organization_id', orgId).then(() => {});
 
   revalidatePath('/dashboard');
   return { success: true };
@@ -339,6 +413,13 @@ export async function assignTemplateToEntity(
     .eq('organization_id', orgId);
 
   if (error) throw new Error(error.message);
+
+  // Dual-write to legacy tables so runComplianceForEntity can find the template
+  // Try both vendors and tenants — only one will match
+  await supabase.from('vendors').update({ template_id: templateId }).eq('id', entityId).eq('organization_id', orgId)
+    .then(() => { /* best-effort */ });
+  await supabase.from('tenants').update({ template_id: templateId }).eq('id', entityId).eq('organization_id', orgId)
+    .then(() => { /* best-effort */ });
 
   revalidatePath('/dashboard');
   return { success: true };

@@ -139,11 +139,11 @@ export default async function PortalPage({ params }: PortalPageProps) {
   const { data: latestCert } = await supabase
     .from('certificates')
     .select('id')
-    .eq('entity_id', entityId)
+    .or(`entity_id.eq.${entityId},vendor_id.eq.${entityId},tenant_id.eq.${entityId}`)
     .in('processing_status', ['extracted', 'review_confirmed'])
     .order('uploaded_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (latestCert) {
     // Check for expired coverages
