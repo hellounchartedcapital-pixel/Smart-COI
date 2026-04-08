@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: '%s | SmartCOI',
   },
   description:
-    'AI-powered COI compliance tracking for commercial property managers',
+    'AI-powered COI compliance tracking for every industry',
   icons: {
     icon: '/favicon.svg',
   },
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'SmartCOI',
     description:
-      'AI-powered COI compliance tracking for commercial property managers',
+      'AI-powered COI compliance tracking for every industry',
     siteName: 'SmartCOI',
     type: 'website',
   },
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'SmartCOI',
     description:
-      'AI-powered COI compliance tracking for commercial property managers',
+      'AI-powered COI compliance tracking for every industry',
   },
   alternates: {
     types: {

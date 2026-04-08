@@ -1,29 +1,37 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
-import { HeroSection } from '@/components/landing/hero-section';
-import { HowItWorks } from '@/components/landing/how-it-works';
-import { WhoItsFor } from '@/components/landing/who-its-for';
-import { BulkUploadSection } from '@/components/landing/bulk-upload-section';
-import { StatsBar } from '@/components/landing/stats-bar';
-import { FeaturesGrid } from '@/components/landing/features-grid';
-import { TestimonialSection } from '@/components/landing/testimonial-section';
-import { PricingSection } from '@/components/landing/pricing-section';
-import { ResourcesSection } from '@/components/landing/resources-section';
 import { FAQSection } from '@/components/landing/faq-section';
-import { FinalCTA } from '@/components/landing/final-cta';
+import {
+  Building2,
+  HardHat,
+  Truck,
+  Hospital,
+  Factory,
+  Hotel,
+  Store,
+  Briefcase,
+  Upload,
+  Search,
+  Bell,
+  Shield,
+  Users,
+  Layers,
+  Check,
+} from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'SmartCOI: AI-Powered COI Tracking for Property Managers',
+  title: 'SmartCOI — AI-Powered COI Tracking & Compliance',
   description:
-    'Automate certificate of insurance compliance across your portfolio. AI extracts data from COI PDFs, checks compliance, and sends follow-ups automatically.',
+    'Automate certificate of insurance tracking with AI. Upload COIs, verify compliance, and get expiration alerts. Built for property management, construction, logistics, healthcare, and more.',
   alternates: {
     canonical: 'https://smartcoi.io',
   },
   openGraph: {
-    title: 'SmartCOI: AI-Powered COI Tracking for Property Managers',
+    title: 'SmartCOI — AI-Powered COI Tracking & Compliance',
     description:
-      'Automate certificate of insurance compliance across your portfolio. AI extracts data from COI PDFs, checks compliance, and sends follow-ups automatically.',
+      'Automate certificate of insurance tracking with AI. Upload COIs, verify compliance, and get expiration alerts. Built for property management, construction, logistics, healthcare, and more.',
     type: 'website',
     url: 'https://smartcoi.io',
   },
@@ -49,84 +57,49 @@ const jsonLd = {
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
       description:
-        'AI-powered certificate of insurance compliance tracking for commercial property managers.',
+        'AI-powered certificate of insurance compliance tracking for any industry.',
       offers: {
         '@type': 'Offer',
         price: '79',
         priceCurrency: 'USD',
       },
     },
-    {
-      '@type': 'FAQPage',
-      mainEntity: [
-        {
-          '@type': 'Question',
-          name: 'How does the 14-day free trial work?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Sign up with just your email — no credit card required. You get full access to all features on the Starter plan for 14 days. Upload certificates, set up compliance templates, and see your dashboard populate in real time. If you decide SmartCOI is right for you, choose a plan before your trial ends. If not, your account simply deactivates — no charges, no hassle.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'What file formats do you accept?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'SmartCOI accepts PDF files — the standard format for certificates of insurance. You can upload individual files or drag and drop up to 50 PDFs at once using our bulk upload feature.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Can vendors and tenants upload their own COIs?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Yes. Every account includes a self-service portal where vendors and tenants can upload certificates directly through a secure link — no login or account creation required on their end. You can include the portal link in your onboarding emails or compliance notices.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'What happens if I reach my certificate limit?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: "You'll get a notification when you're approaching your plan's limit. You can upgrade to a higher tier at any time — your data and settings carry over instantly. If you're on a trial, the 50-certificate limit gives you plenty of room to evaluate the platform.",
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'How accurate is the AI extraction?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: "SmartCOI's AI is trained specifically on ACORD certificate formats and achieves 99%+ accuracy on standard fields including coverage types, policy limits, expiration dates, carrier names, and named insureds. Every extraction is visible for review, so you always have final say.",
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Can I import data from my current system?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'If you\'re currently tracking COIs in spreadsheets or another tool, the fastest way to migrate is our bulk upload feature — simply upload all your existing certificate PDFs and SmartCOI will extract the data and build your vendor roster automatically. No manual data entry or CSV mapping required.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Is my data secure?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Yes. SmartCOI uses industry-standard encryption for data in transit and at rest, runs on secure cloud infrastructure, and follows best practices for authentication and access control. Your certificate data is never shared with third parties.',
-          },
-        },
-        {
-          '@type': 'Question',
-          name: 'Can I cancel anytime?',
-          acceptedAnswer: {
-            '@type': 'Answer',
-            text: 'Yes. There are no long-term contracts. Monthly plans can be canceled at any time. Annual plans are billed upfront for the year but you can cancel renewal at any time. If you cancel, you retain access through the end of your billing period.',
-          },
-        },
-      ],
-    },
   ],
 };
+
+// ============================================================================
+// Industry data
+// ============================================================================
+
+const INDUSTRIES = [
+  { icon: Building2, name: 'Property Management', desc: 'Track vendor and tenant COIs across your portfolio' },
+  { icon: HardHat, name: 'Construction', desc: 'Verify subcontractor insurance before they step on site' },
+  { icon: Truck, name: 'Logistics', desc: 'Ensure every carrier meets your coverage requirements' },
+  { icon: Hospital, name: 'Healthcare', desc: 'Manage vendor insurance compliance across facilities' },
+  { icon: Factory, name: 'Manufacturing', desc: 'Track supplier insurance and reduce supply chain risk' },
+  { icon: Hotel, name: 'Hospitality', desc: 'Keep vendor compliance current across properties' },
+  { icon: Store, name: 'Retail', desc: 'Verify vendor insurance from delivery to renovation' },
+  { icon: Briefcase, name: 'Other', desc: 'Any business that tracks third-party insurance' },
+];
+
+const FEATURES = [
+  { icon: Search, title: 'AI-Powered Extraction', desc: 'Upload a PDF, get structured data in seconds. No manual data entry.' },
+  { icon: Shield, title: 'Compliance Monitoring', desc: 'Set coverage requirements by type. See gaps instantly when a certificate falls short.' },
+  { icon: Bell, title: 'Expiration Alerts', desc: 'Automated notifications at 60, 30, and 14 days before a coverage lapse.' },
+  { icon: Users, title: 'Self-Service Portal', desc: 'Third parties upload renewed COIs directly through a link. No email chains.' },
+  { icon: Layers, title: 'Industry Templates', desc: 'Pre-built coverage requirements for your industry. Customize as needed.' },
+  { icon: Upload, title: 'Bulk Upload', desc: 'Onboard your entire roster in minutes. Drop 50 PDFs and let the AI do the rest.' },
+];
+
+const PLANS = [
+  { name: 'Starter', monthly: 79, annual: 63, certs: 'Up to 50', highlight: false },
+  { name: 'Growth', monthly: 149, annual: 119, certs: 'Up to 150', highlight: true },
+  { name: 'Professional', monthly: 249, annual: 199, certs: 'Unlimited', highlight: false },
+];
+
+// ============================================================================
+// Page
+// ============================================================================
 
 export default function LandingPage() {
   return (
@@ -138,17 +111,238 @@ export default function LandingPage() {
       <Navbar />
 
       <main>
-        <HeroSection />
-        <HowItWorks />
-        <WhoItsFor />
-        <BulkUploadSection />
-        <StatsBar />
-        <FeaturesGrid />
-        <TestimonialSection />
-        <PricingSection />
+        {/* ================================================================ */}
+        {/* HERO                                                             */}
+        {/* ================================================================ */}
+        <section className="relative overflow-hidden bg-white pt-32 pb-20 sm:pt-40 sm:pb-28">
+          <div className="mx-auto max-w-[1200px] px-6 text-center">
+            <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-[#111827] sm:text-5xl lg:text-[56px] lg:leading-[1.1]">
+              AI-Powered COI Tracking for Every Industry
+            </h1>
+            <p className="mx-auto mt-6 max-w-2xl text-lg text-[#6B7280] sm:text-xl">
+              Upload certificates of insurance, let AI extract the data, track compliance automatically,
+              and get alerted before coverage lapses.
+            </p>
+            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+              <Link
+                href="/signup"
+                className="inline-flex items-center rounded-lg bg-[#73E2A7] px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-[#4CC78A]"
+              >
+                Start Free Trial
+              </Link>
+              <Link
+                href="/#how-it-works"
+                className="inline-flex items-center rounded-lg border border-[#E5E7EB] bg-white px-8 py-3.5 text-base font-medium text-[#374151] transition-colors hover:bg-[#F9FAFB]"
+              >
+                See How It Works
+              </Link>
+            </div>
+            <p className="mt-4 text-sm text-[#9CA3AF]">
+              14-day free trial. No credit card required.
+            </p>
+          </div>
+        </section>
+
+        {/* ================================================================ */}
+        {/* SOCIAL PROOF BAR                                                 */}
+        {/* ================================================================ */}
+        <section className="border-y border-[#F3F4F6] bg-[#FAFAFA] py-6">
+          <div className="mx-auto max-w-[1200px] px-6">
+            <p className="text-center text-sm font-medium text-[#6B7280]">
+              Trusted by property managers, general contractors, logistics companies, and healthcare organizations
+            </p>
+          </div>
+        </section>
+
+        {/* ================================================================ */}
+        {/* INDUSTRIES                                                       */}
+        {/* ================================================================ */}
+        <section className="bg-white py-24 sm:py-32" id="features">
+          <div className="mx-auto max-w-[1200px] px-6">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-[#111827] sm:text-4xl">
+                Built for your industry
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-lg text-[#6B7280]">
+                SmartCOI adapts to how your industry works — from terminology to compliance templates.
+              </p>
+            </div>
+            <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {INDUSTRIES.map((ind) => (
+                <div
+                  key={ind.name}
+                  className="rounded-xl border border-[#E5E7EB] bg-white p-6 transition-colors hover:border-[#D1D5DB]"
+                >
+                  <ind.icon className="h-6 w-6 text-[#9CA3AF]" strokeWidth={1.5} />
+                  <h3 className="mt-4 text-sm font-semibold text-[#111827]">{ind.name}</h3>
+                  <p className="mt-1 text-sm text-[#6B7280]">{ind.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================================ */}
+        {/* HOW IT WORKS                                                     */}
+        {/* ================================================================ */}
+        <section className="bg-[#FAFAFA] py-24 sm:py-32" id="how-it-works">
+          <div className="mx-auto max-w-[1200px] px-6">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-[#111827] sm:text-4xl">
+                How it works
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-lg text-[#6B7280]">
+                Three steps to automated compliance.
+              </p>
+            </div>
+            <div className="mt-16 grid gap-8 sm:grid-cols-3">
+              {[
+                {
+                  step: '1',
+                  title: 'Upload',
+                  desc: 'Drop your COIs — one at a time or in bulk. Our AI reads ACORD 25 forms instantly.',
+                },
+                {
+                  step: '2',
+                  title: 'Track',
+                  desc: 'AI extracts coverages, limits, dates, and named insureds. See compliance status at a glance.',
+                },
+                {
+                  step: '3',
+                  title: 'Stay Compliant',
+                  desc: 'Get alerts before certificates expire. Send renewal requests automatically.',
+                },
+              ].map((s) => (
+                <div key={s.step} className="text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#E8FAF0] text-lg font-bold text-[#111827]">
+                    {s.step}
+                  </div>
+                  <h3 className="mt-5 text-lg font-semibold text-[#111827]">{s.title}</h3>
+                  <p className="mt-2 text-[15px] text-[#6B7280]">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================================ */}
+        {/* FEATURES                                                         */}
+        {/* ================================================================ */}
+        <section className="bg-white py-24 sm:py-32">
+          <div className="mx-auto max-w-[1200px] px-6">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-[#111827] sm:text-4xl">
+                Everything you need to track COI compliance
+              </h2>
+            </div>
+            <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {FEATURES.map((f) => (
+                <div key={f.title} className="rounded-xl border border-[#E5E7EB] bg-white p-6">
+                  <f.icon className="h-6 w-6 text-[#73E2A7]" strokeWidth={1.5} />
+                  <h3 className="mt-4 text-base font-semibold text-[#111827]">{f.title}</h3>
+                  <p className="mt-2 text-sm text-[#6B7280] leading-relaxed">{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================================ */}
+        {/* PRICING                                                          */}
+        {/* ================================================================ */}
+        <section className="bg-[#FAFAFA] py-24 sm:py-32" id="pricing">
+          <div className="mx-auto max-w-[1200px] px-6">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold text-[#111827] sm:text-4xl">
+                Simple, transparent pricing
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-lg text-[#6B7280]">
+                All plans include all features. 14-day free trial, no credit card required.
+              </p>
+            </div>
+            <div className="mt-16 grid gap-6 sm:grid-cols-3 max-w-4xl mx-auto">
+              {PLANS.map((plan) => (
+                <div
+                  key={plan.name}
+                  className={`rounded-xl border bg-white p-8 ${
+                    plan.highlight ? 'border-[#73E2A7] ring-1 ring-[#73E2A7]' : 'border-[#E5E7EB]'
+                  }`}
+                >
+                  {plan.highlight && (
+                    <span className="inline-block rounded-full bg-[#E8FAF0] px-3 py-1 text-xs font-medium text-[#065F46] mb-4">
+                      Most Popular
+                    </span>
+                  )}
+                  <h3 className="text-lg font-semibold text-[#111827]">{plan.name}</h3>
+                  <div className="mt-3">
+                    <span className="text-4xl font-bold text-[#111827]">${plan.annual}</span>
+                    <span className="text-[#6B7280]">/mo</span>
+                  </div>
+                  <p className="mt-1 text-sm text-[#9CA3AF]">
+                    ${plan.monthly}/mo billed monthly
+                  </p>
+                  <ul className="mt-6 space-y-3 text-sm text-[#374151]">
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-[#73E2A7]" />
+                      {plan.certs} certificates
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-[#73E2A7]" />
+                      All features included
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-[#73E2A7]" />
+                      14-day free trial
+                    </li>
+                    {plan.name === 'Professional' && (
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-[#73E2A7]" />
+                        Priority support
+                      </li>
+                    )}
+                  </ul>
+                  <Link
+                    href="/signup"
+                    className={`mt-8 block w-full rounded-lg py-3 text-center text-sm font-semibold transition-colors ${
+                      plan.highlight
+                        ? 'bg-[#73E2A7] text-white hover:bg-[#4CC78A]'
+                        : 'border border-[#E5E7EB] bg-white text-[#374151] hover:bg-[#F9FAFB]'
+                    }`}
+                  >
+                    Start Free Trial
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================================ */}
+        {/* FAQ                                                              */}
+        {/* ================================================================ */}
         <FAQSection />
-        <ResourcesSection />
-        <FinalCTA />
+
+        {/* ================================================================ */}
+        {/* FINAL CTA                                                        */}
+        {/* ================================================================ */}
+        <section className="bg-white py-24 sm:py-32">
+          <div className="mx-auto max-w-[1200px] px-6 text-center">
+            <h2 className="text-3xl font-bold text-[#111827] sm:text-4xl">
+              Ready to automate your COI compliance?
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-lg text-[#6B7280]">
+              Start your 14-day free trial. No credit card required.
+            </p>
+            <div className="mt-8">
+              <Link
+                href="/signup"
+                className="inline-flex items-center rounded-lg bg-[#73E2A7] px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-[#4CC78A]"
+              >
+                Get Started Free
+              </Link>
+            </div>
+          </div>
+        </section>
       </main>
 
       <Footer />
