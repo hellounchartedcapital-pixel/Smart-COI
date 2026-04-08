@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getAllPosts } from '@/lib/blog';
-import { propertyTypes, coverageTypes } from '@/lib/pseo';
+import { propertyTypes, coverageTypes, coverageGuides } from '@/lib/pseo';
 import { verticals } from '@/lib/verticals';
 
 const BASE_URL = 'https://smartcoi.io';
@@ -196,6 +196,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
         priority: 0.5,
       }))
     ),
+    // Insurance requirements — coverage guides
+    ...coverageGuides.map((g) => ({
+      url: `${BASE_URL}/insurance-requirements/coverage/${g.slug}`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
 
     // Utility pages
     {

@@ -1,6 +1,8 @@
 export { propertyTypes } from './property-types';
 export { coverageTypes } from './coverage-types';
+export { coverageGuides, getCoverageGuide } from './coverage-guides';
 export type { PropertyType, CoverageType, NichePage } from './types';
+export type { CoverageGuide, CoverageGuideSection } from './coverage-guides';
 
 import { propertyTypes } from './property-types';
 import { coverageTypes } from './coverage-types';
