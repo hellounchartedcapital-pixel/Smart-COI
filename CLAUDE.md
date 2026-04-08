@@ -262,6 +262,15 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Related resources and internal links to compare pages, features, and compliance guide
 - Target: position improvement from 46 → page 1 for buyer-intent queries
 
+#### SEO: Sitemap Cleanup & Canonical Consolidation (Apr 2026)
+
+- Removed 48 noindexed programmatic pages (`/insurance-requirements/[property]/[coverage]`) from sitemap — these were already noindexed but still in sitemap, sending mixed signals to Google
+- Kept 8 hub pages (`/insurance-requirements/[property]`) and 6 coverage guides (`/insurance-requirements/coverage/[guide]`) in sitemap
+- Added canonical tag `https://smartcoi.io/coi-tracking-software` to `/certificate-of-insurance-tracking` and `/features/coi-tracking` to consolidate ranking signals onto primary money page
+- `/ai-coi-extraction` left independent (different enough content)
+- No pages deleted or redirected — canonical tags only
+- ⚠️ ACTION REQUIRED: Resubmit sitemap in Google Search Console after deployment
+
 #### SEO: COI Expiration Tracking Post Optimization (Apr 2026)
 
 - Optimized `/blog/coi-expiration-tracking-best-practices` for improved CTR (was 0.43% at position 6)

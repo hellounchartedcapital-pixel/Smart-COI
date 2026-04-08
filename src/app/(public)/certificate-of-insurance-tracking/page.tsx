@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     'Automate certificate of insurance tracking with AI extraction and instant compliance checks. Built for commercial property managers. Free 14-day trial.',
   alternates: {
-    canonical: 'https://smartcoi.io/certificate-of-insurance-tracking',
+    canonical: 'https://smartcoi.io/coi-tracking-software',
   },
   openGraph: {
     title: 'Certificate of Insurance Tracking Software | SmartCOI',
