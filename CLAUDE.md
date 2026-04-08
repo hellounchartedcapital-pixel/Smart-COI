@@ -134,6 +134,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Industry-aware AI template recommendations
 - Conditional PM-only features (lease extraction, tenant entity type)
 - Competitive comparison table on landing page ("Why teams switch to SmartCOI" — SmartCOI vs Typical COI Platform, 7 rows, no named competitors)
+- Risk quantification engine — calculates dollar-value exposure gaps per entity and per coverage type, with prioritized action items (`src/lib/compliance/risk-quantification.ts`)
 
 ### Features That DO NOT EXIST (never reference)
 
@@ -153,6 +154,18 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Risk Quantification Engine (Apr 2026)
+
+- Created `src/lib/compliance/risk-quantification.ts` — calculates dollar-value exposure gaps across an organization's entities
+- `quantifyRisk()` function takes an array of `EntityComplianceData` (entity + compliance results + extracted coverages + template requirements) and returns a `RiskQuantificationResult`
+- Per-entity breakdown: each entity's coverage gaps with dollar amounts (e.g., "GL limit is $500K but $1M required — $500K gap"), gap type classification (missing, insufficient, endorsement, unquantifiable)
+- Per-coverage-type breakdown: aggregated by coverage type showing which types have the most gaps across all entities
+- Top 5 priority actions: highest-exposure entities sorted by expired status then dollar exposure, with concise action items and top gap descriptions
+- Summary stats: totalExposureGap, entityCount, nonCompliantCount, expiredCount, expiringIn30/60/90Days, missingEndorsementCount, complianceRate
+- Statutory requirements (e.g., Workers' Comp) flagged as "Missing — unquantifiable risk" with `dollarGap: null`
+- Endorsement-only gaps (Additional Insured, Waiver of Subrogation) tracked separately from limit gaps
+- Calculation-only utility — no UI, no database writes, no PDF generation
 
 #### Landing Page Comparison Table (Apr 2026)
 
