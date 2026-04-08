@@ -166,7 +166,10 @@ SmartCOI now supports 8 industries. Key architectural components:
 - **Expiration Calendar:** Chronological list of all certificates expiring within 90 days with color-coded expired/expiring status
 - **Recommendations:** Top 5 priority actions from risk quantification data with numbered badges, exposure amounts, gap descriptions, and SmartCOI CTA footer
 - Design: white background, emerald (#059669) headers/accents, slate gray text, alternating row shading, page numbers ("Page X of Y"), confidential footer — consulting-firm aesthetic
-- Calculation-only utility — no server action, no UI components, no database writes
+- Calculation-only utility — no UI components, no database writes
+- **Server action:** `src/lib/actions/audit-report.ts` — `generateAuditReportPDF()` server action fetches all active entities with compliance results, extracted coverages, and template requirements; runs `quantifyRisk()` then `generateComplianceAuditReport()`; returns base64-encoded PDF + filename
+- Data pipeline: entities table → latest certificates (via entity_id/vendor_id/tenant_id) → parallel fetch of compliance_results + extracted_coverages + template_coverage_requirements → transform to `EntityComplianceData[]` → `quantifyRisk()` → PDF
+- Logs `audit_report_generated` to activity_log with entity count and compliance rate
 
 #### Risk Quantification Engine (Apr 2026)
 
