@@ -401,6 +401,64 @@ A certificate that shows adequate limits but has an unchecked additional insured
       { slug: 'property-inland-marine', name: 'Property & Inland Marine' },
     ],
   },
+  {
+    slug: 'property-inland-marine',
+    title:
+      'Property & Inland Marine Insurance Requirements for Tenants & Vendors',
+    metaDescription:
+      'Property insurance and inland marine requirements for tenants and vendors. Covers business personal property, builders risk, typical limits, and ACORD 25 verification.',
+    headline:
+      'Property & Inland Marine Insurance Requirements for Tenants & Vendors',
+    intro:
+      'Property insurance and inland marine coverage protect physical assets — equipment, inventory, improvements, and property in transit — rather than liability to third parties. In a COI context, property coverage matters most for tenants who occupy your building and for construction vendors who bring valuable tools and materials on-site. This guide covers tenant property requirements, inland marine and builders risk policies, business interruption coverage, and how to verify property coverage on a certificate.',
+    sections: [
+      {
+        id: 'what-property-covers',
+        title: 'What Property Insurance Covers in a COI Context',
+        content: `In commercial real estate, the landlord's property policy covers the building structure, common areas, and building systems, while the tenant is responsible for insuring their own business personal property — inventory, furniture, equipment, and any improvements or betterments they make to the leased space. When you require property insurance from a tenant on their COI, you are verifying that the tenant can replace their own contents and restore their improvements without making a claim against your building policy. This separation protects the landlord's loss history and ensures tenants can resume operations quickly after a covered loss.`,
+      },
+      {
+        id: 'tenant-property-requirements',
+        title: 'Tenant Property Insurance Requirements',
+        content: `Commercial tenants should carry property insurance covering their business personal property (BPP) — inventory, equipment, fixtures, and tenant improvements — at replacement cost value rather than actual cash value, which deducts depreciation. The appropriate limit depends on the tenant's operations and the value of their contents.
+
+| Tenant Type | Typical BPP Limit | Notes |
+|---|---|---|
+| Retail storefront | $100,000 – $250,000 | Inventory and fixtures; seasonal peaks may require higher limits |
+| Restaurant / food service | $250,000 – $500,000 | Kitchen equipment, refrigeration, and tenant build-out costs |
+| Office tenant | $50,000 – $150,000 | Furniture, computers, and leasehold improvements |
+| Industrial / warehouse | $500,000+ | Machinery, raw materials, and finished goods inventory |
+| Medical / dental office | $250,000 – $500,000 | Specialized equipment with high replacement costs |`,
+      },
+      {
+        id: 'inland-marine-builders-risk',
+        title: 'Inland Marine and Builders Risk',
+        content: `Inland marine insurance covers movable property and equipment that standard property policies often exclude — tools and equipment in transit, property at temporary job sites, and specialized items like contractor tools and electronic data processing equipment. Builders risk insurance is a specialized property policy that covers buildings and materials during construction or renovation, protecting against fire, wind, theft, and vandalism from groundbreaking through project completion. For construction vendors working on your property, require a builders risk policy for the project value and a contractor's tools and equipment floater for their own gear — neither is covered under the vendor's general liability or commercial property policy.`,
+      },
+      {
+        id: 'business-interruption',
+        title: 'Business Interruption Coverage',
+        content: `Business interruption insurance — also called business income coverage — pays a tenant's lost revenue and continuing expenses if a covered property loss forces them to suspend operations. Requiring this coverage from tenants protects both the tenant and the landlord: a tenant who cannot cover their expenses during a shutdown is more likely to default on rent or break their lease. Business interruption coverage is particularly important for anchor tenants in retail and mixed-use properties, where a prolonged vacancy from one major tenant can reduce foot traffic and affect the income of surrounding tenants.`,
+      },
+      {
+        id: 'verify-acord-25',
+        title: 'How to Verify on an ACORD 25',
+        content: `The standard ACORD 25 Certificate of Liability Insurance has limited space for property coverage — it is primarily a liability form, so detailed property and inland marine information often requires a separate ACORD 28 (Evidence of Commercial Property Insurance) or ACORD 27 (Evidence of Property Insurance). When property coverage does appear on the ACORD 25, it is typically listed in the Description of Operations section or in a supplemental section showing the policy number, carrier, limits, and covered perils. Look for whether coverage is written on a blanket basis (a single limit covering all locations and property types) or a scheduled basis (specific limits listed per location or per item) — blanket coverage is generally more flexible but requires an adequate overall limit. Confirm that the policy covers your specific property address and that business personal property and tenant improvements are explicitly included, as some policies may cover contents but exclude betterments unless specifically endorsed.`,
+      },
+      {
+        id: 'disclaimer',
+        title: 'Coverage Recommendations Disclaimer',
+        content: `These coverage recommendations are based on common industry benchmarks and should not be considered insurance advice. Every property has unique risk characteristics, and the appropriate coverage requirements for your vendors and tenants depend on factors including your property type, location, lease terms, and risk tolerance. Consult with your insurance broker or risk management professional to determine appropriate requirements for your specific situation.`,
+      },
+    ],
+    relatedGuides: [
+      { slug: 'general-liability', name: 'General Liability' },
+      { slug: 'workers-compensation', name: 'Workers\' Compensation' },
+      { slug: 'auto-liability', name: 'Auto Liability' },
+      { slug: 'umbrella-excess-liability', name: 'Umbrella & Excess Liability' },
+      { slug: 'professional-liability', name: 'Professional Liability' },
+    ],
+  },
 ];
 
 export function getCoverageGuide(slug: string): CoverageGuide | undefined {
