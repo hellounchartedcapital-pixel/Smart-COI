@@ -271,14 +271,13 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 #### SEO: ACORD 25 Post Upgrade (Apr 2026)
 
-- Expanded `/blog/acord-25-certificate-explained` from ~190 lines to ~300+ lines for deeper content and better rankings
-- Updated meta title to "ACORD 25 Certificate of Insurance Explained (2026 Guide)" and description for SEO
-- Added anchor-linked table of contents below intro
-- Expanded "ACORD 25 vs ACORD 28" section with when-to-request guidance
-- Added new "What Property Managers Need to Check on Every ACORD 25" section (8-point verification)
-- Expanded "Common Mistakes" section with 8 specific liability gaps (entity name errors, blanket AI without endorsement, umbrella gaps)
-- Added FAQ section (5 Q&As) with FAQPage JSON-LD structured data (in blog page component)
-- Added internal links to ACORD 28, Additional Insured, COI compliance, expiration tracking, and COI tracking software pages
+- Fully rewrote `/blog/acord-25-certificate-explained` with new expanded content (~180 lines of MDX) focused on field-by-field reading guide, common mistakes, and automation CTA
+- Updated meta title to "ACORD 25 Certificate of Insurance Explained (2026 Guide)" and description to "Complete guide to the ACORD 25 certificate of liability insurance. Learn how to read every field, verify coverage, spot common mistakes, and automate compliance tracking."
+- openGraph title/description synced via `generateMetadata` (reads from MDX frontmatter)
+- Restructured sections: What Is an ACORD 25, ACORD 25 vs ACORD 28, How to Read (field-by-field with Producer/Insured/Coverage/Certificate Holder/Additional Insured/Description of Operations subsections), 8-point PM verification checklist, 8 common mistakes, SmartCOI automation section
+- Updated FAQ section from 5 Q&As to 6 Q&As with FAQPage JSON-LD structured data (in blog page component): ACORD 25 vs 28, guarantee coverage, update frequency, who issues, additional insured meaning, forgery risk
+- Internal links to ACORD 28, Additional Insured, COI expiration tracking, and COI tracking software pages
+- Date updated to 2026-04-08
 
 #### QA Warning Fixes (Apr 2026)
 

@@ -80,42 +80,50 @@ const faqData: Record<string, any> = {
     mainEntity: [
       {
         '@type': 'Question',
-        name: 'What is an ACORD 25 form?',
+        name: 'What is the difference between an ACORD 25 and an ACORD 28?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'An ACORD 25 is a standardized certificate of liability insurance used to provide proof of insurance coverage. It summarizes a company\'s active insurance policies including general liability, automobile liability, umbrella/excess liability, and workers compensation.',
+          text: 'The ACORD 25 is a certificate of liability insurance covering general liability, auto liability, umbrella, and workers\' compensation. The ACORD 28 is evidence of commercial property insurance covering the building and its contents. You\'d request an ACORD 25 from a vendor or contractor and an ACORD 28 from a tenant or for your own property coverage.',
         },
       },
       {
         '@type': 'Question',
-        name: 'What is the difference between ACORD 25 and ACORD 28?',
+        name: 'Does an ACORD 25 certificate guarantee coverage?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'ACORD 25 covers liability insurance (general liability, auto, workers comp, umbrella). ACORD 28 covers commercial property insurance. Property managers typically need ACORD 25 from vendors and contractors, and ACORD 28 from tenants.',
+          text: 'No. An ACORD 25 is a snapshot showing coverage existed when the certificate was issued. It does not modify, extend, or guarantee the underlying insurance policy. Coverage can be cancelled or changed after the certificate is issued without the certificate holder being notified, unless specific endorsements require notice of cancellation.',
         },
       },
       {
         '@type': 'Question',
-        name: 'Who fills out an ACORD 25?',
+        name: 'How often should ACORD 25 certificates be updated?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'The insurance agent or broker fills out the ACORD 25 on behalf of the insured party. The insured (vendor, contractor, or tenant) requests it from their agent, who then issues the certificate to the requesting party.',
+          text: 'Certificates should be renewed annually at minimum, aligned with the underlying policy renewal dates. Best practice is to request updated certificates 30 days before expiration and track compliance continuously rather than relying on annual spot-checks.',
         },
       },
       {
         '@type': 'Question',
-        name: 'Does an ACORD 25 expire?',
+        name: 'Who issues an ACORD 25 certificate?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'The certificate itself doesn\'t technically expire, but the insurance policies listed on it have expiration dates. Once any listed policy expires, the certificate no longer provides evidence of current coverage and a new certificate should be requested.',
+          text: 'ACORD 25 certificates are issued by licensed insurance agents and brokers — not by the insured party. If a vendor sends you a certificate they created themselves, it should be considered unreliable. Always verify that the producer listed on the certificate is a legitimate, licensed agent or broker.',
         },
       },
       {
         '@type': 'Question',
-        name: 'What should a certificate holder look for on an ACORD 25?',
+        name: 'What does "additional insured" mean on an ACORD 25?',
         acceptedAnswer: {
           '@type': 'Answer',
-          text: 'Verify that coverage types and limits meet your requirements, policy dates are current, your entity is named as both Certificate Holder and Additional Insured, required endorsements are referenced, and the property address appears in the Description of Operations.',
+          text: 'Additional insured status means your organization is added to the vendor\'s liability policy, giving you coverage under their policy for claims arising from their work. On the ACORD 25, this is indicated by a checkbox in the CGL section and endorsement language in the description section. The actual protection comes from the endorsement (such as CG 20 10 or CG 20 37), not from the checkbox alone.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Can an ACORD 25 be forged?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yes. Because the ACORD 25 template is freely available, fraudulent certificates can be created with basic PDF editing tools. This is why verifying that certificates come from licensed producers — and cross-checking policy details with the carrier when in doubt — is important for any compliance program.',
         },
       },
     ],
