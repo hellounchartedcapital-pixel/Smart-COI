@@ -127,15 +127,15 @@ function generatePDFHtml(data: ComplianceReportData): string {
     </div>
   </div>
 
-  <!-- Portfolio Summary -->
+  <!-- Compliance Summary -->
   <div style="display:flex;gap:16px;margin-bottom:32px;">
     <div style="flex:1;background:#f8fafc;border-radius:8px;padding:16px;text-align:center;">
       <p style="font-size:28px;font-weight:700;color:#0f172a;margin:0;">${data.totalProperties}</p>
-      <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Properties</p>
+      <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Locations</p>
     </div>
     <div style="flex:1;background:#f8fafc;border-radius:8px;padding:16px;text-align:center;">
       <p style="font-size:28px;font-weight:700;color:#0f172a;margin:0;">${data.totalVendors}</p>
-      <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Vendors</p>
+      <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Entities</p>
     </div>
     <div style="flex:1;background:#f8fafc;border-radius:8px;padding:16px;text-align:center;">
       <p style="font-size:28px;font-weight:700;color:#0f172a;margin:0;">${data.totalTenants}</p>

@@ -42,15 +42,15 @@ const STEPS: TourStep[] = [
   },
   {
     target: 'portfolio-snapshot',
-    title: 'Portfolio Snapshot',
+    title: 'Compliance Overview',
     description:
-      'A quick summary of your portfolio — total properties, vendors, tenants, your compliance score, and upcoming expirations.',
+      'A summary of your compliance status — total entities, compliance rate, and upcoming expirations.',
   },
   {
     target: 'sidebar-nav',
     title: 'Navigation',
     description:
-      'Manage your properties and vendors, set up insurance requirement templates, and configure compliance notifications from here.',
+      'Manage your locations and entities, set up requirement templates, and configure notifications from here.',
   },
 ];
 

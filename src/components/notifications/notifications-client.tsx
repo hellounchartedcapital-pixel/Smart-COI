@@ -87,7 +87,7 @@ export function NotificationsClient({
           Notifications
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          View and manage compliance notifications sent to vendors and tenants.
+          View and manage compliance notifications.
         </p>
       </div>
 

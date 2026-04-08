@@ -155,7 +155,8 @@ export function TemplatesListClient({
             Requirement Templates
           </h1>
           <p className="text-sm text-muted-foreground">
-            Manage insurance requirement templates for vendors and tenants.
+            Manage insurance requirement templates{terminology.hasTenants ? ` for ${terminology.entityPlural.toLowerCase()} and ${terminology.tenantPlural?.toLowerCase()}` : ''}.
+
           </p>
         </div>
         <div className="flex gap-2">

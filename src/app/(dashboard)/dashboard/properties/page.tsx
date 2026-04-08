@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AddPropertyButton } from '@/components/properties/add-property-button';
+import { getServerTerminology } from '@/lib/terminology-server';
 import type { PropertyType } from '@/types';
 
 const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
@@ -104,6 +105,7 @@ export default async function PropertiesPage() {
 
   if (!profile?.organization_id) redirect('/login');
   const orgId = profile.organization_id;
+  const terms = await getServerTerminology(orgId);
 
   // Fetch properties, default entities, and all vendor/tenant statuses in parallel
   const [{ data: defaultEntities }, { data: properties }] = await Promise.all([
@@ -187,11 +189,11 @@ export default async function PropertiesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-            Properties
+          <h1 className="text-[30px] font-bold text-[#111827]">
+            {terms.locationPlural}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Manage your properties and track compliance.
+          <p className="mt-1 text-sm text-[#6B7280]">
+            Manage your {terms.locationPlural.toLowerCase()} and track compliance.
           </p>
         </div>
         <AddPropertyButton
@@ -220,10 +222,10 @@ export default async function PropertiesPage() {
               </svg>
             </div>
             <p className="text-sm font-medium text-foreground">
-              No properties yet
+              No {terms.locationPlural.toLowerCase()} yet
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Add your first property to start tracking compliance.
+              Add your first {terms.location.toLowerCase()} to start tracking compliance.
             </p>
             <div className="mt-6">
               <AddPropertyButton
