@@ -342,6 +342,65 @@ A certificate that shows adequate limits but has an unchecked additional insured
       { slug: 'property-inland-marine', name: 'Property & Inland Marine' },
     ],
   },
+  {
+    slug: 'professional-liability',
+    title:
+      'Professional Liability (E&O) Insurance Requirements',
+    metaDescription:
+      'Which vendors need professional liability insurance and what limits to require. Covers E&O vs general liability, claims-made policies, tail coverage, and verification.',
+    headline:
+      'Professional Liability (E&O) Insurance Requirements',
+    intro:
+      'Professional liability insurance — also called errors and omissions (E&O) — covers claims arising from a vendor\'s professional services, advice, or designs rather than from physical work or bodily injury. General liability does not cover these risks, which means vendors who provide intellectual or advisory services need a separate professional liability policy. This guide covers which vendors need E&O, how claims-made policies differ from occurrence-based coverage, when cyber liability applies, and how to verify professional liability on a certificate.',
+    sections: [
+      {
+        id: 'what-pl-covers',
+        title: 'What Professional Liability Covers',
+        content: `Professional liability insurance covers financial losses that a third party suffers due to the insured's errors, omissions, or negligent performance of professional services. This includes design defects by an architect, faulty advice from a consultant, missed deadlines that cause financial harm, and software failures from an IT vendor. General liability explicitly excludes these "professional services" claims — GL covers bodily injury and property damage, not economic loss from bad work — so vendors providing advisory, design, or technology services need both policies to be fully covered.`,
+      },
+      {
+        id: 'which-vendors',
+        title: 'Which Vendor Types Need It',
+        content: `Any vendor whose primary deliverable is a service, design, recommendation, or technology product rather than physical labor should carry professional liability coverage. The limits you require should reflect the potential financial impact of a professional failure on your property or operations.
+
+| Profession | Typical Limit | Notes |
+|---|---|---|
+| Architects & engineers | $1,000,000 – $2,000,000 | Design defects can cause extensive property damage claims |
+| IT & technology vendors | $1,000,000 – $2,000,000 | Software failures, data loss, system downtime |
+| Consultants & advisors | $1,000,000 | Financial advice, management consulting, environmental consulting |
+| Accountants & auditors | $1,000,000 – $2,000,000 | Errors in financial reporting or tax filings |
+| Property management firms | $1,000,000 – $3,000,000 | Fiduciary duty to owners, tenant disputes, regulatory compliance |
+| Real estate appraisers | $1,000,000 | Valuation errors affecting transactions or financing |`,
+      },
+      {
+        id: 'claims-made-vs-occurrence',
+        title: 'Claims-Made vs Occurrence',
+        content: `Professional liability policies are almost always written on a claims-made basis, which means the policy only covers claims that are filed during the active policy period — not claims filed later for incidents that happened while the policy was in force. This is a critical distinction from occurrence-based GL policies, which cover any incident that occurred during the policy period regardless of when the claim is filed. Every claims-made policy has a retroactive date, and only claims arising from incidents that occurred after that retroactive date are covered — a vendor who switched carriers and received a new retroactive date may have a gap in coverage for prior work. When a vendor cancels or does not renew a claims-made policy, they should purchase an extended reporting period (commonly called "tail coverage") to cover claims filed after cancellation for work performed during the policy period.`,
+      },
+      {
+        id: 'cyber-liability',
+        title: 'Cyber Liability',
+        content: `Cyber liability insurance is related to but separate from professional liability — it covers data breaches, ransomware attacks, regulatory fines, and notification costs arising from a security incident. Require cyber liability from any vendor that accesses, stores, or processes sensitive data on your behalf, including IT service providers, property management software vendors, and any vendor with access to tenant personal information or financial records. For healthcare properties or vendors handling protected health information, cyber coverage should include HIPAA regulatory defense and penalty coverage, as breach notification and remediation costs alone can exceed $1M for a single incident.`,
+      },
+      {
+        id: 'verify-acord-25',
+        title: 'How to Verify on an ACORD 25',
+        content: `Professional liability does not have a dedicated section on the standard ACORD 25 form, so it is often evidenced on a separate certificate or listed in the Description of Operations section at the bottom of the ACORD 25. When it does appear, check whether the policy is marked "CLAIMS-MADE" or "OCCUR" — for professional liability, claims-made is standard, and an occurrence-based policy would be unusual. Verify the retroactive date listed on the certificate and confirm it predates the start of the vendor's work on your property — a retroactive date that postdates prior work creates a coverage gap for claims arising from that earlier period. Confirm that both the per-claim limit and the aggregate limit meet your requirements, and note the policy expiration date so you can follow up on renewal and verify that no gap in coverage occurs between policy periods.`,
+      },
+      {
+        id: 'disclaimer',
+        title: 'Coverage Recommendations Disclaimer',
+        content: `These coverage recommendations are based on common industry benchmarks and should not be considered insurance advice. Every property has unique risk characteristics, and the appropriate coverage requirements for your vendors and tenants depend on factors including your property type, location, lease terms, and risk tolerance. Consult with your insurance broker or risk management professional to determine appropriate requirements for your specific situation.`,
+      },
+    ],
+    relatedGuides: [
+      { slug: 'general-liability', name: 'General Liability' },
+      { slug: 'workers-compensation', name: 'Workers\' Compensation' },
+      { slug: 'auto-liability', name: 'Auto Liability' },
+      { slug: 'umbrella-excess-liability', name: 'Umbrella & Excess Liability' },
+      { slug: 'property-inland-marine', name: 'Property & Inland Marine' },
+    ],
+  },
 ];
 
 export function getCoverageGuide(slug: string): CoverageGuide | undefined {
