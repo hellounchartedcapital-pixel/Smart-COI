@@ -124,6 +124,42 @@ export default async function PropertyInsuranceHubPage({ params }: PageProps) {
           </div>
         </section>
 
+        {/* Compliance Challenges */}
+        {pt.complianceChallenges && (
+          <section className="mx-auto max-w-4xl px-6 mt-16">
+            <h2 className="text-2xl font-bold text-slate-900">
+              Compliance Challenges for {pt.plural}
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-gray-700">
+              {pt.complianceChallenges}
+            </p>
+          </section>
+        )}
+
+        {/* Common Coverage Gaps */}
+        {pt.commonCoverageGaps && (
+          <section className="mx-auto max-w-4xl px-6 mt-16">
+            <h2 className="text-2xl font-bold text-slate-900">
+              Common Coverage Gaps in {pt.plural}
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-gray-700">
+              {pt.commonCoverageGaps}
+            </p>
+          </section>
+        )}
+
+        {/* How SmartCOI Helps */}
+        {pt.howSmartCOIHelps && (
+          <section className="mx-auto max-w-4xl px-6 mt-16">
+            <h2 className="text-2xl font-bold text-slate-900">
+              How SmartCOI Helps {pt.name} Managers
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-gray-700">
+              {pt.howSmartCOIHelps}
+            </p>
+          </section>
+        )}
+
         {/* Related Resources */}
         <section className="mx-auto max-w-4xl px-6 mt-16">
           <h2 className="text-xl font-bold text-slate-900">Related Resources</h2>
