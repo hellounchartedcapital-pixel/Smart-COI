@@ -37,18 +37,18 @@ export default async function OnboardingLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-white">
       {/* Header with logo */}
-      <header className="flex items-center justify-center border-b border-slate-200 bg-white px-6 py-4">
+      <header className="flex items-center justify-center border-b border-[#F3F4F6] px-6 py-5">
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-icon.svg" alt="SmartCOI" className="h-8 w-8" />
-          <span className="text-lg font-bold text-foreground">SmartCOI</span>
+          <img src="/logo-icon.svg" alt="SmartCOI" className="h-7 w-7" />
+          <span className="text-base font-bold text-[#111827]">SmartCOI</span>
         </div>
       </header>
 
-      {/* Centered content */}
-      <main className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+      {/* Centered content — max-width 600px for focused experience */}
+      <main className="mx-auto max-w-[600px] px-4 py-10 sm:px-6 sm:py-14">
         {children}
       </main>
     </div>

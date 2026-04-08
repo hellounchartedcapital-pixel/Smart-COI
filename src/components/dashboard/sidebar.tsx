@@ -115,22 +115,22 @@ function TrialIndicator({ trialDaysLeft, plan, collapsed }: TrialIndicatorProps)
   }
 
   return (
-    <div className="mx-3 my-3 rounded-xl border border-emerald-100 bg-emerald-50/50 px-3 py-3">
-      <p className="text-[11px] font-semibold text-emerald-800">Free trial</p>
-      <p className="mt-0.5 text-[11px] text-emerald-600">
+    <div className="mx-3 my-3 rounded-lg border border-[#E5E7EB] bg-white px-3 py-3">
+      <p className="text-[11px] font-medium text-[#111827]">Free trial</p>
+      <p className="mt-0.5 text-[11px] text-[#6B7280]">
         {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} left
       </p>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-emerald-100">
+      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#F3F4F6]">
         <div
-          className="h-full rounded-full bg-emerald-500 transition-all"
+          className="h-full rounded-full bg-brand transition-all"
           style={{ width: `${progress}%` }}
         />
       </div>
       <Link
         href="/dashboard/settings/billing"
-        className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900"
+        className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-brand-dark hover:text-[#111827]"
       >
-        Upgrade now
+        Upgrade
         <ChevronRight className="h-3 w-3" />
       </Link>
     </div>
@@ -210,26 +210,25 @@ export function DashboardShell({
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 flex h-full flex-col bg-white transition-all duration-200 ease-in-out',
-          // Subtle right shadow instead of hard border
-          'shadow-[1px_0_0_0_rgba(0,0,0,0.06)]',
+          'fixed top-0 left-0 z-50 flex h-full flex-col bg-[#FAFAFA] transition-all duration-200 ease-in-out',
+          'border-r border-[#E5E7EB]',
           'md:relative md:z-auto',
           mobileOpen
-            ? 'w-64 translate-x-0'
+            ? 'w-60 translate-x-0'
             : '-translate-x-full md:translate-x-0',
-          collapsed ? 'md:w-[68px]' : 'md:w-[260px]'
+          collapsed ? 'md:w-[68px]' : 'md:w-[240px]'
         )}
       >
         {/* Logo & org */}
         <div className={cn(
-          'flex items-center gap-3 px-5 py-5',
+          'flex items-center gap-3 px-4 py-5',
           collapsed ? 'md:justify-center md:px-0' : ''
         )}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo-icon.svg"
             alt="SmartCOI"
-            className="h-8 w-8 flex-shrink-0"
+            className="h-7 w-7 flex-shrink-0"
           />
           <div
             className={cn(
@@ -237,10 +236,10 @@ export function DashboardShell({
               collapsed ? 'md:hidden' : ''
             )}
           >
-            <p className="truncate text-[15px] font-bold text-slate-900 tracking-tight">
+            <p className="truncate text-sm font-bold text-[#111827] tracking-tight">
               SmartCOI
             </p>
-            <p className="truncate text-[11px] text-slate-400 mt-0.5">{orgName}</p>
+            <p className="truncate text-[11px] text-[#9CA3AF] mt-0.5">{orgName}</p>
           </div>
 
           {/* Mobile close button */}
@@ -254,13 +253,13 @@ export function DashboardShell({
         </div>
 
         {/* Navigation groups */}
-        <nav className="flex-1 overflow-y-auto px-3 pb-4 pt-2">
+        <nav className="flex-1 overflow-y-auto px-3 pb-4 pt-1">
           {navGroups.map((group, gi) => (
-            <div key={group.title} className={cn(gi > 0 ? 'mt-6' : '')} {...(group.title === 'COMPLIANCE' ? { 'data-tour': 'sidebar-nav' } : {})}>
+            <div key={group.title} className={cn(gi > 0 ? 'mt-5' : '')} {...(group.title === 'COMPLIANCE' ? { 'data-tour': 'sidebar-nav' } : {})}>
               {/* Group label */}
               <div
                 className={cn(
-                  'mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400',
+                  'mb-1.5 px-3 text-[11px] font-medium uppercase tracking-[0.05em] text-[#9CA3AF]',
                   collapsed ? 'md:hidden' : ''
                 )}
               >
@@ -288,26 +287,26 @@ export function DashboardShell({
                         href={item.href}
                         data-tour={item.tutorialId ?? undefined}
                         className={cn(
-                          'group relative flex h-10 items-center gap-3 rounded-lg text-[13px] font-medium transition-colors',
+                          'group relative flex h-9 items-center gap-3 rounded-lg text-sm transition-colors',
                           collapsed ? 'md:justify-center md:px-0' : 'px-3',
                           isActive
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            ? 'bg-[#E8FAF0] font-semibold text-[#111827]'
+                            : 'font-medium text-[#374151] hover:bg-[#F3F4F6] hover:text-[#111827]'
                         )}
                         title={collapsed ? item.label : undefined}
                       >
                         {/* Active indicator bar */}
                         {isActive && (
-                          <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-emerald-500" />
+                          <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-brand" />
                         )}
                         <Icon
                           className={cn(
                             'h-[18px] w-[18px] flex-shrink-0',
                             isActive
-                              ? 'text-emerald-600'
-                              : 'text-slate-400 group-hover:text-slate-500'
+                              ? 'text-brand-dark'
+                              : 'text-[#9CA3AF] group-hover:text-[#6B7280]'
                           )}
-                          strokeWidth={isActive ? 2 : 1.75}
+                          strokeWidth={1.75}
                         />
                         <span
                           className={cn(
@@ -330,7 +329,7 @@ export function DashboardShell({
         <TrialIndicator trialDaysLeft={trialDaysLeft ?? null} plan={plan ?? ''} collapsed={collapsed} />
 
         {/* Bottom section — user info + sign out */}
-        <div className="border-t border-slate-100 p-3">
+        <div className="border-t border-[#E5E7EB] p-3">
           <div
             className={cn(
               'flex items-center gap-3 rounded-lg px-2 py-2',
@@ -338,7 +337,7 @@ export function DashboardShell({
             )}
           >
             {/* Avatar */}
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[11px] font-bold text-emerald-700">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[#E8FAF0] text-[11px] font-semibold text-brand-dark">
               {initials}
             </div>
             <div
@@ -347,16 +346,16 @@ export function DashboardShell({
                 collapsed ? 'md:hidden' : ''
               )}
             >
-              <p className="truncate text-[13px] font-medium text-slate-900">
+              <p className="truncate text-[13px] font-medium text-[#111827]">
                 {userName ?? 'User'}
               </p>
-              <p className="truncate text-[11px] text-slate-400">{userEmail}</p>
+              <p className="truncate text-[11px] text-[#9CA3AF]">{userEmail}</p>
             </div>
           </div>
           <button
             onClick={() => signOut()}
             className={cn(
-              'mt-1 flex h-9 w-full items-center gap-3 rounded-lg px-3 text-[13px] font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700',
+              'mt-1 flex h-9 w-full items-center gap-3 rounded-lg px-3 text-[13px] font-medium text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827]',
               collapsed && 'md:justify-center md:px-0'
             )}
             title={collapsed ? 'Sign out' : undefined}
@@ -374,7 +373,7 @@ export function DashboardShell({
         </div>
 
         {/* Desktop collapse toggle */}
-        <div className="hidden border-t border-slate-100 md:block">
+        <div className="hidden border-t border-[#E5E7EB] md:block">
           <button
             onClick={toggleCollapsed}
             className="flex h-10 w-full items-center justify-center text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-500"
@@ -392,22 +391,22 @@ export function DashboardShell({
       {/* Main area (header + content) */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="sticky top-0 z-20 flex h-14 items-center border-b border-slate-100 bg-white/90 px-6 backdrop-blur-sm md:px-8">
+        <header className="sticky top-0 z-20 flex h-14 items-center border-b border-[#F3F4F6] bg-white px-6 md:px-8">
           <button
             onClick={() => setMobileOpen(true)}
-            className="mr-3 rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 md:hidden"
+            className="mr-3 rounded-lg p-1.5 text-[#9CA3AF] hover:bg-[#F3F4F6] md:hidden"
             aria-label="Open menu"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <h1 className="text-[15px] font-semibold text-slate-900">{pageTitle}</h1>
+          <h1 className="text-sm font-semibold text-[#111827]">{pageTitle}</h1>
         </header>
 
         {/* Trial / plan banner */}
         {topBanner}
 
         {/* Scrollable content */}
-        <main className="flex-1 overflow-y-auto bg-slate-50/50 p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto bg-white p-6 md:p-8">
           {children}
         </main>
       </div>
