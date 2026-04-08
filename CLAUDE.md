@@ -84,7 +84,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Needs Your Attention section capped at 5 items with "Show all [X] items" expansion, per-item Request COI and Upload COI buttons
 - Recent Activity feed limited to 8 items with "View all activity >" link
 - Single Upload COI button in dashboard header (no Bulk Upload button)
-- Export Report button (PDF via browser print, CSV download) for compliance reports
+- Export Report button (PDF via browser print, CSV download, Compliance Audit PDF) for compliance reports
 - 6-step interactive dashboard tour with data-tour attributes, light tooltip style
 - Properties / vendors / tenants CRUD with compliance tracking
 - Certificate holder and additional insured fields on property creation
@@ -170,6 +170,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - **Server action:** `src/lib/actions/audit-report.ts` — `generateAuditReportPDF()` server action fetches all active entities with compliance results, extracted coverages, and template requirements; runs `quantifyRisk()` then `generateComplianceAuditReport()`; returns base64-encoded PDF + filename
 - Data pipeline: entities table → latest certificates (via entity_id/vendor_id/tenant_id) → parallel fetch of compliance_results + extracted_coverages + template_coverage_requirements → transform to `EntityComplianceData[]` → `quantifyRisk()` → PDF
 - Logs `audit_report_generated` to activity_log with entity count and compliance rate
+- **Dashboard UI:** Added "Compliance Audit" option to Export Report dropdown in `src/components/dashboard/export-report-button.tsx` — separated from existing PDF/CSV options by a divider, uses emerald ShieldCheck icon, shows "Generating audit report..." loading state, downloads PDF directly (no print dialog), success/error toasts
 
 #### Risk Quantification Engine (Apr 2026)
 

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { FileDown, FileText, Table } from 'lucide-react';
+import { FileDown, FileText, Table, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { generateComplianceCSV, getComplianceReportData } from '@/lib/actions/reports';
+import { generateAuditReportPDF } from '@/lib/actions/audit-report';
 import { useTerminology } from '@/hooks/useTerminology';
 import type { ComplianceReportData } from '@/lib/actions/reports';
 
@@ -189,7 +190,7 @@ function generatePDFHtml(data: ComplianceReportData, entityLabel: string, tenant
 
 export function ExportReportButton() {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState<'pdf' | 'csv' | null>(null);
+  const [loading, setLoading] = useState<'pdf' | 'csv' | 'audit' | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { terminology: terms } = useTerminology();
 
@@ -241,6 +242,33 @@ export function ExportReportButton() {
     }
   };
 
+  const handleAuditReport = async () => {
+    setLoading('audit');
+    setOpen(false);
+    try {
+      const result = await generateAuditReportPDF();
+      if ('error' in result) {
+        toast.error(result.error);
+        return;
+      }
+      const bytes = Uint8Array.from(atob(result.pdf), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Compliance audit report downloaded');
+    } catch {
+      toast.error('Failed to generate audit report');
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const loadingText = loading === 'audit' ? 'Generating audit report...' : 'Generating...';
+
   return (
     <div className="relative" ref={dropdownRef}>
       <Button
@@ -251,7 +279,7 @@ export function ExportReportButton() {
         disabled={loading !== null}
       >
         <FileDown className="mr-2 h-4 w-4" />
-        {loading ? 'Generating...' : 'Export Report'}
+        {loading ? loadingText : 'Export Report'}
       </Button>
       {open && (
         <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-lg border border-slate-200 bg-white shadow-lg py-1">
@@ -268,6 +296,14 @@ export function ExportReportButton() {
           >
             <Table className="h-4 w-4 text-slate-400" />
             Export as CSV
+          </button>
+          <div className="my-1 border-t border-slate-100" />
+          <button
+            className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+            onClick={handleAuditReport}
+          >
+            <ShieldCheck className="h-4 w-4 text-emerald-500" />
+            Compliance Audit
           </button>
         </div>
       )}
