@@ -33,6 +33,7 @@ import {
   RefreshCw,
   RotateCcw,
 } from 'lucide-react';
+import { useTerminology } from '@/hooks/useTerminology';
 import type { ComplianceWaiver } from '@/lib/actions/waivers';
 import type {
   Tenant,
@@ -82,6 +83,7 @@ export function TenantDetailClient({
 }: TenantDetailClientProps) {
   const router = useRouter();
   const { showUpgradeModal } = useUpgradeModal();
+  const { terminology: terms } = useTerminology();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [hardDeleteOpen, setHardDeleteOpen] = useState(false);
@@ -137,10 +139,10 @@ export function TenantDetailClient({
     setDeleting(true);
     try {
       await softDeleteTenant(tenant.id, tenant.property_id);
-      toast.success('Tenant archived');
+      toast.success(`${terms.tenant ?? 'Tenant'} archived`);
       router.push(`/dashboard/properties/${tenant.property_id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to archive tenant');
+      toast.error(err instanceof Error ? err.message : `Failed to archive ${(terms.tenant ?? 'tenant').toLowerCase()}`);
     } finally {
       setDeleting(false);
       setDeleteOpen(false);
@@ -153,10 +155,10 @@ export function TenantDetailClient({
     try {
       const { permanentlyDeleteTenant } = await import('@/lib/actions/properties');
       await permanentlyDeleteTenant(tenant.id, tenant.property_id);
-      toast.success('Tenant deleted');
+      toast.success(`${terms.tenant ?? 'Tenant'} deleted`);
       router.push(`/dashboard/properties/${tenant.property_id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete tenant');
+      toast.error(err instanceof Error ? err.message : `Failed to delete ${(terms.tenant ?? 'tenant').toLowerCase()}`);
     } finally {
       setDeleting(false);
       setHardDeleteOpen(false);
@@ -229,7 +231,7 @@ export function TenantDetailClient({
             <span>/</span>
           </>
         )}
-        <span className="text-foreground">Tenants</span>
+        <span className="text-foreground">{terms.tenantPlural ?? 'Tenants'}</span>
         <span>/</span>
         <span className="text-foreground font-medium max-w-[40ch] truncate inline-block align-bottom" title={tenant.company_name}>{tenant.company_name}</span>
       </div>
@@ -248,8 +250,8 @@ export function TenantDetailClient({
             <div>
               <p className="text-sm font-semibold text-red-800">
                 {summary.singleLine
-                  ? `This tenant\u2019s certificate has expired. ${summary.singleLine}.`
-                  : `This tenant\u2019s certificate has expired coverage (${summary.expiredCount} of ${summary.totalCount}). An updated certificate is required.`}
+                  ? `This ${(terms.tenant ?? 'tenant').toLowerCase()}\u2019s certificate has expired. ${summary.singleLine}.`
+                  : `This ${(terms.tenant ?? 'tenant').toLowerCase()}\u2019s certificate has expired coverage (${summary.expiredCount} of ${summary.totalCount}). An updated certificate is required.`}
               </p>
               {!summary.allSameDate && summary.groupedLines.length > 0 && (
                 <p className="mt-1 text-sm text-red-700">
@@ -295,7 +297,7 @@ export function TenantDetailClient({
               </div>
               <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
                 <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                Edit Tenant
+                Edit {terms.tenant ?? 'Tenant'}
               </Button>
             </div>
             {(tenant.tenant_type || tenant.unit_suite) && (
@@ -448,7 +450,7 @@ export function TenantDetailClient({
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title="Archive Tenant"
+        title={`Archive ${terms.tenant ?? 'Tenant'}`}
         description={`Archive ${tenant.company_name}? They won't appear in your active lists or compliance calculations, but their data and history will be preserved. You can restore them anytime.`}
         confirmLabel="Archive"
         destructive={false}
@@ -458,7 +460,7 @@ export function TenantDetailClient({
       <ConfirmDialog
         open={hardDeleteOpen}
         onOpenChange={setHardDeleteOpen}
-        title="Delete Tenant"
+        title={`Delete ${terms.tenant ?? 'Tenant'}`}
         description={`Permanently delete ${tenant.company_name}? This will remove all their certificates, compliance data, and history. This action cannot be undone.`}
         confirmLabel="Delete"
         destructive

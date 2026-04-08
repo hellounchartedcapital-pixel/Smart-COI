@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { updateVendor } from '@/lib/actions/properties';
 import { toast } from 'sonner';
+import { useTerminology } from '@/hooks/useTerminology';
 import type { Vendor, RequirementTemplate } from '@/types';
 
 const VENDOR_TYPE_SUGGESTIONS = [
@@ -44,6 +45,7 @@ export function EditVendorDialog({
   onArchive,
   onDelete,
 }: EditVendorDialogProps) {
+  const { terminology: terms } = useTerminology();
   const [saving, setSaving] = useState(false);
   const [companyName, setCompanyName] = useState(vendor.company_name);
   const [contactName, setContactName] = useState(vendor.contact_name ?? '');
@@ -68,10 +70,10 @@ export function EditVendorDialog({
         vendor_type: vendorType.trim() || undefined,
         template_id: templateId || undefined,
       });
-      toast.success('Vendor updated');
+      toast.success(`${terms.entity} updated`);
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update vendor');
+      toast.error(err instanceof Error ? err.message : `Failed to update ${terms.entity.toLowerCase()}`);
     } finally {
       setSaving(false);
     }
@@ -85,8 +87,8 @@ export function EditVendorDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit Vendor</DialogTitle>
-          <DialogDescription>Update vendor details and template assignment.</DialogDescription>
+          <DialogTitle>Edit {terms.entity}</DialogTitle>
+          <DialogDescription>Update {terms.entity.toLowerCase()} details and template assignment.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -109,7 +111,7 @@ export function EditVendorDialog({
               <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} />
             </div>
             <div className="relative space-y-2">
-              <Label>Vendor type</Label>
+              <Label>{terms.entity} type</Label>
               <Input
                 value={vendorType}
                 onChange={(e) => { setVendorType(e.target.value); setShowSuggestions(true); }}

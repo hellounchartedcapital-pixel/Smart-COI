@@ -33,6 +33,7 @@ import {
   RefreshCw,
   RotateCcw,
 } from 'lucide-react';
+import { useTerminology } from '@/hooks/useTerminology';
 import type { ComplianceWaiver } from '@/lib/actions/waivers';
 import type {
   Vendor,
@@ -82,6 +83,7 @@ export function VendorDetailClient({
 }: VendorDetailClientProps) {
   const router = useRouter();
   const { showUpgradeModal } = useUpgradeModal();
+  const { terminology: terms } = useTerminology();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [hardDeleteOpen, setHardDeleteOpen] = useState(false);
@@ -137,10 +139,10 @@ export function VendorDetailClient({
     setDeleting(true);
     try {
       await softDeleteVendor(vendor.id, vendor.property_id);
-      toast.success('Vendor archived');
+      toast.success(`${terms.entity} archived`);
       router.push(`/dashboard/properties/${vendor.property_id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to archive vendor');
+      toast.error(err instanceof Error ? err.message : `Failed to archive ${terms.entity.toLowerCase()}`);
     } finally {
       setDeleting(false);
       setDeleteOpen(false);
@@ -153,10 +155,10 @@ export function VendorDetailClient({
     try {
       const { permanentlyDeleteVendor } = await import('@/lib/actions/properties');
       await permanentlyDeleteVendor(vendor.id, vendor.property_id);
-      toast.success('Vendor deleted');
+      toast.success(`${terms.entity} deleted`);
       router.push(`/dashboard/properties/${vendor.property_id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete vendor');
+      toast.error(err instanceof Error ? err.message : `Failed to delete ${terms.entity.toLowerCase()}`);
     } finally {
       setDeleting(false);
       setHardDeleteOpen(false);
@@ -229,7 +231,7 @@ export function VendorDetailClient({
             <span>/</span>
           </>
         )}
-        <span className="text-foreground">Vendors</span>
+        <span className="text-foreground">{terms.entityPlural}</span>
         <span>/</span>
         <span className="text-foreground font-medium max-w-[40ch] truncate inline-block align-bottom" title={vendor.company_name}>{vendor.company_name}</span>
       </div>
@@ -248,8 +250,8 @@ export function VendorDetailClient({
             <div>
               <p className="text-sm font-semibold text-red-800">
                 {summary.singleLine
-                  ? `This vendor\u2019s certificate has expired. ${summary.singleLine}.`
-                  : `This vendor\u2019s certificate has expired coverage (${summary.expiredCount} of ${summary.totalCount}). An updated certificate is required.`}
+                  ? `This ${terms.entity.toLowerCase()}\u2019s certificate has expired. ${summary.singleLine}.`
+                  : `This ${terms.entity.toLowerCase()}\u2019s certificate has expired coverage (${summary.expiredCount} of ${summary.totalCount}). An updated certificate is required.`}
               </p>
               {!summary.allSameDate && summary.groupedLines.length > 0 && (
                 <p className="mt-1 text-sm text-red-700">
@@ -295,7 +297,7 @@ export function VendorDetailClient({
               </div>
               <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
                 <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                Edit Vendor
+                Edit {terms.entity}
               </Button>
             </div>
             {vendor.vendor_type && (
@@ -446,7 +448,7 @@ export function VendorDetailClient({
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title="Archive Vendor"
+        title={`Archive ${terms.entity}`}
         description={`Archive ${vendor.company_name}? They won't appear in your active lists or compliance calculations, but their data and history will be preserved. You can restore them anytime.`}
         confirmLabel="Archive"
         destructive={false}
@@ -456,7 +458,7 @@ export function VendorDetailClient({
       <ConfirmDialog
         open={hardDeleteOpen}
         onOpenChange={setHardDeleteOpen}
-        title="Delete Vendor"
+        title={`Delete ${terms.entity}`}
         description={`Permanently delete ${vendor.company_name}? This will remove all their certificates, compliance data, and history. This action cannot be undone.`}
         confirmLabel="Delete"
         destructive

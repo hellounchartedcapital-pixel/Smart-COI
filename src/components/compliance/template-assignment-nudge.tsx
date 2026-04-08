@@ -25,6 +25,7 @@ import {
   ALL_LIMIT_TYPES,
   formatLimit,
 } from '@/components/templates/template-labels';
+import { useTerminology } from '@/hooks/useTerminology';
 import type { RequirementTemplate, LimitType, TemplateCategory } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -69,6 +70,7 @@ export function TemplateAssignmentNudge({
   onTemplateAssigned,
 }: TemplateAssignmentNudgeProps) {
   const { showUpgradeModal } = useUpgradeModal();
+  const { terminology: terms } = useTerminology();
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Mode
@@ -599,7 +601,7 @@ export function TemplateAssignmentNudge({
                 </Button>
               )}
 
-              {entityType === 'tenant' && (
+              {entityType === 'tenant' && terms.hasTenants && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -842,7 +844,7 @@ export function TemplateAssignmentNudge({
                 <Input
                   value={leaseTemplateName}
                   onChange={(e) => setLeaseTemplateName(e.target.value)}
-                  placeholder={`e.g., ${entityName} Lease Requirements`}
+                  placeholder={`e.g., ${entityName} ${terms.hasTenants ? 'Lease ' : ''}Requirements`}
                   className="bg-white"
                 />
               </div>
@@ -852,7 +854,7 @@ export function TemplateAssignmentNudge({
                   size="sm"
                   onClick={() => {
                     if (!leaseTemplateName.trim()) {
-                      setLeaseTemplateName(`${entityName} — Lease Requirements`);
+                      setLeaseTemplateName(`${entityName} — ${terms.hasTenants ? 'Lease Requirements' : 'Requirements'}`);
                     }
                     handleLeaseExtract();
                   }}

@@ -1010,7 +1010,7 @@ export function PropertyDetailClient({
       <Dialog open={coiPrompt !== null} onOpenChange={(open) => !open && setCoiPrompt(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>{coiPrompt?.type === 'vendor' ? 'Vendor' : 'Tenant'} Added</DialogTitle>
+            <DialogTitle>{coiPrompt?.type === 'vendor' ? terms.entity : (terms.tenant ?? 'Tenant')} Added</DialogTitle>
             <DialogDescription>
               Would you like to upload a COI for {coiPrompt?.name} now?
             </DialogDescription>

@@ -61,6 +61,7 @@ import {
   Minus,
   Info,
 } from 'lucide-react';
+import { useTerminology } from '@/hooks/useTerminology';
 
 // ============================================================================
 // Types for editable state
@@ -167,6 +168,7 @@ export function CertificateReviewClient({
   expirationThresholdDays,
 }: CertificateReviewClientProps) {
   const router = useRouter();
+  const { terminology: terms } = useTerminology();
   const isConfirmed = false; // Review workflow removed — always editable
   const isFailed = certificate.processing_status === 'failed';
   const isProcessing = certificate.processing_status === 'processing';
@@ -466,7 +468,7 @@ function ReviewInterface({
         <BackLink entityType={entityType} entityId={entityId} entityName={entityName} />
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Edit Certificate Data</h1>
         <p className="text-sm text-muted-foreground">
-          {entityType === 'vendor' ? 'Vendor' : 'Tenant'}:{' '}
+          {entityType === 'vendor' ? terms.entity : (terms.tenant ?? 'Tenant')}:{' '}
           <span className="font-medium text-foreground">{entityName}</span>
           {propertyName && (
             <>
@@ -512,7 +514,7 @@ function ReviewInterface({
                   <span className="font-semibold text-foreground">{insuredName}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">{entityType === 'vendor' ? 'Vendor' : 'Tenant'} in system: </span>
+                  <span className="text-muted-foreground">{entityType === 'vendor' ? terms.entity : (terms.tenant ?? 'Tenant')} in system: </span>
                   <span className="font-semibold text-foreground">{entityName}</span>
                 </div>
               </div>
@@ -1209,7 +1211,7 @@ function BackLink({ entityType, entityId, entityName }: { entityType: string; en
   return (
     <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
       <Link href={`/dashboard/${entityType}s/${entityId}`} className="hover:text-foreground">
-        {entityName || (entityType === 'vendor' ? 'Vendor' : 'Tenant')}
+        {entityName || entityType}
       </Link>
       <ChevronRight className="h-3.5 w-3.5" />
       <span className="font-medium text-foreground">Review Certificate</span>

@@ -32,6 +32,7 @@ import {
   formatLimit,
 } from './template-labels';
 import { AlertTriangle } from 'lucide-react';
+import { useTerminology } from '@/hooks/useTerminology';
 import type { LimitType, TemplateCategory } from '@/types';
 
 interface ExtractLeaseDialogProps {
@@ -57,6 +58,7 @@ type Step = 'upload' | 'extracting' | 'review';
 export function ExtractLeaseDialog({ open, onOpenChange, entityName }: ExtractLeaseDialogProps) {
   const router = useRouter();
   const { showUpgradeModal } = useUpgradeModal();
+  const { terminology: terms } = useTerminology();
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Upload step state
@@ -227,9 +229,10 @@ export function ExtractLeaseDialog({ open, onOpenChange, entityName }: ExtractLe
     }
   }, [requirements, templateName, category, showUpgradeModal, router]);
 
+  const reqLabel = terms.hasTenants ? 'Lease Requirements' : 'Requirements';
   const defaultName = entityName?.trim()
-    ? `${entityName.trim()} — Lease Requirements`
-    : `Lease Requirements — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    ? `${entityName.trim()} — ${reqLabel}`
+    : `${reqLabel} — ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -241,7 +244,7 @@ export function ExtractLeaseDialog({ open, onOpenChange, entityName }: ExtractLe
           <DialogDescription>
             {step === 'review'
               ? 'Review and adjust the extracted requirements before creating the template.'
-              : 'Upload a tenant lease and our AI will extract the insurance requirements and create a compliance template automatically.'}
+              : `Upload a ${(terms.tenant ?? 'tenant').toLowerCase()} lease and our AI will extract the insurance requirements and create a compliance template automatically.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -288,7 +291,7 @@ export function ExtractLeaseDialog({ open, onOpenChange, entityName }: ExtractLe
               <Input
                 value={templateName || defaultName}
                 onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="e.g., Lease Requirements — Mar 24, 2026"
+                placeholder={`e.g., ${reqLabel} — Mar 24, 2026`}
               />
             </div>
 

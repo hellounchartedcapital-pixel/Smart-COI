@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { validatePDFFile } from '@/lib/utils/file-validation';
 import { Upload, CheckCircle2, FileText, X, UserPlus } from 'lucide-react';
+import { useTerminology } from '@/hooks/useTerminology';
 
 interface SimpleUploadCOIDialogProps {
   open: boolean;
@@ -41,6 +42,7 @@ export function SimpleUploadCOIDialog({
   onOpenWizard,
 }: SimpleUploadCOIDialogProps) {
   const router = useRouter();
+  const { terminology: terms } = useTerminology();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // File state
@@ -272,8 +274,9 @@ export function SimpleUploadCOIDialog({
                         : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    Vendor
+                    {terms.entity}
                   </button>
+                  {terms.hasTenants && (
                   <button
                     type="button"
                     onClick={() => handleEntityTypeChange('tenant')}
@@ -283,15 +286,16 @@ export function SimpleUploadCOIDialog({
                         : 'text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    Tenant
+                    {terms.tenant}
                   </button>
+                  )}
                 </div>
               </div>
 
               {/* Entity selection: two-path choice or searchable dropdown */}
               <div className="space-y-1.5">
                 <Label className="text-xs">
-                  {entityType === 'vendor' ? 'Vendor' : 'Tenant'}
+                  {entityType === 'vendor' ? terms.entity : terms.tenant}
                 </Label>
 
                 {entityPath === 'choose' && (
@@ -303,7 +307,7 @@ export function SimpleUploadCOIDialog({
                     >
                       <FileText className="h-5 w-5 text-slate-400" />
                       <span className="text-sm font-medium text-slate-700">
-                        Existing {entityType === 'vendor' ? 'Vendor' : 'Tenant'}
+                        Existing {entityType === 'vendor' ? terms.entity : terms.tenant}
                       </span>
                       <span className="text-[11px] text-slate-400">
                         {filteredByProperty.length} available
@@ -317,7 +321,7 @@ export function SimpleUploadCOIDialog({
                     >
                       <UserPlus className="h-5 w-5 text-slate-400" />
                       <span className="text-sm font-medium text-slate-700">
-                        New {entityType === 'vendor' ? 'Vendor' : 'Tenant'}
+                        New {entityType === 'vendor' ? terms.entity : terms.tenant}
                       </span>
                       <span className="text-[11px] text-slate-400">
                         Add &amp; upload
@@ -333,12 +337,12 @@ export function SimpleUploadCOIDialog({
                       onValueChange={setSelectedEntityId}
                     >
                       <SelectTrigger className="text-sm">
-                        <SelectValue placeholder={`Select ${entityType}`} />
+                        <SelectValue placeholder={`Select ${entityType === 'vendor' ? terms.entity.toLowerCase() : (terms.tenant ?? 'tenant').toLowerCase()}`} />
                       </SelectTrigger>
                       <SelectContent>
                         <div className="px-2 pb-2">
                           <Input
-                            placeholder={`Search ${entityType}s...`}
+                            placeholder={`Search ${entityType === 'vendor' ? terms.entityPlural.toLowerCase() : (terms.tenantPlural ?? 'tenants').toLowerCase()}...`}
                             value={entitySearch}
                             onChange={(e) => setEntitySearch(e.target.value)}
                             className="h-8 text-sm"
@@ -348,7 +352,7 @@ export function SimpleUploadCOIDialog({
                         </div>
                         {filteredEntities.length === 0 && (
                           <div className="px-2 py-1.5 text-center text-xs text-muted-foreground">
-                            No {entityType}s found
+                            No {entityType === 'vendor' ? terms.entityPlural.toLowerCase() : (terms.tenantPlural ?? 'tenants').toLowerCase()} found
                           </div>
                         )}
                         {filteredEntities.map((e) => (
