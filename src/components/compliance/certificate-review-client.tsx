@@ -265,6 +265,7 @@ function ReviewInterface({
   expirationThresholdDays,
 }: CertificateReviewClientProps & { isConfirmed: boolean }) {
   const router = useRouter();
+  const { terminology: terms } = useTerminology();
   const { showUpgradeModal } = useUpgradeModal();
   const [confirming, setConfirming] = useState(false);
   const [pdfExpanded, setPdfExpanded] = useState(false);
