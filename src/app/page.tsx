@@ -72,14 +72,14 @@ const jsonLd = {
 // ============================================================================
 
 const INDUSTRIES = [
-  { icon: Building2, name: 'Property Management', desc: 'Track vendor and tenant COIs across your portfolio' },
-  { icon: HardHat, name: 'Construction', desc: 'Verify subcontractor insurance before they step on site' },
-  { icon: Truck, name: 'Logistics', desc: 'Ensure every carrier meets your coverage requirements' },
-  { icon: Hospital, name: 'Healthcare', desc: 'Manage vendor insurance compliance across facilities' },
-  { icon: Factory, name: 'Manufacturing', desc: 'Track supplier insurance and reduce supply chain risk' },
-  { icon: Hotel, name: 'Hospitality', desc: 'Keep vendor compliance current across properties' },
-  { icon: Store, name: 'Retail', desc: 'Verify vendor insurance from delivery to renovation' },
-  { icon: Briefcase, name: 'Other', desc: 'Any business that tracks third-party insurance' },
+  { icon: Building2, name: 'Property Management', desc: 'Track vendor and tenant COIs across your portfolio', href: '/for/property-management-companies' },
+  { icon: HardHat, name: 'Construction', desc: 'Verify subcontractor insurance before they step on site', href: '/for/construction' },
+  { icon: Truck, name: 'Logistics', desc: 'Ensure every carrier meets your coverage requirements', href: '/for/logistics' },
+  { icon: Hospital, name: 'Healthcare', desc: 'Manage vendor insurance compliance across facilities', href: '/for/healthcare' },
+  { icon: Factory, name: 'Manufacturing', desc: 'Track supplier insurance and reduce supply chain risk', href: '/for/manufacturing' },
+  { icon: Hotel, name: 'Hospitality', desc: 'Keep vendor compliance current across properties', href: '/for/hospitality' },
+  { icon: Store, name: 'Retail', desc: 'Verify vendor insurance from delivery to renovation', href: '/for/retail' },
+  { icon: Briefcase, name: 'Other', desc: 'Any business that tracks third-party insurance', href: '/signup' },
 ];
 
 const FEATURES = [
@@ -169,14 +169,15 @@ export default function LandingPage() {
             </div>
             <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {INDUSTRIES.map((ind) => (
-                <div
+                <Link
                   key={ind.name}
+                  href={ind.href}
                   className="rounded-xl border border-[#E5E7EB] bg-white p-6 transition-colors hover:border-[#D1D5DB]"
                 >
                   <ind.icon className="h-6 w-6 text-[#9CA3AF]" strokeWidth={1.5} />
                   <h3 className="mt-4 text-sm font-semibold text-[#111827]">{ind.name}</h3>
                   <p className="mt-1 text-sm text-[#6B7280]">{ind.desc}</p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
