@@ -11,6 +11,7 @@ import {
   type PropertyEntityInput,
 } from '@/lib/compliance/calculate';
 import type { LimitType, EntityType } from '@/types';
+import { cleanExtractedEntityName } from '@/lib/utils';
 
 // ============================================================================
 // Helpers
@@ -376,7 +377,9 @@ export async function autoAssignCertificateToEntity(input: {
   const { createServiceClient } = await import('@/lib/supabase/service');
   const supabase = createServiceClient();
 
-  const { certificateId, orgId, propertyId, insuredName, entityType } = input;
+  const { certificateId, orgId, propertyId, entityType } = input;
+  // Clean address-like suffixes from AI-extracted insured names
+  const insuredName = cleanExtractedEntityName(input.insuredName);
   const legacyType = entityType === 'tenant' ? 'tenant' : 'vendor';
 
   // 1. Look for existing entity match

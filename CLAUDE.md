@@ -181,6 +181,26 @@ Two bugs caused the compliance audit report to show $0 exposure and classify all
 
 **Coverage type matching confirmed working correctly** — both AI extraction and templates use identical Title Case strings, and `coverageTypeMatchScore()` in `coverage-utils.ts` handles variations with fuzzy matching (0.7 threshold).
 
+#### Fix: Compliance Audit Report — Real-World Testing Fixes (Apr 2026)
+
+Four issues fixed from real-world testing of the compliance audit report:
+
+**Issue 1 — Empty entity detail section for expired entities:**
+- Entities entered the non-compliant list via `e.isExpired` but if all coverage limits/endorsements passed, `coverageGaps` was empty → header rendered but no table or detail below it.
+- **Fix:** Added expiration detail rendering when `coverageGaps.length === 0` but entity is expired or partially expired, showing which coverages are expired and earliest expiration date.
+
+**Issue 2 — Entity names containing full addresses:**
+- AI extraction sometimes pulls the full insured block as entity name (e.g., "Blue Mesa Electric 527 Kalamath LLC 2875 W Oxford Englewood CO 80110").
+- **Fix:** Added `cleanExtractedEntityName()` to `src/lib/utils.ts` — strips trailing address patterns (street addresses, city/state/zip) while preserving business name parts (LLC, Inc, DBA). Applied in `autoAssignCertificateToEntity()`.
+
+**Issue 3 — Partially expired entities shown as fully expired:**
+- `isExpired` was a simple boolean from `complianceStatus === 'expired'`, treating partial expiration (some coverages expired, others active) the same as full expiration.
+- **Fix:** Added `isPartiallyExpired`, `expiredCoverageTypes` fields to `EntityRiskBreakdown` in `risk-quantification.ts`. `isExpired` now means ALL coverages expired; `isPartiallyExpired` means some but not all. Report shows "EXPIRED" badge for fully expired, "COVERAGE LAPSE" for partially expired with specific coverage detail.
+
+**Issue 4 — Misleading $0 exposure display:**
+- When exposure was $0 but expired certificates and endorsement gaps existed, the bold "$0" undermined the report's value.
+- **Fix:** Redesigned executive summary exposure section with three modes: (1) dollar exposure > $0 → show large dollar figure, (2) $0 but expired/endorsement issues → show "KEY RISK AREAS" headline with expired count + missing endorsement count in large red text, secondary note "No coverage limit shortfalls identified", (3) fully compliant → green "All insurance requirements are currently met" bar.
+
 #### Fix: Onboarding Bulk Upload — Orphaned Certificates (Apr 2026)
 
 - **Root cause:** Onboarding bulk upload (`step-bulk-upload.tsx`) created certificate records without `entity_id`/`vendor_id`/`tenant_id`, then attempted to auto-assign entities via client-side Supabase calls that: (a) bypassed the `createEntity()` server action (no dual-write to legacy tables), (b) silently swallowed errors via try/catch, (c) ran auto-compliance before entity assignment (compliance returned early with "no entity"), and (d) never re-triggered compliance after assignment.

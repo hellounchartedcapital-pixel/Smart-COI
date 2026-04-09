@@ -83,7 +83,10 @@ function getRiskLevel(entity: EntityRiskBreakdown): {
   color: RGB;
 } {
   if (entity.isExpired || entity.totalExposure > 500_000) {
-    return { label: 'CRITICAL', color: RED_600 };
+    return { label: 'EXPIRED', color: RED_600 };
+  }
+  if (entity.isPartiallyExpired) {
+    return { label: 'COVERAGE LAPSE', color: RED_600 };
   }
   if (entity.totalExposure > 100_000 || entity.hasUnquantifiableRisk) {
     return { label: 'WARNING', color: AMBER_600 };
@@ -382,22 +385,68 @@ function buildExecutiveSummary(
 
   y += boxH + 12;
 
-  // ---- Estimated Uninsured Exposure ----
-  drawRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, 22, SLATE_50);
-  drawRect(doc, MARGIN_LEFT, y, 3, 22, EMERALD); // left accent
+  const hasRealExposure = result.totalExposureGap > 0;
+  const hasExpiredOrEndorsement = result.expiredCount > 0 || result.missingEndorsementCount > 0;
 
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...SLATE_500);
-  doc.text('ESTIMATED UNINSURED EXPOSURE', MARGIN_LEFT + 10, y + 7);
+  if (hasRealExposure) {
+    // ---- Dollar exposure is meaningful — show prominently ----
+    drawRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, 22, SLATE_50);
+    drawRect(doc, MARGIN_LEFT, y, 3, 22, EMERALD); // left accent
 
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  const exposureColor: RGB = result.totalExposureGap > 0 ? RED_600 : EMERALD;
-  doc.setTextColor(exposureColor[0], exposureColor[1], exposureColor[2]);
-  doc.text(formatDollars(result.totalExposureGap), MARGIN_LEFT + 10, y + 18);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...SLATE_500);
+    doc.text('ESTIMATED UNINSURED EXPOSURE', MARGIN_LEFT + 10, y + 7);
 
-  y += 30;
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...RED_600);
+    doc.text(formatDollars(result.totalExposureGap), MARGIN_LEFT + 10, y + 18);
+
+    y += 30;
+  } else if (hasExpiredOrEndorsement) {
+    // ---- $0 dollar exposure but real risks exist — show risk metrics as headline ----
+    const boxHeight = 28;
+    drawRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, boxHeight, SLATE_50);
+    drawRect(doc, MARGIN_LEFT, y, 3, boxHeight, RED_600); // red accent
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...SLATE_500);
+    doc.text('KEY RISK AREAS', MARGIN_LEFT + 10, y + 7);
+
+    // Build headline risk items
+    const riskParts: string[] = [];
+    if (result.expiredCount > 0) {
+      riskParts.push(`${result.expiredCount} Expired Certificate${result.expiredCount > 1 ? 's' : ''}`);
+    }
+    if (result.missingEndorsementCount > 0) {
+      riskParts.push(`${result.missingEndorsementCount} Missing Endorsement${result.missingEndorsementCount > 1 ? 's' : ''}`);
+    }
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...RED_600);
+    doc.text(riskParts.join('   |   '), MARGIN_LEFT + 10, y + 19);
+
+    // Secondary note
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...SLATE_500);
+    doc.text('No coverage limit shortfalls identified', MARGIN_LEFT + 10, y + 25);
+
+    y += boxHeight + 8;
+  } else {
+    // ---- Fully compliant — small green note ----
+    drawRect(doc, MARGIN_LEFT, y, CONTENT_WIDTH, 14, EMERALD_LIGHT);
+    drawRect(doc, MARGIN_LEFT, y, 3, 14, EMERALD);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...EMERALD);
+    doc.text('All insurance requirements are currently met', MARGIN_LEFT + 10, y + 9);
+
+    y += 22;
+  }
 
   // ---- Explanatory paragraph ----
   const compliantPct = result.complianceRate;
@@ -407,12 +456,11 @@ function buildExecutiveSummary(
     (meta.industryLabel ? ` (${meta.industryLabel})` : '') +
     `. ${compliantPct}% are currently in full compliance with your insurance requirements. `;
 
-  if (result.nonCompliantCount > 0 && result.totalExposureGap > 0) {
+  if (hasRealExposure) {
     paragraph +=
       `${result.nonCompliantCount} ${entityLabel} have one or more coverage gaps, ` +
       `representing an estimated ${formatDollars(result.totalExposureGap)} in uninsured exposure. `;
-  } else if (result.nonCompliantCount > 0 && result.totalExposureGap === 0 && result.missingEndorsementCount > 0) {
-    // $0 dollar exposure but endorsement gaps exist
+  } else if (result.nonCompliantCount > 0 && result.missingEndorsementCount > 0) {
     const endorsementTypes = new Set<string>();
     for (const detail of result.endorsementGapDetails) {
       for (const e of detail.missingEndorsements) endorsementTypes.add(e);
@@ -424,13 +472,13 @@ function buildExecutiveSummary(
       `. While no coverage limit shortfalls were identified, missing endorsements mean your ` +
       `organization may not be protected as an additional insured party in the event of a claim. `;
   } else if (result.nonCompliantCount > 0) {
-    paragraph += `${result.nonCompliantCount} ${entityLabel} have one or more coverage gaps. `;
+    paragraph += `${result.nonCompliantCount} ${entityLabel} have one or more compliance gaps. `;
   } else {
     paragraph += 'All entities are currently meeting their insurance requirements. ';
   }
 
   if (result.expiredCount > 0) {
-    paragraph += `${result.expiredCount} certificates are expired and require immediate attention. `;
+    paragraph += `${result.expiredCount} certificate${result.expiredCount > 1 ? 's have' : ' has'} expired coverage and require${result.expiredCount === 1 ? 's' : ''} immediate attention. `;
   }
   if (result.expiringIn30Days > 0) {
     paragraph += `${result.expiringIn30Days} certificates will expire within the next 30 days.`;
@@ -678,7 +726,7 @@ function buildEntityDetails(
   meta: AuditReportOrgMetadata
 ): void {
   const nonCompliantEntities = result.perEntityBreakdown.filter(
-    (e) => e.coverageGaps.length > 0 || e.isExpired
+    (e) => e.coverageGaps.length > 0 || e.isExpired || e.isPartiallyExpired
   );
 
   if (nonCompliantEntities.length === 0) return;
@@ -806,6 +854,31 @@ function buildEntityDetails(
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       y = (doc as any).lastAutoTable.finalY + 3;
+    }
+
+    // Expiration detail — show when entity has expired coverages but no gap rows cover it
+    if (entity.coverageGaps.length === 0 && (entity.isExpired || entity.isPartiallyExpired)) {
+      y = ensureSpace(doc, y, 15);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...RED_600);
+      if (entity.isExpired) {
+        doc.text('All coverages on this certificate have expired.', MARGIN_LEFT + 5, y);
+      } else {
+        const expiredList = entity.expiredCoverageTypes.join(', ');
+        const expText = `Expired coverage: ${expiredList}`;
+        const lines = doc.splitTextToSize(expText, CONTENT_WIDTH - 10);
+        doc.text(lines, MARGIN_LEFT + 5, y);
+        y += (lines.length - 1) * 3.5;
+      }
+      if (entity.earliestExpiration) {
+        y += 4;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...SLATE_500);
+        doc.text(`Earliest expiration: ${formatShortDate(entity.earliestExpiration)}`, MARGIN_LEFT + 5, y);
+      }
+      y += 4;
     }
 
     // Missing endorsements — extract specific endorsement types from gap descriptions
