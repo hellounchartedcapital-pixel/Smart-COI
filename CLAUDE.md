@@ -157,6 +157,11 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Landing page audit section + login sidebar copy fix (Apr 2026)
+
+- Added "Not Ready for Software? Start With a Free Compliance Assessment" section to the landing page (`src/app/page.tsx`) after FAQ and before final CTA — links to `/audit`, uses secondary button style to avoid competing with main SaaS offering
+- Fixed login page sidebar copy in `src/app/(auth)/layout.tsx` — changed "commercial property managers" to "property managers, contractors, and operations teams" to match industry-broadened messaging
+
 #### Fix: /audit page redirecting to login (Apr 2026)
 
 - Added `/audit` to `publicRoutes` in `src/middleware.ts` so the page is accessible without authentication, matching other marketing pages
