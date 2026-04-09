@@ -15,6 +15,7 @@ const resourceLinks = [
   { label: 'Blog', href: '/blog', desc: 'Insights on COI compliance' },
   { label: 'COI Compliance Guide', href: '/blog/coi-compliance-guide-property-managers', desc: 'The complete compliance guide' },
   { label: 'Compare Solutions', href: '/compare', desc: 'See how SmartCOI stacks up' },
+  { label: 'Get a COI Audit', href: '/audit', desc: 'Full compliance report in 48 hours' },
 ];
 
 export function Navbar() {
