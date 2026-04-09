@@ -157,6 +157,10 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: /audit page redirecting to login (Apr 2026)
+
+- Added `/audit` to `publicRoutes` in `src/middleware.ts` so the page is accessible without authentication, matching other marketing pages
+
 #### COI Compliance Audit Service Page (Apr 2026)
 
 - Created `/audit` page (`src/app/audit/page.tsx`) — one-time $299 COI compliance audit service offering as a lead generation play

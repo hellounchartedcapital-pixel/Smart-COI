@@ -10,7 +10,7 @@ const publicRoutes = [
   // Marketing / SEO pages
   '/terms', '/privacy', '/coi-tracking-software',
   '/certificate-of-insurance-tracking', '/vendor-insurance-compliance',
-  '/tenant-insurance-tracking', '/ai-coi-extraction', '/llms.txt', '/og-image.png',
+  '/tenant-insurance-tracking', '/ai-coi-extraction', '/audit', '/llms.txt', '/og-image.png',
   // Infrastructure
   '/api/health',
 ];
