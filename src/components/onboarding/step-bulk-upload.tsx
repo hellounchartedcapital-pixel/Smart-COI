@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash } from '@/lib/utils/file-validation';
 import { autoAssignCertificateToEntity } from '@/lib/actions/certificates';
 import { Button } from '@/components/ui/button';
-import { Upload, FileText, X, CheckCircle2, Loader2, AlertTriangle, Building2, Users } from 'lucide-react';
+import { Upload, FileText, X, CheckCircle2, Loader2, AlertTriangle, Building2, Users, RotateCcw } from 'lucide-react';
 import { getTerminology } from '@/lib/constants/terminology';
 import type { Industry, CoveredEntityType } from '@/types';
 
@@ -96,11 +96,15 @@ export function StepBulkUpload({
     })();
   }, [supabase]);
 
-  // Track when all processing is complete
+  // Track when all processing is complete (or canceled)
   useEffect(() => {
-    if (processing && files.length > 0 && files.every((f) => f.status === 'done' || f.status === 'failed')) {
-      setAllDone(true);
-      setProcessing(false);
+    if (processing && files.length > 0 && files.every((f) => f.status === 'done' || f.status === 'failed' || f.status === 'pending')) {
+      // Only transition when no files are actively uploading/extracting
+      const hasActive = files.some((f) => f.status === 'uploading' || f.status === 'extracting');
+      if (!hasActive) {
+        setAllDone(true);
+        setProcessing(false);
+      }
     }
   }, [files, processing]);
 
@@ -127,6 +131,14 @@ export function StepBulkUpload({
 
   const removeFile = useCallback((id: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+
+  const retryFile = useCallback((id: string) => {
+    setFiles((prev) => prev.map((f) => f.id === id ? { ...f, status: 'pending' as const, error: undefined } : f));
+  }, []);
+
+  const retryAllFailed = useCallback(() => {
+    setFiles((prev) => prev.map((f) => f.status === 'failed' ? { ...f, status: 'pending' as const, error: undefined } : f));
   }, []);
 
   const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -480,6 +492,17 @@ export function StepBulkUpload({
                   )}
                 </div>
 
+                {/* Retry button for failed files */}
+                {entry.status === 'failed' && !processing && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); retryFile(entry.id); }}
+                    className="shrink-0 rounded p-1 text-amber-500 hover:text-amber-700"
+                    title="Retry"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </button>
+                )}
+
                 {/* Remove button (only when not processing) */}
                 {!processing && !allDone && (
                   <button
@@ -509,21 +532,44 @@ export function StepBulkUpload({
         )}
 
         {processing && (
-          <Button size="lg" className="w-full font-semibold" disabled>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Processing {activeCount} of {totalCount} files...
-          </Button>
+          <>
+            <Button size="lg" className="w-full font-semibold" disabled>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Processing {activeCount} of {totalCount} files...
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full font-semibold text-red-600 border-red-200 hover:bg-red-50"
+              onClick={() => { abortRef.current = true; }}
+            >
+              Cancel Upload
+            </Button>
+          </>
         )}
 
         {allDone && (
-          <Button
-            size="lg"
-            className="w-full font-semibold"
-            onClick={() => onNext(doneCount, coiType)}
-            disabled={saving}
-          >
-            {saving ? 'Finishing...' : `Continue with ${doneCount} COI${doneCount !== 1 ? 's' : ''}`}
-          </Button>
+          <>
+            <Button
+              size="lg"
+              className="w-full font-semibold"
+              onClick={() => onNext(doneCount, coiType)}
+              disabled={saving}
+            >
+              {saving ? 'Finishing...' : `Continue with ${doneCount} COI${doneCount !== 1 ? 's' : ''}`}
+            </Button>
+            {failedCount > 0 && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full font-semibold"
+                onClick={() => { retryAllFailed(); setAllDone(false); }}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Retry {failedCount} Failed File{failedCount !== 1 ? 's' : ''}
+              </Button>
+            )}
+          </>
         )}
 
         {files.length === 0 && (

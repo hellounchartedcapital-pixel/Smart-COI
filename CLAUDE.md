@@ -157,6 +157,30 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: P0 Critical Fixes from QA Audit (Apr 2026)
+
+Fixed all 9 CRITICAL issues from the comprehensive QA audit:
+
+**Billing enforcement (3 fixes):**
+- `getActivePlanStatus()` now checks `payment_failed` flag — paid plans with failed payments are blocked from operations (`src/lib/plan-status.ts`)
+- `checkVendorTenantLimit()` now calls `getActivePlanStatus()` — expired trials and failed payments block entity creation (`src/lib/plan-limits.ts`)
+- Stripe webhook error handler now returns HTTP 500 on failure — enables Stripe retry on transient DB errors (`src/app/api/webhooks/stripe/route.ts`)
+- All callers of `getActivePlanStatus` updated to include `payment_failed` in their org select queries
+
+**Extraction validation (1 fix):**
+- Zero-coverage AI extractions now return `success: false` with user message "No insurance coverage data found" — prevents random PDFs from being accepted as valid COIs (`src/lib/ai/extraction.ts`)
+
+**Bulk upload UX (2 fixes):**
+- Added per-file "Retry" button and "Retry All Failed" button to onboarding bulk upload (`src/components/onboarding/step-bulk-upload.tsx`)
+- Added "Cancel Upload" button during processing — sets abort flag to stop remaining files while keeping already-processed ones
+
+**Report completeness (2 fixes):**
+- Added `needs_setup` and `under_review` to compliance report status breakdown — both PDF and CSV exports now account for all 7 compliance statuses (`src/lib/actions/reports.ts`, `export-report-button.tsx`)
+- Compliance rate now excludes `needs_setup` and `under_review` entities from denominator — prevents inflation from non-evaluable entities (`src/lib/compliance/risk-quantification.ts`)
+
+**Portal security (1 fix):**
+- Added in-memory rate limiter (10 requests/IP/minute) to portal token lookup — blocks automated UUID scanning (`src/app/portal/[token]/page.tsx`, `src/lib/rate-limit.ts`)
+
 #### Audit: Comprehensive 10-Flow QA Audit (Apr 2026)
 
 Full 10-flow QA audit covering signup, extraction, bulk upload, reports, portal, billing, entity management, emails, public routes, and data integrity. Found 10 CRITICAL, 14 WARNING, 10 INFO issues across all flows. Key findings:

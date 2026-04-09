@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     const serviceForPlan = createServiceClient();
     const { data: orgForPlan, error: orgPlanError } = await serviceForPlan
       .from('organizations')
-      .select('plan, trial_ends_at')
+      .select('plan, trial_ends_at, payment_failed')
       .eq('id', orgId)
       .single();
     if (orgPlanError || !orgForPlan) {

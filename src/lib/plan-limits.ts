@@ -1,4 +1,5 @@
 import { createServiceClient } from '@/lib/supabase/service';
+import { getActivePlanStatus } from '@/lib/plan-status';
 
 // ---------------------------------------------------------------------------
 // Plan limits
@@ -34,17 +35,24 @@ export async function checkVendorTenantLimit(
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('plan')
+    .select('plan, trial_ends_at, payment_failed')
     .eq('id', orgId)
     .single();
 
   const plan = org?.plan ?? 'trial';
   const limits = getOrgLimits(plan);
 
-  if (plan === 'canceled') {
+  // Check plan is active (catches canceled, expired trial, and payment failures)
+  const planStatus = getActivePlanStatus(org ?? { plan, trial_ends_at: null });
+  if (!planStatus.isActive) {
+    const messages: Record<string, string> = {
+      canceled: 'Your subscription has been canceled. Please resubscribe to add vendors or tenants.',
+      trial_expired: 'Your free trial has expired. Subscribe to add vendors or tenants.',
+      payment_failed: 'Your last payment failed. Please update your payment method to add vendors or tenants.',
+    };
     return {
       allowed: false,
-      error: 'Your subscription has been canceled. Please resubscribe to add vendors or tenants.',
+      error: messages[planStatus.reason] ?? 'Your plan is inactive. Please subscribe to continue.',
     };
   }
 

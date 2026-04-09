@@ -213,7 +213,11 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     console.error(`[Stripe Webhook] Error handling ${event.type}:`, err);
-    // Still return 200 so Stripe doesn't retry
+    // Return 500 so Stripe retries the event delivery
+    return NextResponse.json(
+      { error: `Failed to process ${event.type}` },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ received: true });

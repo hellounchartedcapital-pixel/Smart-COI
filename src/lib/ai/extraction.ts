@@ -539,6 +539,19 @@ function mapToDbRows(parsed: AIExtractionResponse): ExtractionResult {
     description: e.description || null,
   }));
 
+  // Reject extractions with zero coverages — likely not a COI document
+  if (coverages.length === 0) {
+    return {
+      success: false,
+      coverages: [],
+      entities,
+      endorsements,
+      insuredName: parsed.named_insured || null,
+      error: 'no_coverages',
+      userMessage: 'No insurance coverage data found in this document. Please upload a valid Certificate of Insurance (COI).',
+    };
+  }
+
   return {
     success: true,
     coverages,

@@ -162,7 +162,7 @@ export async function POST(
     // Check org plan status — reject if canceled or trial expired
     const { data: orgForPlan } = await supabase
       .from('organizations')
-      .select('plan, trial_ends_at, industry')
+      .select('plan, trial_ends_at, payment_failed, industry')
       .eq('id', organizationId)
       .single();
 

@@ -130,7 +130,11 @@ export interface RiskQuantificationResult {
   expiringIn90Days: number;
   /** Entities missing additional insured verification */
   missingEndorsementCount: number;
-  /** Percentage of entities that are compliant (0-100) */
+  /** Entities with needs_setup status (no requirements configured) */
+  needsSetupCount: number;
+  /** Entities with under_review status (processing in progress) */
+  underReviewCount: number;
+  /** Percentage of entities that are compliant (0-100), excluding needs_setup and under_review */
   complianceRate: number;
   /** Per-entity risk breakdown */
   perEntityBreakdown: EntityRiskBreakdown[];
@@ -466,13 +470,16 @@ export function quantifyRisk(
 
   // ---- Compute aggregates ----
   const entityCount = entities.length;
+  const needsSetupCount = perEntityBreakdown.filter((e) => e.complianceStatus === 'needs_setup').length;
+  const underReviewCount = perEntityBreakdown.filter((e) => e.complianceStatus === 'under_review').length;
+  const evaluableCount = entityCount - needsSetupCount - underReviewCount;
   const nonCompliantCount = perEntityBreakdown.filter(
-    (e) => e.complianceStatus !== 'compliant'
+    (e) => e.complianceStatus !== 'compliant' && e.complianceStatus !== 'needs_setup' && e.complianceStatus !== 'under_review'
   ).length;
   const expiredCount = perEntityBreakdown.filter((e) => e.isExpired || e.isPartiallyExpired).length;
-  const compliantCount = entityCount - nonCompliantCount;
-  const complianceRate = entityCount > 0
-    ? Math.round((compliantCount / entityCount) * 10000) / 100
+  const compliantCount = evaluableCount - nonCompliantCount;
+  const complianceRate = evaluableCount > 0
+    ? Math.round((compliantCount / evaluableCount) * 10000) / 100
     : 100;
 
   const totalExposureGap = perEntityBreakdown.reduce(
@@ -532,6 +539,8 @@ export function quantifyRisk(
     expiringIn60Days,
     expiringIn90Days,
     missingEndorsementCount,
+    needsSetupCount,
+    underReviewCount,
     complianceRate,
     perEntityBreakdown,
     perCoverageTypeBreakdown,
