@@ -1069,7 +1069,7 @@ export async function runComplianceForEntity(
   }
 
   if (!entity?.template_id) {
-    // No template assigned — can't calculate compliance, set under_review if cert exists
+    // No template assigned — can't calculate compliance, set needs_setup if cert exists
     const { data: anyCert } = await supabase
       .from('certificates')
       .select('id')
@@ -1083,11 +1083,11 @@ export async function runComplianceForEntity(
       // Update both entities table and legacy table
       await supabase
         .from('entities')
-        .update({ compliance_status: 'under_review' })
+        .update({ compliance_status: 'needs_setup' })
         .eq('id', entityId);
       await supabase
         .from(legacyTable)
-        .update({ compliance_status: 'under_review' })
+        .update({ compliance_status: 'needs_setup' })
         .eq('id', entityId);
     }
     return;

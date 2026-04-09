@@ -82,9 +82,10 @@ const STATUS_ORDER: Record<ComplianceStatus, number> = {
   expired: 0,
   non_compliant: 1,
   expiring_soon: 2,
-  under_review: 3,
-  pending: 4,
-  compliant: 5,
+  needs_setup: 3,
+  under_review: 4,
+  pending: 5,
+  compliant: 6,
 };
 
 interface PropertyDetailClientProps {
@@ -422,6 +423,7 @@ export function PropertyDetailClient({
           <SelectItem value="expired">Expired</SelectItem>
           <SelectItem value="pending">Pending</SelectItem>
           <SelectItem value="under_review">Under Review</SelectItem>
+          <SelectItem value="needs_setup">Needs Setup</SelectItem>
         </SelectContent>
       </Select>
     );

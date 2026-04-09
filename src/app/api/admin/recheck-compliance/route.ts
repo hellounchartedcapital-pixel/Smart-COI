@@ -12,7 +12,7 @@ import {
  * POST /api/admin/recheck-compliance
  *
  * One-time admin endpoint to recalculate compliance for all entities stuck in
- * "under_review" or null compliance status. Authenticated via CRON_SECRET.
+ * "under_review", "needs_setup", or null compliance status. Authenticated via CRON_SECRET.
  *
  * Usage:
  *   curl -X POST https://smartcoi.io/api/admin/recheck-compliance \
@@ -33,11 +33,11 @@ export async function POST(request: Request) {
 
   const supabase = createServiceClient();
 
-  // Find all entities with compliance_status = 'under_review' or null
+  // Find all entities with compliance_status = 'under_review', 'needs_setup', or null
   const { data: stuckEntities, error: fetchErr } = await supabase
     .from('entities')
     .select('id, organization_id, entity_type, template_id, property_id, compliance_status, name')
-    .or('compliance_status.eq.under_review,compliance_status.is.null');
+    .or('compliance_status.eq.under_review,compliance_status.eq.needs_setup,compliance_status.is.null');
 
   if (fetchErr) {
     return NextResponse.json({ error: 'Failed to fetch entities', details: fetchErr.message }, { status: 500 });

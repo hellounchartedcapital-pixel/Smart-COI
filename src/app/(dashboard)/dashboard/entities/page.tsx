@@ -128,6 +128,7 @@ function StatusBadge({ status }: { status: ComplianceStatus }) {
     expired: 'bg-[#FEF2F2] text-[#991B1B]',
     pending: 'bg-[#F3F4F6] text-[#6B7280]',
     under_review: 'bg-[#EFF6FF] text-[#1E40AF]',
+    needs_setup: 'bg-[#F5F3FF] text-[#6D28D9]',
   };
 
   const labels: Record<string, string> = {
@@ -137,6 +138,7 @@ function StatusBadge({ status }: { status: ComplianceStatus }) {
     expired: 'Expired',
     pending: 'Pending',
     under_review: 'Under Review',
+    needs_setup: 'Needs Setup',
   };
 
   return (

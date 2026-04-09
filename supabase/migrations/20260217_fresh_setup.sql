@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS vendors (
   contact_phone TEXT,
   template_id UUID REFERENCES requirement_templates(id) ON DELETE SET NULL,
   compliance_status TEXT DEFAULT 'pending'
-    CHECK (compliance_status IN ('compliant', 'non_compliant', 'expiring_soon', 'expired', 'pending', 'under_review')),
+    CHECK (compliance_status IN ('compliant', 'non_compliant', 'expiring_soon', 'expired', 'pending', 'under_review', 'needs_setup')),
   notifications_paused BOOLEAN DEFAULT false,
   deleted_at TIMESTAMPTZ DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   tenant_type TEXT,
   template_id UUID REFERENCES requirement_templates(id) ON DELETE SET NULL,
   compliance_status TEXT DEFAULT 'pending'
-    CHECK (compliance_status IN ('compliant', 'non_compliant', 'expiring_soon', 'expired', 'pending', 'under_review')),
+    CHECK (compliance_status IN ('compliant', 'non_compliant', 'expiring_soon', 'expired', 'pending', 'under_review', 'needs_setup')),
   notifications_paused BOOLEAN DEFAULT false,
   deleted_at TIMESTAMPTZ DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),

@@ -39,6 +39,7 @@ interface PropertyWithCounts {
   status_expired: number;
   status_pending: number;
   status_under_review: number;
+  status_needs_setup: number;
 }
 
 const BAR_COLORS: Record<string, string> = {
@@ -48,6 +49,7 @@ const BAR_COLORS: Record<string, string> = {
   status_expired: 'bg-status-expired',
   status_pending: 'bg-status-pending',
   status_under_review: 'bg-status-under-review',
+  status_needs_setup: 'bg-status-needs-setup',
 };
 
 function formatAddress(p: PropertyWithCounts): string | null {
@@ -181,6 +183,7 @@ export default async function PropertiesPage() {
       status_expired: countStatus('expired'),
       status_pending: countStatus('pending'),
       status_under_review: countStatus('under_review'),
+      status_needs_setup: countStatus('needs_setup'),
     };
   });
 
@@ -288,6 +291,7 @@ export default async function PropertiesPage() {
                           { key: 'status_non_compliant', count: prop.status_non_compliant },
                           { key: 'status_expired', count: prop.status_expired },
                           { key: 'status_pending', count: prop.status_pending },
+                          { key: 'status_needs_setup', count: prop.status_needs_setup },
                           { key: 'status_under_review', count: prop.status_under_review },
                         ].filter((s) => s.count > 0);
 

@@ -157,6 +157,19 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Add `needs_setup` compliance status for unconfigured entities (Apr 2026)
+
+Entities without requirement templates were previously marked `under_review`, which is misleading — that status means "COI being processed." New `needs_setup` status clearly indicates "no requirements configured."
+
+- Added `needs_setup` to `ComplianceStatus` type (`src/types/index.ts`)
+- `runAutoCompliance()` and `runComplianceForEntity()` now set `needs_setup` instead of `under_review` when entity has no template
+- Dashboard renders `needs_setup` as purple "Needs Setup" pill, distinct from blue "Under Review"
+- Added to all UI: `STATUS_CONFIG`, filter pills, health bar segments, action queue, entities page, properties page, compliance badge, property detail filter
+- Admin recheck endpoint also targets `needs_setup` entities
+- Created `supabase/migrations/20260409_add_needs_setup_status.sql` — adds `needs_setup` to CHECK constraints on vendors, tenants, and entities tables
+
+⚠️ ACTION REQUIRED: Run `supabase/migrations/20260409_add_needs_setup_status.sql` in Supabase SQL Editor to add `needs_setup` to the compliance_status CHECK constraints.
+
 #### Fix: Industry-Agnostic P0 Critical Fixes (Apr 2026)
 
 Four critical fixes from the industry-agnostic expansion audit that blocked non-PM users:
