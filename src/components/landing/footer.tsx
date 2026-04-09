@@ -89,6 +89,9 @@ export function Footer() {
               <Link href="/insurance-requirements" className="text-slate-400 transition-colors hover:text-white">
                 Insurance Requirements
               </Link>
+              <Link href="/audit" className="text-slate-400 transition-colors hover:text-white">
+                COI Audit Service
+              </Link>
               <Link href="/feed.xml" className="text-slate-400 transition-colors hover:text-white">
                 RSS Feed
               </Link>

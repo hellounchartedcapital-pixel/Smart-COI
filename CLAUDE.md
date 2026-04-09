@@ -157,6 +157,16 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### COI Compliance Audit Service Page (Apr 2026)
+
+- Created `/audit` page (`src/app/audit/page.tsx`) — one-time $299 COI compliance audit service offering as a lead generation play
+- Page sections: hero with Stripe payment link CTA, 3-step "How It Works", "What's In Your Report" checklist, "Who This Is For" audience cards, pricing section with second CTA, founder credibility quote, soft SaaS upsell to SmartCOI platform
+- Two CTA buttons link to Stripe payment link (`buy.stripe.com`)
+- SEO meta tags: title, description, canonical URL (`https://smartcoi.io/audit`), Open Graph
+- Added `/audit` to sitemap with priority 0.8
+- Added "Get a COI Audit" to navbar Resources dropdown and "COI Audit Service" to footer Resources section
+- Matches existing design system — Inter font, emerald/slate palette, consistent spacing and component patterns
+
 #### Fix: P1 Landing Page Copy + All 16 WARNING-Level Audit Findings (Apr 2026)
 
 Fixed 3 P1 CRITICALs (landing page PM-exclusive copy) and all 16 WARNINGs from the industry-agnostic audit.

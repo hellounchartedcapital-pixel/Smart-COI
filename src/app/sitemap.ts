@@ -22,6 +22,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1,
     },
 
+    // Audit service
+    {
+      url: `${BASE_URL}/audit`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+
     // Feature pages
     {
       url: `${BASE_URL}/features/coi-tracking`,
