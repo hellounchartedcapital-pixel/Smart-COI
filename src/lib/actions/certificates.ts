@@ -253,6 +253,23 @@ export async function runAutoCompliance(
     requirements = (reqs ?? []) as RequirementInput[];
   }
 
+  // If no template is assigned, compliance cannot be evaluated — leave entity
+  // at 'under_review' status so the dashboard shows it needs attention rather
+  // than silently marking it compliant with zero requirements.
+  if (!entity?.template_id || requirements.length === 0) {
+    await supabase
+      .from('entities')
+      .update({ compliance_status: 'under_review' })
+      .eq('id', entityId);
+    await supabase
+      .from(entity?.entity_type === 'tenant' ? 'tenants' : 'vendors')
+      .update({ compliance_status: 'under_review' })
+      .eq('id', entityId)
+      .then(() => { /* best-effort legacy sync */ });
+    console.log(`[runAutoCompliance] cert=${certificateId} entity=${entityId} — skipped: no template or requirements assigned`);
+    return { overallStatus: 'under_review' as const, entityType: entity?.entity_type === 'tenant' ? 'tenant' : 'vendor', entityId };
+  }
+
   let propEntities: PropertyEntityInput[] = [];
   let acceptCertHolderInAI = true; // default
   if (entity?.property_id) {

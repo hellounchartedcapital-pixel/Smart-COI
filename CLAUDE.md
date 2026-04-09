@@ -157,6 +157,25 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Industry-Agnostic P0 Critical Fixes (Apr 2026)
+
+Four critical fixes from the industry-agnostic expansion audit that blocked non-PM users:
+
+**Fix 1 — Onboarding Step 6 blocks non-PM users from seeing COIs:**
+- `src/components/onboarding/step-assign-requirements.tsx:52` — removed `propertyId` from the early-return guard. Non-PM users who skip the property step now see their uploaded certificates. When `propertyId` exists, certificates are scoped to that property's entities; otherwise all org certificates are fetched.
+
+**Fix 2 — `entity_compliance_results.property_entity_id` NOT NULL FK violation:**
+- `supabase/migrations/20260217_fresh_setup.sql:207` and `20260217_v2_schema_migration.sql:507` — changed `property_entity_id` from NOT NULL to nullable. Non-PM entities use `organization_default_entities` for entity matching, whose IDs don't exist in `property_entities`.
+- Created `supabase/migrations/20260409_nullable_property_entity_id.sql` for production ALTER TABLE.
+
+**Fix 3 — Zero requirements = silent compliance pass:**
+- `src/lib/actions/certificates.ts:256-271` — `runAutoCompliance()` now returns early with `'under_review'` status when entity has no template or template has zero requirements. Previously, empty requirements meant zero gaps → `'compliant'`, silently masking unconfigured entities.
+
+**Fix 4 — "Assign Now" banner links to wrong route:**
+- `src/components/dashboard/dashboard-client.tsx:226` — changed `href="/dashboard/vendors"` to `href="/dashboard/entities"`.
+
+⚠️ ACTION REQUIRED: Run `supabase/migrations/20260409_nullable_property_entity_id.sql` in Supabase SQL Editor to drop the NOT NULL constraint on `entity_compliance_results.property_entity_id`.
+
 #### Audit: Industry-Agnostic Expansion — Full Codebase Audit (Apr 2026)
 
 Comprehensive 7-area audit of the multi-industry expansion. Found 7 CRITICAL, 16 WARNING, 5 INFO issues.

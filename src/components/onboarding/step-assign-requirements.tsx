@@ -49,7 +49,7 @@ export function StepAssignRequirements({
   const [done, setDone] = useState(false);
 
   const fetchData = useCallback(async () => {
-    if (!orgId || !propertyId) {
+    if (!orgId) {
       setLoading(false);
       return;
     }
@@ -57,12 +57,27 @@ export function StepAssignRequirements({
     // Fetch uploaded COIs (extracted or needs_review)
     const entityType = coiType ?? 'vendor';
 
-    const { data: certs } = await supabase
+    let certQuery = supabase
       .from('certificates')
       .select('id, insured_name, entity_id')
       .eq('organization_id', orgId)
       .in('processing_status', ['extracted', 'needs_review'])
       .order('uploaded_at', { ascending: false });
+
+    // If a property exists, scope certificates to that property's entities;
+    // otherwise fetch all org certificates (non-PM industries skip property step)
+    if (propertyId) {
+      const { data: propEntities } = await supabase
+        .from('entities')
+        .select('id')
+        .eq('property_id', propertyId);
+      const entityIds = (propEntities ?? []).map((e) => e.id);
+      if (entityIds.length > 0) {
+        certQuery = certQuery.in('entity_id', entityIds);
+      }
+    }
+
+    const { data: certs } = await certQuery;
 
     if (certs && certs.length > 0) {
       // Get entity IDs to look up template assignments

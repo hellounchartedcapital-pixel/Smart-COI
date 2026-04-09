@@ -204,7 +204,7 @@ CREATE TABLE IF NOT EXISTS compliance_results (
 CREATE TABLE IF NOT EXISTS entity_compliance_results (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   certificate_id UUID NOT NULL REFERENCES certificates(id) ON DELETE CASCADE,
-  property_entity_id UUID NOT NULL REFERENCES property_entities(id) ON DELETE CASCADE,
+  property_entity_id UUID REFERENCES property_entities(id) ON DELETE CASCADE,
   extracted_entity_id UUID REFERENCES extracted_entities(id) ON DELETE SET NULL,
   status TEXT NOT NULL CHECK (status IN ('found', 'missing', 'partial_match')),
   match_details TEXT,
