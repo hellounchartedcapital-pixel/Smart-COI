@@ -14,6 +14,7 @@ import { formatTimeAgo, formatDate } from '@/lib/utils';
 import { SimpleUploadCOIDialog } from '@/components/dashboard/simple-upload-coi-dialog';
 import { EntityCreationWizard } from '@/components/properties/entity-creation-wizard';
 import { getTerminology } from '@/lib/constants/terminology';
+import { useTerminology } from '@/hooks/useTerminology';
 import type { Industry } from '@/types';
 import { ExportReportButton } from '@/components/dashboard/export-report-button';
 import { DashboardTutorial, useTutorial } from '@/components/dashboard/dashboard-tutorial';
@@ -588,6 +589,7 @@ function ActionItemRow({ item, isLast, isFirst = false }: { item: ActionItem; is
   const [sending, setSending] = useState(false);
   const { showUpgradeModal } = useUpgradeModal();
   const router = useRouter();
+  const { terminology: terms } = useTerminology();
 
   const handleRequestCOI = useCallback(async () => {
     setSending(true);
@@ -692,7 +694,7 @@ function ActionItemRow({ item, isLast, isFirst = false }: { item: ActionItem; is
               if (hasEmail) {
                 handleRequestCOI();
               } else {
-                toast.info(`No contact email on file. Edit this ${item.entityType} to add one.`);
+                toast.info(`No contact email on file. Edit this ${item.entityType === 'tenant' && terms.tenant ? terms.tenant.toLowerCase() : terms.entity.toLowerCase()} to add one.`);
               }
             }}
           >

@@ -256,7 +256,7 @@ export async function POST(
       })
       .eq('id', certificate_id);
 
-    // Fetch entity info for activity log and PM notification — try legacy, fall back to entities
+    // Fetch entity info for activity log and admin notification — try legacy, fall back to entities
     let entityInfo: { company_name: string; organization_id: string; property_id: string | null } | null = null;
     const { data: legacyInfo } = await supabase
       .from(entityType === 'vendor' ? 'vendors' : 'tenants')
@@ -335,13 +335,13 @@ export async function POST(
           portal_link: `/dashboard/certificates/${certificate_id}/review`,
         });
 
-        // Send immediate email to PM
-        const pmEmail = orgUsers[0].email;
-        if (pmEmail) {
+        // Send immediate email to org admin
+        const adminEmail = orgUsers[0].email;
+        if (adminEmail) {
           try {
-            await sendNotificationEmail(pmEmail, emailSubject, emailHtml);
+            await sendNotificationEmail(adminEmail, emailSubject, emailHtml);
           } catch (emailErr) {
-            console.error('[portal/extract] Failed to send PM notification email:', emailErr);
+            console.error('[portal/extract] Failed to send admin notification email:', emailErr);
           }
         }
       }

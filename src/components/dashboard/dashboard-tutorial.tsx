@@ -16,7 +16,7 @@ interface TourStep {
   description: string;
 }
 
-function buildSteps(entityPlural: string, tenantPlural: string | null, entity: string): TourStep[] {
+function buildSteps(entityPlural: string, tenantPlural: string | null, entity: string, locationPlural: string): TourStep[] {
   const entitiesLabel = tenantPlural
     ? `${entityPlural} and ${tenantPlural.toLowerCase()}`
     : entityPlural.toLowerCase();
@@ -25,7 +25,7 @@ function buildSteps(entityPlural: string, tenantPlural: string | null, entity: s
       target: 'health-pills',
       title: 'Portfolio Health',
       description:
-        'Your overall compliance rate across all properties. Click the status pills to filter the action queue below.',
+        `Your overall compliance rate across all ${locationPlural.toLowerCase()}. Click the status pills to filter the action queue below.`,
     },
     {
       target: 'action-queue',
@@ -55,7 +55,7 @@ function buildSteps(entityPlural: string, tenantPlural: string | null, entity: s
       target: 'sidebar-nav',
       title: 'Navigation',
       description:
-        'Manage your locations and entities, set up requirement templates, and configure notifications from here.',
+        `Manage your ${locationPlural.toLowerCase()} and ${entityPlural.toLowerCase()}, set up requirement templates, and configure notifications from here.`,
     },
   ];
 }
@@ -105,8 +105,8 @@ export function DashboardTutorial({ active, onClose }: DashboardTutorialProps) {
   const { terminology: terms } = useTerminology();
 
   const STEPS = useMemo(
-    () => buildSteps(terms.entityPlural, terms.tenantPlural, terms.entity),
-    [terms.entityPlural, terms.tenantPlural, terms.entity]
+    () => buildSteps(terms.entityPlural, terms.tenantPlural, terms.entity, terms.locationPlural),
+    [terms.entityPlural, terms.tenantPlural, terms.entity, terms.locationPlural]
   );
 
   useEffect(() => {

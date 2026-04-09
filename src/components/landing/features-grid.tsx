@@ -120,8 +120,7 @@ export function FeaturesGrid() {
               Everything You Need to Stay Compliant
             </h2>
             <p className="mt-4 text-lg text-slate-500">
-              Purpose-built for commercial property managers who need reliable,
-              automated COI tracking.
+              Everything your team needs to track vendor and contractor insurance — from upload to compliance.
             </p>
           </div>
         </AnimateIn>

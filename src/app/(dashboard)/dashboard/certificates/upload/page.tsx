@@ -277,7 +277,7 @@ export default function CertificateUploadPage() {
           tenant_id: entityType === 'tenant' ? entityId : null,
           file_path: storagePath,
           file_hash: fileHash,
-          upload_source: 'pm_upload',
+          upload_source: 'user_upload',
           processing_status: 'processing',
         })
         .select('id')

@@ -277,23 +277,46 @@ async function recalculateComplianceForTemplate(
     .is('deleted_at', null)
     .is('archived_at', null);
 
-  const entityIds = [
-    ...(vendors ?? []).map((v) => ({ id: v.id, type: 'vendor' as const })),
-    ...(tenants ?? []).map((t) => ({ id: t.id, type: 'tenant' as const })),
-  ];
+  // Also recalculate for entities in the unified table (covers non-PM industries)
+  const { data: unifiedEntities } = await supabase
+    .from('entities')
+    .select('id, entity_type')
+    .eq('template_id', templateId)
+    .is('deleted_at', null);
+
+  // Merge all entity IDs, avoiding duplicates (some IDs may exist in both tables)
+  const seen = new Set<string>();
+  const entityIds: { id: string; type: 'vendor' | 'tenant' }[] = [];
+  for (const v of vendors ?? []) {
+    if (!seen.has(v.id)) {
+      seen.add(v.id);
+      entityIds.push({ id: v.id, type: 'vendor' });
+    }
+  }
+  for (const t of tenants ?? []) {
+    if (!seen.has(t.id)) {
+      seen.add(t.id);
+      entityIds.push({ id: t.id, type: 'tenant' });
+    }
+  }
+  for (const e of unifiedEntities ?? []) {
+    if (!seen.has(e.id)) {
+      seen.add(e.id);
+      entityIds.push({ id: e.id, type: (e.entity_type === 'tenant' ? 'tenant' : 'vendor') as 'vendor' | 'tenant' });
+    }
+  }
 
   for (const entity of entityIds) {
-    // Get most recent confirmed certificate
-    const certFilter =
-      entity.type === 'vendor'
-        ? { vendor_id: entity.id }
-        : { tenant_id: entity.id };
+    // Get most recent confirmed certificate — check all 3 ID columns (entity_id, vendor_id, tenant_id)
+    const orFilter = entity.type === 'vendor'
+      ? `entity_id.eq.${entity.id},vendor_id.eq.${entity.id}`
+      : `entity_id.eq.${entity.id},tenant_id.eq.${entity.id}`;
 
     // Try confirmed first, then fall back to extracted
     const { data: confirmedCert } = await supabase
       .from('certificates')
       .select('id')
-      .match(certFilter)
+      .or(orFilter)
       .eq('processing_status', 'review_confirmed')
       .order('uploaded_at', { ascending: false })
       .limit(1)
@@ -304,7 +327,7 @@ async function recalculateComplianceForTemplate(
       const { data: extractedCert } = await supabase
         .from('certificates')
         .select('id')
-        .match(certFilter)
+        .or(orFilter)
         .eq('processing_status', 'extracted')
         .order('uploaded_at', { ascending: false })
         .limit(1)
@@ -313,10 +336,14 @@ async function recalculateComplianceForTemplate(
     }
 
     if (!cert) {
-      // No cert at all — set to pending
+      // No cert at all — set to pending in both legacy and unified tables
       const table = entity.type === 'vendor' ? 'vendors' : 'tenants';
       await supabase
         .from(table)
+        .update({ compliance_status: 'pending' })
+        .eq('id', entity.id);
+      await supabase
+        .from('entities')
         .update({ compliance_status: 'pending' })
         .eq('id', entity.id);
       continue;
@@ -403,7 +430,7 @@ async function recalculateComplianceForTemplate(
       await supabase.from('compliance_results').insert(results);
     }
 
-    // Update entity compliance status
+    // Update entity compliance status in both legacy and unified tables
     const newStatus = allMet ? 'compliant' : 'non_compliant';
     const table = entity.type === 'vendor' ? 'vendors' : 'tenants';
     await supabase
@@ -412,11 +439,16 @@ async function recalculateComplianceForTemplate(
         compliance_status: newStatus,
       })
       .eq('id', entity.id);
+    await supabase
+      .from('entities')
+      .update({ compliance_status: newStatus })
+      .eq('id', entity.id);
 
     // Log compliance recalculation for each entity
     await supabase.from('activity_log').insert({
       organization_id: orgId,
       certificate_id: cert.id,
+      entity_id: entity.id,
       [entity.type === 'vendor' ? 'vendor_id' : 'tenant_id']: entity.id,
       action: 'compliance_checked',
       description: `Compliance recalculated after template update: ${newStatus}`,

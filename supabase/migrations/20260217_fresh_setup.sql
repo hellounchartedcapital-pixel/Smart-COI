@@ -145,7 +145,7 @@ CREATE TABLE IF NOT EXISTS certificates (
   file_path TEXT NOT NULL,
   file_hash TEXT,
   upload_source TEXT DEFAULT 'pm_upload'
-    CHECK (upload_source IN ('pm_upload', 'portal_upload')),
+    CHECK (upload_source IN ('user_upload', 'pm_upload', 'portal_upload')),
   processing_status TEXT DEFAULT 'processing'
     CHECK (processing_status IN ('processing', 'extracted', 'review_confirmed', 'failed')),
   uploaded_at TIMESTAMPTZ DEFAULT now(),

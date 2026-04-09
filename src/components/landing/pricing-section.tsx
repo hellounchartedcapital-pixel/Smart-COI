@@ -54,9 +54,9 @@ export function PricingSection() {
         <AnimateIn delay={30}>
           <div className="mx-auto mt-8 max-w-2xl text-center">
             <p className="text-base leading-relaxed text-slate-500 sm:text-[17px]">
-              Manual COI tracking costs property managers 15–20 hours per month in chasing
-              certificates, checking expirations, and following up with vendors. At $35/hour,
-              that&apos;s over <span className="font-semibold text-slate-700">$600/month in labor alone</span> — before
+              Manual COI tracking costs teams 15–20 hours per month — chasing
+              certificates, checking expirations, and following up with vendors. That&apos;s
+              over{' '}<span className="font-semibold text-slate-700">$600/month in labor alone</span> — before
               counting the risk of a single uninsured incident that could cost $500,000 or
               more. SmartCOI starts at <span className="font-semibold text-emerald-700">$63/month</span>.
             </p>
