@@ -223,7 +223,7 @@ export function DashboardClient({
           </div>
           <div className="flex items-center gap-2">
             <Link
-              href="/dashboard/vendors"
+              href="/dashboard/entities"
               className="inline-flex items-center gap-1 rounded-lg bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 transition-colors"
             >
               Assign now <ArrowRight className="h-3 w-3" />
