@@ -157,6 +157,46 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Audit: Comprehensive 10-Flow QA Audit (Apr 2026)
+
+Full 10-flow QA audit covering signup, extraction, bulk upload, reports, portal, billing, entity management, emails, public routes, and data integrity. Found 10 CRITICAL, 14 WARNING, 10 INFO issues across all flows. Key findings:
+
+**CRITICAL:**
+- `payment_failed` flag not checked in `getActivePlanStatus()` — failed payments don't block operations (`src/lib/plan-status.ts`)
+- `checkVendorTenantLimit()` doesn't check trial expiration — only checks `plan === 'canceled'` (`src/lib/plan-limits.ts:30-82`)
+- Stripe webhook swallows errors and returns 200 — prevents Stripe from retrying failed events (`src/app/api/webhooks/stripe/route.ts:214-217`)
+- `needs_setup` and `under_review` statuses missing from compliance report breakdown (`src/lib/actions/audit-report.ts`, `export-report-button.tsx`)
+- Zero-coverage AI extractions accepted as valid — random PDFs pass extraction without warning (`src/lib/ai/extraction.ts`)
+- No rate limiting on portal token lookup — brute-force enumeration possible (`src/app/portal/[token]/page.tsx`)
+- Permanent delete doesn't explicitly clean up all related records across dual tables (`src/lib/actions/entities.ts:250-267`)
+- Bulk upload missing retry button and cancel option in onboarding flow (`src/components/onboarding/step-bulk-upload.tsx`)
+
+**WARNING:**
+- Trial lifecycle stats query reads from legacy `vendors` table only, not `entities` (`src/lib/emails/trial-lifecycle.ts`)
+- Entity `updateEntity()` doesn't dual-write `entity_type` or `property_id` to legacy tables (`src/lib/actions/entities.ts`)
+- Notification deduplication key doesn't include threshold — may fire multiple times per month (`src/lib/notifications/scheduler.ts`)
+- Report compliance rate counts `needs_setup` entities as evaluable, inflating the rate
+- OpenGraph URL mismatch on `/features/coi-tracking` page
+- PM notification email on portal upload fails silently (`src/app/portal/[token]/extract/route.ts`)
+- Extraction limit excludes failed extractions from count — inconsistent with user expectations (`src/lib/plan-limits.ts`)
+- `subscription.updated` webhook doesn't check if subscription status is active vs past_due
+
+#### Fix: Hydration errors on vendor detail and dashboard pages (Apr 2026)
+
+Fixed recurring "Hydration failed" Sentry errors on vendor detail pages (`/dashboard/vendors/{id}`) caused by `new Date()` calls during render producing different values on server vs client.
+
+**Root cause:** Six client components used `new Date()` in the render path to compute time-dependent values (expiration status, days remaining, color classes). Since SSR and client hydration occur at different moments, the computed values could differ, causing React hydration mismatches.
+
+**Files fixed:**
+- `src/components/compliance/compact-compliance-view.tsx` — `hasExpiredCoverage` now computed in `useEffect` instead of render
+- `src/components/compliance/waiver-dialog.tsx` — `WaiverHistory` isActive/isExpired now uses client-side `now` via `useState`+`useEffect`
+- `src/components/dashboard/trial-banner.tsx` — trial days remaining deferred to client mount via `useState`+`useEffect`
+- `src/components/properties/property-detail-client.tsx` — COI expiration date color coding deferred to client via `clientNow` state
+- `src/components/compliance/certificate-review-client.tsx` — coverage expiration status computed in `useEffect`
+- `src/app/(dashboard)/dashboard/settings/billing/billing-client.tsx` — trial expiration check deferred to client mount
+
+**Pattern applied:** Replace `new Date()` in render with `useState(null)` + `useEffect(() => set(new Date()), [])`. On server render, time-dependent values default to safe initial state; on client mount, they update to correct values.
+
 #### Landing page audit section + login sidebar copy fix (Apr 2026)
 
 - Added "Not Ready for Software? Start With a Free Compliance Assessment" section to the landing page (`src/app/page.tsx`) after FAQ and before final CTA — links to `/audit`, uses secondary button style to avoid competing with main SaaS offering

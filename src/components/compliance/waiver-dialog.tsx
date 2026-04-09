@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ShieldOff, X } from 'lucide-react';
@@ -187,6 +187,9 @@ export function WaiverBadge({ waiver, onRevoke }: { waiver: ComplianceWaiver; on
 // ============================================================================
 
 export function WaiverHistory({ waivers }: { waivers: ComplianceWaiver[] }) {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => { setNow(new Date()); }, []);
+
   if (waivers.length === 0) return null;
 
   return (
@@ -198,8 +201,8 @@ export function WaiverHistory({ waivers }: { waivers: ComplianceWaiver[] }) {
       </div>
       <div className="divide-y divide-slate-100">
         {waivers.map((w) => {
-          const isActive = !w.revoked_at && new Date(w.expires_at) > new Date();
-          const isExpired = !w.revoked_at && new Date(w.expires_at) <= new Date();
+          const isActive = now !== null && !w.revoked_at && new Date(w.expires_at) > now;
+          const isExpired = now !== null && !w.revoked_at && new Date(w.expires_at) <= now;
 
           return (
             <div key={w.id} className="px-4 py-3">

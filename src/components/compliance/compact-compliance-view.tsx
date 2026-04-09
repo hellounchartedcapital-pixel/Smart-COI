@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
@@ -236,11 +236,16 @@ export function CompactComplianceView({
   propertyEntities,
   latestCert,
 }: CompactComplianceViewProps) {
-  const now = new Date();
-  const hasExpiredCoverage = extractedCoverages.some((c) => {
-    if (!c.expiration_date) return false;
-    return new Date(c.expiration_date) < now;
-  });
+  const [hasExpiredCoverage, setHasExpiredCoverage] = useState(false);
+  useEffect(() => {
+    const now = new Date();
+    setHasExpiredCoverage(
+      extractedCoverages.some((c) => {
+        if (!c.expiration_date) return false;
+        return new Date(c.expiration_date) < now;
+      })
+    );
+  }, [extractedCoverages]);
 
   const additionalCoverages = extractedCoverages.filter(
     (c) => !templateRequirements.some(

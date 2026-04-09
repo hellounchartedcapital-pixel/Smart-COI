@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -917,16 +917,17 @@ function CoverageCard({
 }) {
   const [detailsExpanded, setDetailsExpanded] = useState(false);
 
-  // Derive a quick expiration status for the primary row
-  const expirationStatus = (() => {
-    if (!coverage.expiration_date) return null;
+  // Derive expiration status after mount to avoid hydration mismatch
+  const [expirationStatus, setExpirationStatus] = useState<'expired' | 'expiring_soon' | 'valid' | null>(null);
+  useEffect(() => {
+    if (!coverage.expiration_date) { setExpirationStatus(null); return; }
     const exp = new Date(coverage.expiration_date + 'T00:00:00');
     const now = new Date();
     const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    if (exp < now) return 'expired' as const;
-    if (exp < thirtyDays) return 'expiring_soon' as const;
-    return 'valid' as const;
-  })();
+    if (exp < now) { setExpirationStatus('expired'); return; }
+    if (exp < thirtyDays) { setExpirationStatus('expiring_soon'); return; }
+    setExpirationStatus('valid');
+  }, [coverage.expiration_date]);
 
   return (
     <div

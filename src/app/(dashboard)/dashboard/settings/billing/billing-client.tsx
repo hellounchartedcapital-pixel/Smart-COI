@@ -69,9 +69,12 @@ export function BillingClient({
       })
     : null;
 
-  const isTrialExpired = trialEndsAt ? new Date() >= new Date(trialEndsAt) : false;
-  const trialDaysRemaining = trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+  const [clientNow, setClientNow] = useState<number | null>(null);
+  useEffect(() => { setClientNow(Date.now()); }, []);
+
+  const isTrialExpired = trialEndsAt && clientNow ? clientNow >= new Date(trialEndsAt).getTime() : false;
+  const trialDaysRemaining = trialEndsAt && clientNow
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - clientNow) / (1000 * 60 * 60 * 24)))
     : null;
 
   // ---- Handlers ----

@@ -14,11 +14,13 @@ interface TrialBannerProps {
 
 export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerProps) {
   const [dismissed, setDismissed] = useState(false);
+  const [clientNow, setClientNow] = useState<Date | null>(null);
 
   useEffect(() => {
     if (sessionStorage.getItem(DISMISSED_KEY) === 'true') {
       setDismissed(true);
     }
+    setClientNow(new Date());
   }, []);
 
   // Payment failed banner — NOT dismissible, takes priority
@@ -42,14 +44,16 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
   // Don't show for non-trial plans
   if (plan !== 'trial') return null;
 
-  const now = new Date();
+  // Defer time-dependent rendering to client to avoid hydration mismatch
+  if (!clientNow) return null;
+
   const expiresAt = trialEndsAt ? new Date(trialEndsAt) : null;
-  const isExpired = expiresAt ? now >= expiresAt : true;
+  const isExpired = expiresAt ? clientNow >= expiresAt : true;
 
   let daysRemaining: number | null = null;
   let daysText = '';
   if (expiresAt && !isExpired) {
-    const msRemaining = expiresAt.getTime() - now.getTime();
+    const msRemaining = expiresAt.getTime() - clientNow.getTime();
     daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
     if (daysRemaining < 1) {
       daysText = 'less than 1 day remaining';
