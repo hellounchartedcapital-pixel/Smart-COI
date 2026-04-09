@@ -172,7 +172,7 @@ export async function checkAndScheduleNotifications(): Promise<number> {
         if (daysUntil <= threshold) {
           const notifType = threshold >= 0 ? 'expiration_warning' : 'escalation';
           const month = now.toISOString().substring(0, 7);
-          const key = `${entity.id}:${notifType}:${month}`;
+          const key = `${entity.id}:${notifType}:${threshold}:${month}`;
 
           if (notifSet.has(key)) continue;
           notifSet.add(key);

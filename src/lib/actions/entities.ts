@@ -166,13 +166,14 @@ export async function updateEntity(entityId: string, input: UpdateEntityInput) {
 
   if (error) throw new Error(error.message);
 
-  // Dual-write key fields to legacy tables
+  // Dual-write key fields to legacy tables (includes entity_type → type mapping and property_id)
   const legacyUpdate: Record<string, unknown> = {};
   if (input.name !== undefined) legacyUpdate.company_name = input.name;
   if (input.contact_name !== undefined) legacyUpdate.contact_name = input.contact_name || null;
   if (input.contact_email !== undefined) legacyUpdate.contact_email = input.contact_email || null;
   if (input.contact_phone !== undefined) legacyUpdate.contact_phone = input.contact_phone || null;
   if (input.template_id !== undefined) legacyUpdate.template_id = input.template_id || null;
+  if (input.property_id !== undefined) legacyUpdate.property_id = input.property_id;
   if (Object.keys(legacyUpdate).length > 0) {
     await supabase.from('vendors').update(legacyUpdate).eq('id', entityId).eq('organization_id', orgId)
       .then(() => { /* best-effort */ });
@@ -246,9 +247,20 @@ export async function deleteEntity(entityId: string) {
   return { success: true };
 }
 
-/** Permanently delete an entity */
+/** Permanently delete an entity and all related records across both unified and legacy tables */
 export async function permanentlyDeleteEntity(entityId: string) {
   const { supabase, orgId } = await getAuthContext();
+
+  // Clean up related records that reference via legacy vendor_id/tenant_id columns
+  // (entities table ON DELETE CASCADE handles entity_id references)
+  await Promise.all([
+    supabase.from('certificates').update({ vendor_id: null }).eq('vendor_id', entityId).then(() => {}),
+    supabase.from('certificates').update({ tenant_id: null }).eq('tenant_id', entityId).then(() => {}),
+    supabase.from('notifications').delete().eq('vendor_id', entityId).then(() => {}),
+    supabase.from('notifications').delete().eq('tenant_id', entityId).then(() => {}),
+    supabase.from('upload_portal_tokens').delete().eq('vendor_id', entityId).then(() => {}),
+    supabase.from('upload_portal_tokens').delete().eq('tenant_id', entityId).then(() => {}),
+  ]);
 
   const { error } = await supabase
     .from('entities')

@@ -110,7 +110,10 @@ export async function checkExtractionLimit(
     };
   }
 
-  // Count extractions this calendar month
+  // Count extractions this calendar month.
+  // Intentionally excludes failed extractions (processing_status='failed') so users
+  // aren't penalized for AI/API failures they can't control. Retries of failed
+  // files create new certificate records, but the failed ones don't count.
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 

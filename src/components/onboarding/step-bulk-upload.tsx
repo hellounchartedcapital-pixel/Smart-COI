@@ -443,8 +443,14 @@ export function StepBulkUpload({
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
               <div
                 className="h-full rounded-full bg-brand transition-all duration-500"
-                style={{ width: `${totalCount > 0 ? ((doneCount + failedCount) / totalCount) * 100 : 0}%` }}
+                style={{ width: `${totalCount > 0 ? (doneCount / totalCount) * 100 : 0}%` }}
               />
+              {failedCount > 0 && (
+                <div
+                  className="h-full -mt-2 rounded-full bg-red-400 transition-all duration-500"
+                  style={{ width: `${(failedCount / totalCount) * 100}%`, marginLeft: `${(doneCount / totalCount) * 100}%` }}
+                />
+              )}
             </div>
           )}
 

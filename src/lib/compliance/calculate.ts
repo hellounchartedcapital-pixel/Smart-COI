@@ -357,8 +357,10 @@ export function calculateCompliance(
       gapDesc = `${fmtCov(req.coverage_type, req.limit_type)} limit could not be determined`;
     }
 
-    // Check endorsements — use coverage-level flags (Pass 1) first, then fall
-    // back to certificate-level endorsement_data (Pass 2) for verification.
+    // Check endorsements — only for REQUIRED coverages. Non-required coverages
+    // don't trigger endorsement checks because they're informational only.
+    // Uses coverage-level flags (Pass 1) first, then falls back to
+    // certificate-level endorsement_data (Pass 2) for verification.
     if (limitMet && req.requires_additional_insured && !match.additional_insured_listed) {
       // Pass 1 didn't detect AI — check Pass 2 endorsement pages for CG 20 10 / CG 20 37
       const hasAIEndorsement = endorsements.some(

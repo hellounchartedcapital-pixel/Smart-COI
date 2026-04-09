@@ -737,8 +737,14 @@ function buildEntityDetails(
   const nonCompliantEntities = result.perEntityBreakdown.filter(
     (e) => e.coverageGaps.length > 0 || e.isExpired || e.isPartiallyExpired
   );
+  const noCertEntities = result.perEntityBreakdown.filter(
+    (e) => e.complianceStatus === 'pending'
+  );
+  const needsSetupEntities = result.perEntityBreakdown.filter(
+    (e) => e.complianceStatus === 'needs_setup'
+  );
 
-  if (nonCompliantEntities.length === 0) return;
+  if (nonCompliantEntities.length === 0 && noCertEntities.length === 0 && needsSetupEntities.length === 0) return;
 
   doc.addPage();
   addPageFooter(doc);
@@ -914,6 +920,44 @@ function buildEntityDetails(
     }
 
     y += 6;
+  }
+
+  // Render entities with no certificate on file
+  if (noCertEntities.length > 0) {
+    y = ensureSpace(doc, y, 20);
+    y = drawText(doc, 'No Certificate on File', MARGIN_LEFT, y, {
+      fontSize: 10,
+      fontStyle: 'bold',
+      color: SLATE_700,
+    });
+    y += 3;
+    for (const entity of noCertEntities) {
+      y = ensureSpace(doc, y, 8);
+      doc.setFontSize(9);
+      doc.setTextColor(...SLATE_700);
+      doc.text(`${entity.entityName} — No COI uploaded. Request a certificate from this ${entity.entityType}.`, MARGIN_LEFT + 5, y);
+      y += 5;
+    }
+    y += 4;
+  }
+
+  // Render entities that need configuration
+  if (needsSetupEntities.length > 0) {
+    y = ensureSpace(doc, y, 20);
+    y = drawText(doc, 'Needs Configuration', MARGIN_LEFT, y, {
+      fontSize: 10,
+      fontStyle: 'bold',
+      color: SLATE_700,
+    });
+    y += 3;
+    for (const entity of needsSetupEntities) {
+      y = ensureSpace(doc, y, 8);
+      doc.setFontSize(9);
+      doc.setTextColor(...SLATE_700);
+      doc.text(`${entity.entityName} — No requirement template assigned. Compliance cannot be evaluated.`, MARGIN_LEFT + 5, y);
+      y += 5;
+    }
+    y += 4;
   }
 }
 

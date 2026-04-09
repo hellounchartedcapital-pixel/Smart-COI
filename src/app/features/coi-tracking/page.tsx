@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     description:
       'Upload COIs and get instant AI compliance checks. Track every certificate across your portfolio from one dashboard. Start your free 14-day trial.',
     type: 'website',
-    url: 'https://smartcoi.io/features/coi-tracking',
+    url: 'https://smartcoi.io/coi-tracking-software',
   },
 };
 

@@ -341,7 +341,20 @@ export async function POST(
           try {
             await sendNotificationEmail(adminEmail, emailSubject, emailHtml);
           } catch (emailErr) {
-            console.error('[portal/extract] Failed to send admin notification email:', emailErr);
+            const errMsg = emailErr instanceof Error ? emailErr.message : String(emailErr);
+            console.error(
+              `[portal/extract] Failed to send admin notification email: entity=${entityInfo.company_name}, to=${adminEmail}, error=${errMsg}`
+            );
+            // Update notification record to reflect the failure
+            await supabase
+              .from('notifications')
+              .update({ status: 'failed', sent_date: null })
+              .eq('organization_id', entityInfo.organization_id)
+              .eq(`${entityType === 'vendor' ? 'vendor_id' : 'tenant_id'}`, entityId)
+              .eq('type', 'portal_upload')
+              .order('scheduled_date', { ascending: false })
+              .limit(1)
+              .then(() => { /* best-effort */ });
           }
         }
       }

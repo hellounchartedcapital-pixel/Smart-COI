@@ -369,6 +369,11 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
         };
       }
 
+      // Basic structural validation — ensure required arrays exist
+      if (!Array.isArray(parsed.coverages)) parsed.coverages = [];
+      if (!Array.isArray(parsed.endorsements)) parsed.endorsements = [];
+      if (typeof parsed.named_insured !== 'string') parsed.named_insured = '';
+
       return mapToDbRows(parsed);
     }
 
