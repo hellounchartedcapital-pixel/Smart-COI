@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDate } from '@/lib/utils';
 import { useTerminology } from '@/hooks/useTerminology';
@@ -110,6 +110,10 @@ export function PropertyDetailClient({
   const router = useRouter();
   const { showUpgradeModal } = useUpgradeModal();
   const { terminology: terms } = useTerminology();
+
+  // Stable client-side time for date comparisons (avoids hydration mismatch)
+  const [clientNow, setClientNow] = useState<Date | null>(null);
+  useEffect(() => { setClientNow(new Date()); }, []);
 
   // Dialog states
   const [editOpen, setEditOpen] = useState(false);
@@ -601,13 +605,15 @@ export function PropertyDetailClient({
                         {(() => {
                           const d = v.coi_expiration_date;
                           if (!d) return <span className="text-sm text-slate-400">—</span>;
-                          const exp = new Date(d + 'T00:00:00');
-                          const now = new Date();
-                          now.setHours(0, 0, 0, 0);
-                          const diffDays = Math.floor((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                           let colorClass = 'text-muted-foreground';
-                          if (diffDays < 0) colorClass = 'text-red-600';
-                          else if (diffDays <= 30) colorClass = 'text-amber-600';
+                          if (clientNow) {
+                            const exp = new Date(d + 'T00:00:00');
+                            const now = new Date(clientNow);
+                            now.setHours(0, 0, 0, 0);
+                            const diffDays = Math.floor((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                            if (diffDays < 0) colorClass = 'text-red-600';
+                            else if (diffDays <= 30) colorClass = 'text-amber-600';
+                          }
                           return <span className={`text-sm ${colorClass}`}>{formatDate(d)}</span>;
                         })()}
                       </TableCell>
@@ -780,13 +786,15 @@ export function PropertyDetailClient({
                         {(() => {
                           const d = t.coi_expiration_date;
                           if (!d) return <span className="text-sm text-slate-400">—</span>;
-                          const exp = new Date(d + 'T00:00:00');
-                          const now = new Date();
-                          now.setHours(0, 0, 0, 0);
-                          const diffDays = Math.floor((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
                           let colorClass = 'text-muted-foreground';
-                          if (diffDays < 0) colorClass = 'text-red-600';
-                          else if (diffDays <= 30) colorClass = 'text-amber-600';
+                          if (clientNow) {
+                            const exp = new Date(d + 'T00:00:00');
+                            const now = new Date(clientNow);
+                            now.setHours(0, 0, 0, 0);
+                            const diffDays = Math.floor((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                            if (diffDays < 0) colorClass = 'text-red-600';
+                            else if (diffDays <= 30) colorClass = 'text-amber-600';
+                          }
                           return <span className={`text-sm ${colorClass}`}>{formatDate(d)}</span>;
                         })()}
                       </TableCell>

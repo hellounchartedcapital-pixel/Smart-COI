@@ -157,6 +157,22 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Hydration errors on vendor detail and dashboard pages (Apr 2026)
+
+Fixed recurring "Hydration failed" Sentry errors on vendor detail pages (`/dashboard/vendors/{id}`) caused by `new Date()` calls during render producing different values on server vs client.
+
+**Root cause:** Six client components used `new Date()` in the render path to compute time-dependent values (expiration status, days remaining, color classes). Since SSR and client hydration occur at different moments, the computed values could differ, causing React hydration mismatches.
+
+**Files fixed:**
+- `src/components/compliance/compact-compliance-view.tsx` — `hasExpiredCoverage` now computed in `useEffect` instead of render
+- `src/components/compliance/waiver-dialog.tsx` — `WaiverHistory` isActive/isExpired now uses client-side `now` via `useState`+`useEffect`
+- `src/components/dashboard/trial-banner.tsx` — trial days remaining deferred to client mount via `useState`+`useEffect`
+- `src/components/properties/property-detail-client.tsx` — COI expiration date color coding deferred to client via `clientNow` state
+- `src/components/compliance/certificate-review-client.tsx` — coverage expiration status computed in `useEffect`
+- `src/app/(dashboard)/dashboard/settings/billing/billing-client.tsx` — trial expiration check deferred to client mount
+
+**Pattern applied:** Replace `new Date()` in render with `useState(null)` + `useEffect(() => set(new Date()), [])`. On server render, time-dependent values default to safe initial state; on client mount, they update to correct values.
+
 #### Landing page audit section + login sidebar copy fix (Apr 2026)
 
 - Added "Not Ready for Software? Start With a Free Compliance Assessment" section to the landing page (`src/app/page.tsx`) after FAQ and before final CTA — links to `/audit`, uses secondary button style to avoid competing with main SaaS offering

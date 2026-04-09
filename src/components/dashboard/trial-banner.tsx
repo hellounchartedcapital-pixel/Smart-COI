@@ -39,17 +39,26 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
     );
   }
 
+  const [clientNow, setClientNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setClientNow(new Date());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Don't show for non-trial plans
   if (plan !== 'trial') return null;
 
-  const now = new Date();
+  // Defer time-dependent rendering to client to avoid hydration mismatch
+  if (!clientNow) return null;
+
   const expiresAt = trialEndsAt ? new Date(trialEndsAt) : null;
-  const isExpired = expiresAt ? now >= expiresAt : true;
+  const isExpired = expiresAt ? clientNow >= expiresAt : true;
 
   let daysRemaining: number | null = null;
   let daysText = '';
   if (expiresAt && !isExpired) {
-    const msRemaining = expiresAt.getTime() - now.getTime();
+    const msRemaining = expiresAt.getTime() - clientNow.getTime();
     daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
     if (daysRemaining < 1) {
       daysText = 'less than 1 day remaining';
