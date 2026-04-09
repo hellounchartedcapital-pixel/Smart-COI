@@ -517,6 +517,10 @@ Full end-to-end audit of 7 critical user flows. **All 7 flows PASS** — no bloc
 
 - Anthropic API 529 errors during bulk upload (retry logic with exponential backoff in place — increased to 5 retries with up to 90s backoff)
 - Tutorial walkthrough positioning edge cases
+- **Compliance audit report shows $0 exposure / all "Endorsement Gap"** — Two bugs identified (Apr 2026):
+  1. **`extracted_coverage_id` not persisted by `runAutoCompliance()`:** `src/lib/actions/certificates.ts` lines 310-316 omit `extracted_coverage_id` when inserting `compliance_results`. `calculateCompliance()` computes it (calculate.ts:368,375) but `runAutoCompliance()` strips it. `runComplianceForEntity()` in `properties.ts:1215` saves it correctly. Impact: risk quantification can't look up matched coverage's `limit_amount` for shortfall calculations.
+  2. **Endorsement gaps classified with null dollarGap:** `risk-quantification.ts:183-198` classifies any gap whose `gap_description` contains "Additional Insured", "Waiver of Subrogation", or "Primary" as `gapType: 'endorsement'` with `dollarGap: null`. Since most industry templates require AI/WoS endorsements (`ai: true, wos: true` in industry-templates.ts), and endorsement detection from real COIs is unreliable (depends on ADDL INSD checkbox, endorsement pages), nearly ALL gaps are endorsement-type → $0 total exposure.
+  - **Coverage type matching itself works correctly** — both AI extraction and templates use identical Title Case strings ("Commercial General Liability", "Automobile Liability", etc.), and `coverageTypeMatchScore()` in `coverage-utils.ts:193-223` handles variations with fuzzy matching (0.7 threshold). The issue is NOT type mismatch — types match, limits are met, only endorsement checks fail.
 
 ## Architecture Notes
 
