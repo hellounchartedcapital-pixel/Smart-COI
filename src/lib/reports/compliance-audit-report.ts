@@ -510,10 +510,11 @@ function buildPortfolioOverview(
   });
   y += 3;
 
-  const compliantCount = result.entityCount - result.nonCompliantCount;
   const noCertCount = result.perEntityBreakdown.filter(
     (e) => e.complianceStatus === 'pending'
   ).length;
+  const evaluableCount = result.entityCount - (result.needsSetupCount ?? 0) - (result.underReviewCount ?? 0);
+  const compliantCount = evaluableCount - result.nonCompliantCount;
   const nonCompliant = result.nonCompliantCount - result.expiredCount - noCertCount;
 
   const pct = (n: number) =>
@@ -521,16 +522,24 @@ function buildPortfolioOverview(
       ? ((n / result.entityCount) * 100).toFixed(1) + '%'
       : '0%';
 
+  const statusRows: string[][] = [
+    ['Compliant', String(compliantCount > 0 ? compliantCount : 0), pct(compliantCount > 0 ? compliantCount : 0)],
+    ['Non-Compliant', String(nonCompliant > 0 ? nonCompliant : 0), pct(nonCompliant > 0 ? nonCompliant : 0)],
+    ['Expired', String(result.expiredCount), pct(result.expiredCount)],
+    ['No Certificate', String(noCertCount), pct(noCertCount)],
+  ];
+  if ((result.needsSetupCount ?? 0) > 0) {
+    statusRows.push(['Needs Configuration', String(result.needsSetupCount), pct(result.needsSetupCount ?? 0)]);
+  }
+  if ((result.underReviewCount ?? 0) > 0) {
+    statusRows.push(['Under Review', String(result.underReviewCount), pct(result.underReviewCount ?? 0)]);
+  }
+
   autoTable(doc, {
     startY: y,
     margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
     head: [['Status', 'Count', 'Percentage']],
-    body: [
-      ['Compliant', String(compliantCount), pct(compliantCount)],
-      ['Non-Compliant', String(nonCompliant > 0 ? nonCompliant : 0), pct(nonCompliant > 0 ? nonCompliant : 0)],
-      ['Expired', String(result.expiredCount), pct(result.expiredCount)],
-      ['No Certificate', String(noCertCount), pct(noCertCount)],
-    ],
+    body: statusRows,
     headStyles: {
       fillColor: [...EMERALD],
       textColor: [...WHITE],
@@ -728,8 +737,14 @@ function buildEntityDetails(
   const nonCompliantEntities = result.perEntityBreakdown.filter(
     (e) => e.coverageGaps.length > 0 || e.isExpired || e.isPartiallyExpired
   );
+  const noCertEntities = result.perEntityBreakdown.filter(
+    (e) => e.complianceStatus === 'pending'
+  );
+  const needsSetupEntities = result.perEntityBreakdown.filter(
+    (e) => e.complianceStatus === 'needs_setup'
+  );
 
-  if (nonCompliantEntities.length === 0) return;
+  if (nonCompliantEntities.length === 0 && noCertEntities.length === 0 && needsSetupEntities.length === 0) return;
 
   doc.addPage();
   addPageFooter(doc);
@@ -905,6 +920,44 @@ function buildEntityDetails(
     }
 
     y += 6;
+  }
+
+  // Render entities with no certificate on file
+  if (noCertEntities.length > 0) {
+    y = ensureSpace(doc, y, 20);
+    y = drawText(doc, 'No Certificate on File', MARGIN_LEFT, y, {
+      fontSize: 10,
+      fontStyle: 'bold',
+      color: SLATE_700,
+    });
+    y += 3;
+    for (const entity of noCertEntities) {
+      y = ensureSpace(doc, y, 8);
+      doc.setFontSize(9);
+      doc.setTextColor(...SLATE_700);
+      doc.text(`${entity.entityName} — No COI uploaded. Request a certificate from this ${entity.entityType}.`, MARGIN_LEFT + 5, y);
+      y += 5;
+    }
+    y += 4;
+  }
+
+  // Render entities that need configuration
+  if (needsSetupEntities.length > 0) {
+    y = ensureSpace(doc, y, 20);
+    y = drawText(doc, 'Needs Configuration', MARGIN_LEFT, y, {
+      fontSize: 10,
+      fontStyle: 'bold',
+      color: SLATE_700,
+    });
+    y += 3;
+    for (const entity of needsSetupEntities) {
+      y = ensureSpace(doc, y, 8);
+      doc.setFontSize(9);
+      doc.setTextColor(...SLATE_700);
+      doc.text(`${entity.entityName} — No requirement template assigned. Compliance cannot be evaluated.`, MARGIN_LEFT + 5, y);
+      y += 5;
+    }
+    y += 4;
   }
 }
 

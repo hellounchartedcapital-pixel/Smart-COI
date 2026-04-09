@@ -196,31 +196,29 @@ async function getOrgStats(
   supabase: ReturnType<typeof createServiceClient>,
   orgId: string
 ): Promise<OrgStats> {
-  const [certRes, vendorRes, tenantRes] = await Promise.all([
+  // Query unified entities table (not legacy vendors/tenants) to get accurate stats
+  const [certRes, entityRes] = await Promise.all([
     supabase
       .from('certificates')
       .select('id', { count: 'exact', head: true })
       .eq('organization_id', orgId),
     supabase
-      .from('vendors')
-      .select('id, compliance_status', { count: 'exact' })
+      .from('entities')
+      .select('id, entity_type, compliance_status')
       .eq('organization_id', orgId)
-      .is('archived_at', null),
-    supabase
-      .from('tenants')
-      .select('id', { count: 'exact', head: true })
-      .eq('organization_id', orgId)
+      .is('deleted_at', null)
       .is('archived_at', null),
   ]);
 
-  const vendorCount = vendorRes.count ?? 0;
-  const tenantCount = tenantRes.count ?? 0;
-  const totalEntities = vendorCount + tenantCount;
+  const entities = entityRes.data ?? [];
+  const vendorCount = entities.filter((e) => e.entity_type !== 'tenant').length;
+  const tenantCount = entities.filter((e) => e.entity_type === 'tenant').length;
+  const totalEntities = entities.length;
 
   let complianceRate: number | null = null;
-  if (totalEntities > 0 && vendorRes.data) {
-    const compliant = vendorRes.data.filter(
-      (v: { compliance_status: string }) => v.compliance_status === 'compliant'
+  if (totalEntities > 0) {
+    const compliant = entities.filter(
+      (e) => e.compliance_status === 'compliant'
     ).length;
     complianceRate = Math.round((compliant / totalEntities) * 100);
   }

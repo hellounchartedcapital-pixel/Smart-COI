@@ -2,7 +2,7 @@
 // Plan status helpers — shared between server actions and client components
 // ---------------------------------------------------------------------------
 
-export type PlanReason = 'active' | 'trial_expired' | 'canceled';
+export type PlanReason = 'active' | 'trial_expired' | 'canceled' | 'payment_failed';
 
 export interface PlanStatus {
   isActive: boolean;
@@ -13,18 +13,20 @@ export interface PlanStatus {
  * Determine whether an org has an active (usable) plan.
  *
  * Active if:
- *   - plan is starter, growth, or professional
+ *   - plan is starter, growth, or professional AND payment not failed
  *   - plan is trial AND trial_ends_at is in the future
  *
  * Inactive if:
  *   - plan is trial AND trial_ends_at is in the past or null
  *   - plan is canceled
+ *   - paid plan with payment_failed flag set
  */
 export function getActivePlanStatus(org: {
   plan: string;
   trial_ends_at: string | null;
+  payment_failed?: boolean;
 }): PlanStatus {
-  const { plan, trial_ends_at } = org;
+  const { plan, trial_ends_at, payment_failed } = org;
 
   if (plan === 'canceled') {
     return { isActive: false, reason: 'canceled' };
@@ -36,6 +38,11 @@ export function getActivePlanStatus(org: {
     return isValid
       ? { isActive: true, reason: 'active' }
       : { isActive: false, reason: 'trial_expired' };
+  }
+
+  // Paid plan with failed payment — restrict access
+  if (payment_failed) {
+    return { isActive: false, reason: 'payment_failed' };
   }
 
   // starter, growth, professional, or any paid plan

@@ -46,6 +46,8 @@ export interface ComplianceReportData {
     expired: number;
     non_compliant: number;
     pending: number;
+    needs_setup: number;
+    under_review: number;
   };
   properties: ReportProperty[];
 }
@@ -115,17 +117,18 @@ export async function getComplianceReportData(): Promise<ComplianceReportData> {
     })),
   ];
 
-  // Status counts
-  const statusBreakdown = { compliant: 0, expiring_soon: 0, expired: 0, non_compliant: 0, pending: 0 };
+  // Status counts — all 7 compliance statuses
+  const statusBreakdown = { compliant: 0, expiring_soon: 0, expired: 0, non_compliant: 0, pending: 0, needs_setup: 0, under_review: 0 };
   for (const e of allEntities) {
     if (e.status in statusBreakdown) {
       statusBreakdown[e.status as keyof typeof statusBreakdown]++;
     }
   }
 
-  const withCert = allEntities.filter((e) => e.status !== 'pending').length;
+  // Exclude non-evaluable entities (pending, needs_setup, under_review) from compliance rate
+  const evaluable = allEntities.filter((e) => e.status !== 'pending' && e.status !== 'needs_setup' && e.status !== 'under_review').length;
   const overallComplianceRate =
-    withCert > 0 ? Math.round((statusBreakdown.compliant / withCert) * 100) : null;
+    evaluable > 0 ? Math.round((statusBreakdown.compliant / evaluable) * 100) : null;
 
   // Fetch latest certificates for all entities to get coverages and gaps
   const vendorIds = vendors.map((v) => v.id);

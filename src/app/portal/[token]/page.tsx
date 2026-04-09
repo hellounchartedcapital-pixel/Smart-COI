@@ -1,8 +1,10 @@
+import { headers } from 'next/headers';
 import { createServiceClient } from '@/lib/supabase/service';
 import { formatCurrency } from '@/lib/utils';
 import { getCoverageLabel, LIMIT_TYPE_LABELS } from '@/components/templates/template-labels';
 import type { Industry, LimitType } from '@/types';
 import { getTerminology } from '@/lib/constants/terminology';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { PortalUploadClient } from './portal-upload-client';
 
 interface PortalPageProps {
@@ -49,6 +51,15 @@ interface EntityComplianceGap {
 
 export default async function PortalPage({ params }: PortalPageProps) {
   const { token } = await params;
+
+  // Rate limit: 10 lookups per IP per minute
+  const headersList = await headers();
+  const ip = headersList.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown';
+  const rl = checkRateLimit(`portal:${ip}`, 10);
+  if (rl.limited) {
+    return <PortalErrorPage message="Too many requests. Please wait a moment and try again." />;
+  }
+
   const supabase = createServiceClient();
 
   // Look up the portal token

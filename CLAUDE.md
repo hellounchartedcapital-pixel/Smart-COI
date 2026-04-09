@@ -157,6 +157,72 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: P1 WARNING-Level Audit Findings (Apr 2026)
+
+Fixed all 16 WARNING-level issues from the comprehensive QA audit:
+
+**Signup (1 fix):**
+- Added password length validation (min 6 chars) before Supabase signup call (`src/app/(auth)/signup/page.tsx`)
+
+**Extraction (2 fixes):**
+- Added structural validation for AI JSON response — ensures `coverages`, `endorsements` arrays and `named_insured` string exist before processing (`src/lib/ai/extraction.ts`)
+- Documented endorsement checks as intentionally limited to required coverages only (`src/lib/compliance/calculate.ts`)
+
+**Bulk upload (1 fix):**
+- Progress bar now shows successful count only in green, failed count in red — no longer counts failures as "complete" (`src/components/onboarding/step-bulk-upload.tsx`)
+
+**Reports (2 fixes):**
+- Audit PDF now renders "No Certificate on File" and "Needs Configuration" sections for entities with `pending` and `needs_setup` statuses (`src/lib/reports/compliance-audit-report.ts`)
+- Compliance rate calculation already excludes non-evaluable entities (from P0 fix)
+
+**Portal (1 fix):**
+- PM notification email failure now logged with entity name, recipient email, and error details; notification record updated to `status: 'failed'` (`src/app/portal/[token]/extract/route.ts`)
+
+**Billing (2 fixes):**
+- `subscription.updated` webhook now checks `subscription.status === 'active'` before updating plan — `past_due` subscriptions no longer treated as active (`src/app/api/webhooks/stripe/route.ts`)
+- Documented extraction limit exclusion of failed extractions as intentional (`src/lib/plan-limits.ts`)
+
+**Entity management (2 fixes):**
+- `updateEntity()` now dual-writes `property_id` to legacy tables (`src/lib/actions/entities.ts`)
+- `permanentlyDeleteEntity()` now explicitly cleans up legacy `vendor_id`/`tenant_id` references in certificates, notifications, and portal tokens before deletion
+
+**Email notifications (3 fixes):**
+- `getOrgStats()` now queries unified `entities` table instead of legacy `vendors` table (`src/lib/emails/trial-lifecycle.ts`)
+- Notification deduplication key now includes threshold value to prevent same threshold firing multiple times (`src/lib/notifications/scheduler.ts`)
+- Documented `sendManualFollowUp()` as intentionally ignoring `notifications_paused` — admin manual override by design (`src/lib/actions/notifications.ts`)
+
+**Public pages (1 fix):**
+- Fixed OpenGraph URL mismatch on `/features/coi-tracking` — now matches canonical URL `https://smartcoi.io/coi-tracking-software` (`src/app/features/coi-tracking/page.tsx`)
+
+**Data integrity (1 migration):**
+- Created `supabase/migrations/20260409_add_certificate_fk_check.sql` — adds CHECK constraint requiring at least one of `entity_id`, `vendor_id`, `tenant_id` to be non-null on certificates table
+
+⚠️ ACTION REQUIRED: Run `supabase/migrations/20260409_add_certificate_fk_check.sql` in Supabase SQL Editor. Must run `20260408_fix_orphaned_bulk_upload_certs.sql` first to fix any existing orphaned records.
+
+#### Fix: P0 Critical Fixes from QA Audit (Apr 2026)
+
+Fixed all 9 CRITICAL issues from the comprehensive QA audit:
+
+**Billing enforcement (3 fixes):**
+- `getActivePlanStatus()` now checks `payment_failed` flag — paid plans with failed payments are blocked from operations (`src/lib/plan-status.ts`)
+- `checkVendorTenantLimit()` now calls `getActivePlanStatus()` — expired trials and failed payments block entity creation (`src/lib/plan-limits.ts`)
+- Stripe webhook error handler now returns HTTP 500 on failure — enables Stripe retry on transient DB errors (`src/app/api/webhooks/stripe/route.ts`)
+- All callers of `getActivePlanStatus` updated to include `payment_failed` in their org select queries
+
+**Extraction validation (1 fix):**
+- Zero-coverage AI extractions now return `success: false` with user message "No insurance coverage data found" — prevents random PDFs from being accepted as valid COIs (`src/lib/ai/extraction.ts`)
+
+**Bulk upload UX (2 fixes):**
+- Added per-file "Retry" button and "Retry All Failed" button to onboarding bulk upload (`src/components/onboarding/step-bulk-upload.tsx`)
+- Added "Cancel Upload" button during processing — sets abort flag to stop remaining files while keeping already-processed ones
+
+**Report completeness (2 fixes):**
+- Added `needs_setup` and `under_review` to compliance report status breakdown — both PDF and CSV exports now account for all 7 compliance statuses (`src/lib/actions/reports.ts`, `export-report-button.tsx`)
+- Compliance rate now excludes `needs_setup` and `under_review` entities from denominator — prevents inflation from non-evaluable entities (`src/lib/compliance/risk-quantification.ts`)
+
+**Portal security (1 fix):**
+- Added in-memory rate limiter (10 requests/IP/minute) to portal token lookup — blocks automated UUID scanning (`src/app/portal/[token]/page.tsx`, `src/lib/rate-limit.ts`)
+
 #### Audit: Comprehensive 10-Flow QA Audit (Apr 2026)
 
 Full 10-flow QA audit covering signup, extraction, bulk upload, reports, portal, billing, entity management, emails, public routes, and data integrity. Found 10 CRITICAL, 14 WARNING, 10 INFO issues across all flows. Key findings:

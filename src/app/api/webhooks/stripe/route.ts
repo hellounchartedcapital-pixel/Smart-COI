@@ -93,6 +93,14 @@ export async function POST(request: Request) {
 
         if (!plan) break;
 
+        // Only update plan when subscription is fully active or trialing.
+        // past_due, unpaid, etc. should not update the plan — payment_failed
+        // flag is set via invoice.payment_failed event instead.
+        if (subscription.status !== 'active' && subscription.status !== 'trialing') {
+          console.log(`[Stripe Webhook] subscription.updated — status ${subscription.status}, skipping plan update`);
+          break;
+        }
+
         const { data: org } = await supabase
           .from('organizations')
           .select('id, plan, stripe_subscription_id')
@@ -213,7 +221,11 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     console.error(`[Stripe Webhook] Error handling ${event.type}:`, err);
-    // Still return 200 so Stripe doesn't retry
+    // Return 500 so Stripe retries the event delivery
+    return NextResponse.json(
+      { error: `Failed to process ${event.type}` },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ received: true });

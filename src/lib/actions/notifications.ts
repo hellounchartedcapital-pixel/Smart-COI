@@ -112,6 +112,13 @@ export async function generatePortalLink(
 // Manual Follow-Up
 // ============================================================================
 
+/**
+ * Send a manual follow-up notification to an entity.
+ *
+ * Note: This intentionally does NOT check `notifications_paused` — manual
+ * follow-ups from the admin are explicit overrides of the pause setting.
+ * Automated notifications (via scheduler.ts) DO respect the pause flag.
+ */
 export async function sendManualFollowUp(
   entityType: 'vendor' | 'tenant',
   entityId: string

@@ -369,6 +369,11 @@ export async function extractCOIFromPDF(pdfBase64: string): Promise<ExtractionRe
         };
       }
 
+      // Basic structural validation — ensure required arrays exist
+      if (!Array.isArray(parsed.coverages)) parsed.coverages = [];
+      if (!Array.isArray(parsed.endorsements)) parsed.endorsements = [];
+      if (typeof parsed.named_insured !== 'string') parsed.named_insured = '';
+
       return mapToDbRows(parsed);
     }
 
@@ -538,6 +543,19 @@ function mapToDbRows(parsed: AIExtractionResponse): ExtractionResult {
     named_parties: e.named_parties ?? [],
     description: e.description || null,
   }));
+
+  // Reject extractions with zero coverages — likely not a COI document
+  if (coverages.length === 0) {
+    return {
+      success: false,
+      coverages: [],
+      entities,
+      endorsements,
+      insuredName: parsed.named_insured || null,
+      error: 'no_coverages',
+      userMessage: 'No insurance coverage data found in this document. Please upload a valid Certificate of Insurance (COI).',
+    };
+  }
 
   return {
     success: true,

@@ -42,7 +42,7 @@ export async function requireActivePlan(
 
   const { data: org, error: orgError } = await service
     .from('organizations')
-    .select('plan, trial_ends_at')
+    .select('plan, trial_ends_at, payment_failed')
     .eq('id', profile.organization_id)
     .single();
 
@@ -96,7 +96,7 @@ export async function checkActivePlan(
 
   const { data: org, error: orgError } = await service
     .from('organizations')
-    .select('plan, trial_ends_at')
+    .select('plan, trial_ends_at, payment_failed')
     .eq('id', profile.organization_id)
     .single();
 

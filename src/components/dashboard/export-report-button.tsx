@@ -28,6 +28,8 @@ function statusColor(status: string): string {
     case 'expired': return '#dc2626';
     case 'non_compliant': return '#ef4444';
     case 'pending': return '#64748b';
+    case 'needs_setup': return '#7c3aed';
+    case 'under_review': return '#2563eb';
     default: return '#475569';
   }
 }
@@ -173,6 +175,14 @@ function generatePDFHtml(data: ComplianceReportData, entityLabel: string, tenant
         <p style="font-size:24px;font-weight:700;color:#64748b;margin:0;">${data.statusBreakdown.pending}</p>
         <p style="font-size:11px;color:#64748b;margin:2px 0 0;">Pending</p>
       </div>
+      ${data.statusBreakdown.needs_setup > 0 ? `<div style="background:#f5f3ff;border-radius:8px;padding:12px 20px;text-align:center;">
+        <p style="font-size:24px;font-weight:700;color:#7c3aed;margin:0;">${data.statusBreakdown.needs_setup}</p>
+        <p style="font-size:11px;color:#64748b;margin:2px 0 0;">Needs Setup</p>
+      </div>` : ''}
+      ${data.statusBreakdown.under_review > 0 ? `<div style="background:#eff6ff;border-radius:8px;padding:12px 20px;text-align:center;">
+        <p style="font-size:24px;font-weight:700;color:#2563eb;margin:0;">${data.statusBreakdown.under_review}</p>
+        <p style="font-size:11px;color:#64748b;margin:2px 0 0;">Under Review</p>
+      </div>` : ''}
     </div>
   </div>
 
