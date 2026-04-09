@@ -157,6 +157,39 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Audit: Industry-Agnostic Expansion — Full Codebase Audit (Apr 2026)
+
+Comprehensive 7-area audit of the multi-industry expansion. Found 7 CRITICAL, 16 WARNING, 5 INFO issues.
+
+**CRITICAL findings (broken functionality):**
+- **Onboarding Step 6 blocks non-PM users:** `step-assign-requirements.tsx:52` — `if (!orgId || !propertyId)` guard prevents certificate fetch when `propertyId` is null (non-PM industries skip property step). Users see "No uploaded COIs found" despite having certificates.
+- **"Assign Now" banner links to `/dashboard/vendors`:** `dashboard-client.tsx:226` — should link to `/dashboard/entities` for non-PM industries.
+- **`entity_compliance_results` FK violation:** `fresh_setup.sql:207` — `property_entity_id UUID NOT NULL` constraint fails when compliance runs for non-PM entities using `organization_default_entities` (IDs don't exist in `property_entities` table).
+- **No template enforcement for non-PM entities:** `certificates.ts:247-254` — entities without `template_id` run compliance with zero requirements, silently passing compliance.
+- **Landing page hero says "Purpose-built for commercial property managers":** `hero-section.tsx:80` — contradicts "AI-Powered COI Tracking for Every Industry" headline.
+- **Features grid says "Purpose-built for commercial property managers":** `features-grid.tsx:123` — same PM-exclusive language.
+- **Pricing value anchor only mentions property managers:** `pricing-section.tsx:57-61` — labor cost framing irrelevant to non-PM buyers.
+
+**WARNING findings (inconsistency/UX issues):**
+- `upload_source: 'pm_upload'` hardcoded in 4 upload paths + DB CHECK constraint
+- PDF export hardcodes "Locations", "Tenants" labels instead of using terminology (`export-report-button.tsx:51,136,144`)
+- Dashboard error toast shows raw DB `entityType` instead of terminology (`dashboard-client.tsx:683`)
+- Tutorial text hardcodes "properties" and "locations" (`dashboard-tutorial.tsx:28,58`)
+- Template recalculation skips `organization_default_entities` (`templates.ts:262-278`)
+- Email templates accept but never use `location_label`/`entity_label` merge fields (`email-templates.ts:35-36`)
+- Portal upload error uses `getTerminology(null)` instead of actual industry (`upload/route.ts:154`)
+- Portal notification email bypasses terminology system entirely (`extract/route.ts:298-324`)
+- PM-specific comments in portal extract route (`extract/route.ts:259,338,344`)
+- Vertical page testimonial heading/CTA hardcode "Property Managers" (`for/[vertical]/page.tsx:134,214`)
+- Blog index says "property management best practices" (`blog/page.tsx:27-28`)
+- Compare page mentions PM-specific software only (`compare/page.tsx:169`)
+- Dead code: `src/lib/emailTemplates.ts` is never imported
+- Email subject lines don't use industry terminology (`email-templates.ts:136,167,197,222`)
+- Deprecated `pm_name`/`pm_email` fields still required, migration never completed (`email-templates.ts:28-31`)
+- AI extraction prompt heavily PM-biased with ACORD 25 references (`extraction.ts:90-219`)
+
+**No issues found in:** Terminology system, industry templates, onboarding industry selector, bulk upload entity type defaults, database nullability for property_id/entity_id, `contactLine()` requester_label usage, trial lifecycle industry awareness.
+
 #### Fix: Compliance Audit Report $0 Exposure / Endorsement Detection (Apr 2026)
 
 Two bugs caused the compliance audit report to show $0 exposure and classify all gaps as "Endorsement Gap":
