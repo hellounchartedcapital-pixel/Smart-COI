@@ -64,8 +64,12 @@ export interface EntityRiskBreakdown {
   totalExposure: number;
   /** Whether any gap is unquantifiable (statutory missing, etc.) */
   hasUnquantifiableRisk: boolean;
-  /** Whether the entity's certificate is expired */
+  /** Whether ALL coverages on the entity's certificate are expired */
   isExpired: boolean;
+  /** Whether SOME (but not all) coverages are expired while others are still active */
+  isPartiallyExpired: boolean;
+  /** Coverage types that are currently expired (for partial expiration detail) */
+  expiredCoverageTypes: string[];
   /** Earliest expiration date across coverages, or null */
   earliestExpiration: string | null;
 }
@@ -295,6 +299,9 @@ function buildActionString(breakdown: EntityRiskBreakdown): string {
   if (breakdown.isExpired) {
     return 'Request updated certificate — current COI is expired';
   }
+  if (breakdown.isPartiallyExpired) {
+    return `Renew expired coverage: ${breakdown.expiredCoverageTypes.join(', ')}`;
+  }
 
   const missingCoverages = breakdown.coverageGaps
     .filter((g) => g.gapType === 'missing' || g.gapType === 'missing_unquantifiable')
@@ -418,8 +425,27 @@ export function quantifyRisk(
       });
     }
 
-    const isExpired = entity.complianceStatus === 'expired';
     const earliestExpiration = getEarliestExpiration(entity.extractedCoverages);
+
+    // Determine expiration granularity — fully vs partially expired
+    const expiredCoverageTypes: string[] = [];
+    let activeCoverageCount = 0;
+    for (const cov of entity.extractedCoverages) {
+      if (cov.expiration_date) {
+        const expDate = new Date(cov.expiration_date + 'T00:00:00');
+        if (expDate < now) {
+          const label = formatCoverageType(cov.coverage_type);
+          if (!expiredCoverageTypes.includes(label)) {
+            expiredCoverageTypes.push(label);
+          }
+        } else {
+          activeCoverageCount++;
+        }
+      }
+    }
+    const hasAnyExpired = expiredCoverageTypes.length > 0;
+    const isFullyExpired = hasAnyExpired && activeCoverageCount === 0;
+    const isPartiallyExpired = hasAnyExpired && activeCoverageCount > 0;
 
     perEntityBreakdown.push({
       entityId: entity.entityId,
@@ -431,7 +457,9 @@ export function quantifyRisk(
       coverageGaps,
       totalExposure: entityExposure,
       hasUnquantifiableRisk,
-      isExpired,
+      isExpired: isFullyExpired,
+      isPartiallyExpired,
+      expiredCoverageTypes,
       earliestExpiration,
     });
   }
@@ -441,7 +469,7 @@ export function quantifyRisk(
   const nonCompliantCount = perEntityBreakdown.filter(
     (e) => e.complianceStatus !== 'compliant'
   ).length;
-  const expiredCount = perEntityBreakdown.filter((e) => e.isExpired).length;
+  const expiredCount = perEntityBreakdown.filter((e) => e.isExpired || e.isPartiallyExpired).length;
   const compliantCount = entityCount - nonCompliantCount;
   const complianceRate = entityCount > 0
     ? Math.round((compliantCount / entityCount) * 10000) / 100
@@ -464,11 +492,12 @@ export function quantifyRisk(
 
   // ---- Top 5 priority actions (highest exposure first, expired entities prioritized) ----
   const sortedEntities = [...perEntityBreakdown]
-    .filter((e) => e.coverageGaps.length > 0 || e.isExpired)
+    .filter((e) => e.coverageGaps.length > 0 || e.isExpired || e.isPartiallyExpired)
     .sort((a, b) => {
-      // Expired entities always come first
-      if (a.isExpired && !b.isExpired) return -1;
-      if (!a.isExpired && b.isExpired) return 1;
+      // Fully expired entities first, then partially expired
+      const aExpScore = a.isExpired ? 2 : a.isPartiallyExpired ? 1 : 0;
+      const bExpScore = b.isExpired ? 2 : b.isPartiallyExpired ? 1 : 0;
+      if (aExpScore !== bExpScore) return bExpScore - aExpScore;
       // Then by total exposure descending
       if (b.totalExposure !== a.totalExposure) return b.totalExposure - a.totalExposure;
       // Then by unquantifiable risk

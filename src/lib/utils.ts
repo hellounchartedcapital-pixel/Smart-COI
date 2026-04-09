@@ -71,3 +71,62 @@ export function toTitleCase(str: string): string {
     })
     .join(' ');
 }
+
+// US state abbreviations for address detection
+const US_STATES = new Set([
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
+  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
+  'VA','WA','WV','WI','WY','DC',
+]);
+
+/**
+ * Clean an AI-extracted insured name by stripping address-like suffixes.
+ *
+ * The AI extraction sometimes pulls the full insured block including street
+ * address, city, state, and zip. This strips the address while preserving
+ * business name parts like LLC, Inc, DBA, etc.
+ *
+ * Strategy:
+ * 1. Strip trailing "City, ST 12345" or "City ST 12345" patterns
+ * 2. Strip trailing street address lines (number + street name)
+ * 3. Trim and collapse whitespace
+ */
+export function cleanExtractedEntityName(raw: string): string {
+  let name = raw.trim();
+
+  // Remove trailing zip code patterns: ", CO 80110" or "CO 80110" at end
+  // Match: optional comma, optional city words, state abbrev, zip
+  name = name.replace(
+    /,?\s+(?:[A-Za-z]+\s+)*([A-Z]{2})\s+\d{5}(?:-\d{4})?$/,
+    (match, state) => {
+      if (US_STATES.has(state.toUpperCase())) return '';
+      return match; // Not a real state — keep it
+    }
+  );
+
+  // Remove trailing city/state without zip: ", Englewood CO" or ", Denver, CO"
+  name = name.replace(
+    /,?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*,?\s+([A-Z]{2})$/,
+    (match, state) => {
+      if (US_STATES.has(state.toUpperCase())) return '';
+      return match;
+    }
+  );
+
+  // Remove trailing street address patterns: "2875 W Oxford" or "527 Kalamath"
+  // Match: number, optional directional, street name word(s)
+  // Only strip if it looks like a street (number followed by name words)
+  name = name.replace(
+    /\s+\d{1,6}\s+(?:[NSEW]\s+)?[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s+(?:St|Ave|Blvd|Rd|Dr|Ln|Way|Ct|Pl|Cir|Pkwy|Hwy|Trail|Loop)\.?)?$/,
+    ''
+  );
+
+  // Collapse multiple spaces and trim
+  name = name.replace(/\s+/g, ' ').trim();
+
+  // If we stripped everything (unlikely), fall back to original
+  if (name.length === 0) return raw.trim();
+
+  return name;
+}
