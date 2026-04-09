@@ -131,7 +131,7 @@ export default async function VerticalPage({ params }: PageProps) {
         {/* Testimonials */}
         <section className="mx-auto mt-20 max-w-4xl px-6">
           <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl">
-            What Property Managers Are Saying
+            What {v.name} Teams Are Saying
           </h2>
           <div className="mt-8 grid gap-6 sm:grid-cols-3">
             {v.testimonials.map((t) => (
@@ -211,7 +211,7 @@ export default async function VerticalPage({ params }: PageProps) {
               Ready to Automate COI Compliance?
             </h2>
             <p className="mt-4 text-slate-400">
-              Join property managers who spend minutes — not hours — on insurance compliance.
+              Join teams who spend minutes — not hours — on insurance compliance.
               14-day free trial, no credit card required.
             </p>
             <Link

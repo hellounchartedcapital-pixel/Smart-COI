@@ -24,7 +24,7 @@ export default function BlogIndexPage() {
           Blog
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Insights on COI compliance, insurance tracking, and property
+          Insights on COI compliance, insurance tracking, and vendor
           management best practices.
         </p>
 

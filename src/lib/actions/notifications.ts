@@ -222,8 +222,8 @@ export async function sendManualFollowUp(
     days_until_expiration: 0,
     pm_name: pmName,
     pm_email: pmEmail,
-    location_label: terms.location,
-    entity_label: terms.entity,
+    admin_name: pmName,
+    admin_email: pmEmail,
     requester_label: terms.requesterLabel,
   };
 

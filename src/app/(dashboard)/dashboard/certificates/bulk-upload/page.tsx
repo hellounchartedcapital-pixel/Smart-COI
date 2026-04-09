@@ -406,7 +406,7 @@ export default function BulkUploadPage() {
               organization_id: orgId,
               file_path: storagePath,
               file_hash: fileHash,
-              upload_source: 'pm_upload',
+              upload_source: 'user_upload',
               processing_status: 'processing',
             })
             .select('id')

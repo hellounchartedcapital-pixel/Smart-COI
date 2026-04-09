@@ -166,7 +166,7 @@ export default function ComparePage() {
             </p>
             <p>
               <strong className="text-slate-950">Integration needs.</strong> Do you need deep
-              integration with property management software like Yardi, MRI, or AppFolio? Or is
+              integration with industry-specific tools like Yardi, Procore, or your TMS? Or is
               a standalone solution sufficient?
             </p>
           </div>

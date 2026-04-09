@@ -32,7 +32,7 @@ function statusColor(status: string): string {
   }
 }
 
-function generatePDFHtml(data: ComplianceReportData, entityLabel: string, tenantLabel: string | null): string {
+function generatePDFHtml(data: ComplianceReportData, entityLabel: string, tenantLabel: string | null, locationLabel: string): string {
   const date = formatReportDate(data.generatedAt);
 
   const propertyRows = data.properties
@@ -48,7 +48,7 @@ function generatePDFHtml(data: ComplianceReportData, entityLabel: string, tenant
         return `
         <tr>
           <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${e.name}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${e.type === 'vendor' ? entityLabel : (tenantLabel ?? 'Tenant')}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#334155;">${e.type === 'vendor' ? entityLabel : (tenantLabel ?? entityLabel)}</td>
           <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;">
             <span style="color:${statusColor(e.complianceStatus)};font-weight:600;">${statusLabel(e.complianceStatus)}</span>
           </td>
@@ -133,16 +133,16 @@ function generatePDFHtml(data: ComplianceReportData, entityLabel: string, tenant
   <div style="display:flex;gap:16px;margin-bottom:32px;">
     <div style="flex:1;background:#f8fafc;border-radius:8px;padding:16px;text-align:center;">
       <p style="font-size:28px;font-weight:700;color:#0f172a;margin:0;">${data.totalProperties}</p>
-      <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Locations</p>
+      <p style="font-size:12px;color:#64748b;margin:4px 0 0;">${locationLabel}</p>
     </div>
     <div style="flex:1;background:#f8fafc;border-radius:8px;padding:16px;text-align:center;">
       <p style="font-size:28px;font-weight:700;color:#0f172a;margin:0;">${data.totalVendors}</p>
       <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Entities</p>
     </div>
-    <div style="flex:1;background:#f8fafc;border-radius:8px;padding:16px;text-align:center;">
+    ${data.totalTenants > 0 ? `<div style="flex:1;background:#f8fafc;border-radius:8px;padding:16px;text-align:center;">
       <p style="font-size:28px;font-weight:700;color:#0f172a;margin:0;">${data.totalTenants}</p>
-      <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Tenants</p>
-    </div>
+      <p style="font-size:12px;color:#64748b;margin:4px 0 0;">${tenantLabel ?? 'Tenants'}</p>
+    </div>` : ''}
     <div style="flex:1;background:#f0fdf4;border-radius:8px;padding:16px;text-align:center;">
       <p style="font-size:28px;font-weight:700;color:#059669;margin:0;">${data.overallComplianceRate != null ? `${data.overallComplianceRate}%` : '—'}</p>
       <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Compliance Rate</p>
@@ -209,7 +209,7 @@ export function ExportReportButton() {
     setOpen(false);
     try {
       const data = await getComplianceReportData();
-      const html = generatePDFHtml(data, terms.entity, terms.tenant);
+      const html = generatePDFHtml(data, terms.entity, terms.tenant, terms.locationPlural);
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');

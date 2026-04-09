@@ -204,8 +204,8 @@ export async function checkAndScheduleNotifications(): Promise<number> {
             days_until_expiration: Math.max(daysUntil, 0),
             pm_name: pm.name,
             pm_email: pm.email,
-            location_label: terms.location,
-            entity_label: terms.entity,
+            admin_name: pm.name,
+            admin_email: pm.email,
             requester_label: terms.requesterLabel,
           };
 
@@ -317,8 +317,8 @@ export async function checkAndScheduleNotifications(): Promise<number> {
             is_expired: isExpired,
             pm_name: pm.name,
             pm_email: pm.email,
-            location_label: terms.location,
-            entity_label: terms.entity,
+            admin_name: pm.name,
+            admin_email: pm.email,
             requester_label: terms.requesterLabel,
           };
 

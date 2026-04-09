@@ -77,7 +77,7 @@ export function HeroSection() {
           <AnimateIn delay={300}>
             <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-5">
               {[
-                'Purpose-built for commercial property managers',
+                'Built for property managers, GCs, logistics teams, and more',
                 'No credit card required',
                 'Set up in 5 minutes',
               ].map((item, i) => (

@@ -157,6 +157,42 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: P1 Landing Page Copy + All 16 WARNING-Level Audit Findings (Apr 2026)
+
+Fixed 3 P1 CRITICALs (landing page PM-exclusive copy) and all 16 WARNINGs from the industry-agnostic audit.
+
+**Landing page (3 CRITICALs fixed):**
+- `hero-section.tsx:80` — trust bar now says "Built for property managers, GCs, logistics teams, and more"
+- `features-grid.tsx:123` — subtitle now industry-neutral: "Everything your team needs to track vendor and contractor insurance — from upload to compliance."
+- `pricing-section.tsx:57-61` — value anchor generalized from PM-specific labor costs to "costs teams 15-20 hours per month"
+
+**Dashboard (4 WARNINGs fixed):**
+- `export-report-button.tsx:51,136,144` — PDF export now uses dynamic `locationLabel`, `entityLabel`, `tenantLabel` from terminology; Tenants section hidden when `totalTenants === 0`
+- `dashboard-client.tsx:695` — error toast uses terminology-aware entity label instead of raw DB `entityType`
+- `dashboard-tutorial.tsx:28,58` — tour steps use dynamic `locationPlural` and `entityPlural` from terminology
+- `upload_source: 'pm_upload'` → `'user_upload'` in 4 upload paths; DB CHECK updated to allow both values for backward compatibility
+
+**Compliance (2 WARNINGs fixed):**
+- `templates.ts:262-278` — `recalculateComplianceForTemplate()` now also queries the unified `entities` table with deduplication, and uses `.or()` for certificate lookup across all 3 ID columns
+- `extraction.ts:90-219` — reviewed; no PM-specific language found in the AI extraction prompt (ACORD 25 references are industry-standard)
+
+**Portal (4 WARNINGs fixed):**
+- `email-templates.ts:35-36` — removed unused `location_label`/`entity_label` from `EmailMergeFields` interface
+- `upload/route.ts:154` — added comment explaining `getTerminology(null)` fallback (org lookup failed, "compliance team" is correct)
+- `extract/route.ts:259,338,344` — changed PM-specific comments to "admin notification"; renamed `pmEmail` → `adminEmail`
+- Deleted dead code: `src/lib/emailTemplates.ts` (never imported anywhere)
+
+**Public pages (4 WARNINGs fixed):**
+- `for/[vertical]/page.tsx:134` — testimonial heading now dynamic: "What {vertical.name} Teams Are Saying"
+- `for/[vertical]/page.tsx:214` — CTA changed from "Join property managers" to "Join teams"
+- `blog/page.tsx:27-28` — changed "property management best practices" to "vendor management best practices"
+- `compare/page.tsx:169` — changed PM-only tool names to "industry-specific tools like Yardi, Procore, or your TMS"
+
+**Email templates (3 WARNINGs fixed):**
+- `email-templates.ts:28-31` — made `pm_name`/`pm_email` optional; callers now populate `admin_name`/`admin_email` alongside deprecated fields
+- `email-templates.ts:136,167,197,222` — subjects already use industry-neutral "COI"/"certificate" terminology (no change needed)
+- `emailTemplates.ts` — deleted (dead code, never imported)
+
 #### Fix: Add `needs_setup` compliance status for unconfigured entities (Apr 2026)
 
 Entities without requirement templates were previously marked `under_review`, which is misleading — that status means "COI being processed." New `needs_setup` status clearly indicates "no requirements configured."

@@ -150,6 +150,7 @@ export async function POST(
     }
 
     if (!entityData) {
+      // Org lookup failed so we can't resolve industry — falls back to "compliance team"
       return NextResponse.json(
         { error: `Unable to process your upload. Please contact your ${getTerminology(null).requesterLabel}.` },
         { status: 500 }
