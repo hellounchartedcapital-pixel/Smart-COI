@@ -100,7 +100,7 @@ function getGapStatusLabel(gap: CoverageGap): string {
     case 'insufficient':
       return 'Insufficient';
     case 'endorsement':
-      return 'Endorsement Gap';
+      return 'Endorsement Missing';
     default:
       return 'Gap';
   }
@@ -402,20 +402,39 @@ function buildExecutiveSummary(
   // ---- Explanatory paragraph ----
   const compliantPct = result.complianceRate;
   const entityLabel = meta.entityLabel ?? 'entities';
-  const paragraph =
+  let paragraph =
     `This audit reviewed ${result.entityCount} ${entityLabel} across your organization` +
     (meta.industryLabel ? ` (${meta.industryLabel})` : '') +
-    `. ${compliantPct}% are currently in full compliance with your insurance requirements. ` +
-    (result.nonCompliantCount > 0
-      ? `${result.nonCompliantCount} ${entityLabel} have one or more coverage gaps, ` +
-        `representing an estimated ${formatDollars(result.totalExposureGap)} in uninsured exposure. `
-      : 'All entities are currently meeting their insurance requirements. ') +
-    (result.expiredCount > 0
-      ? `${result.expiredCount} certificates are expired and require immediate attention. `
-      : '') +
-    (result.expiringIn30Days > 0
-      ? `${result.expiringIn30Days} certificates will expire within the next 30 days.`
-      : '');
+    `. ${compliantPct}% are currently in full compliance with your insurance requirements. `;
+
+  if (result.nonCompliantCount > 0 && result.totalExposureGap > 0) {
+    paragraph +=
+      `${result.nonCompliantCount} ${entityLabel} have one or more coverage gaps, ` +
+      `representing an estimated ${formatDollars(result.totalExposureGap)} in uninsured exposure. `;
+  } else if (result.nonCompliantCount > 0 && result.totalExposureGap === 0 && result.missingEndorsementCount > 0) {
+    // $0 dollar exposure but endorsement gaps exist
+    const endorsementTypes = new Set<string>();
+    for (const detail of result.endorsementGapDetails) {
+      for (const e of detail.missingEndorsements) endorsementTypes.add(e);
+    }
+    const endorsementList = [...endorsementTypes].join(', ');
+    paragraph +=
+      `${result.missingEndorsementCount} ${entityLabel} are missing critical endorsements` +
+      (endorsementList ? ` (${endorsementList})` : '') +
+      `. While no coverage limit shortfalls were identified, missing endorsements mean your ` +
+      `organization may not be protected as an additional insured party in the event of a claim. `;
+  } else if (result.nonCompliantCount > 0) {
+    paragraph += `${result.nonCompliantCount} ${entityLabel} have one or more coverage gaps. `;
+  } else {
+    paragraph += 'All entities are currently meeting their insurance requirements. ';
+  }
+
+  if (result.expiredCount > 0) {
+    paragraph += `${result.expiredCount} certificates are expired and require immediate attention. `;
+  }
+  if (result.expiringIn30Days > 0) {
+    paragraph += `${result.expiringIn30Days} certificates will expire within the next 30 days.`;
+  }
 
   y = drawText(doc, paragraph, MARGIN_LEFT, y, {
     fontSize: 9.5,
@@ -491,6 +510,54 @@ function buildPortfolioOverview(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   y = (doc as any).lastAutoTable.finalY + 12;
+
+  // ---- Endorsement Gap Summary ----
+  if (result.endorsementGapDetails.length > 0) {
+    y = ensureSpace(doc, y, 40);
+    y = drawText(doc, 'Endorsement Gaps', MARGIN_LEFT, y, {
+      fontSize: 11,
+      fontStyle: 'bold',
+      color: SLATE_900,
+    });
+    y += 3;
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: MARGIN_LEFT, right: MARGIN_RIGHT },
+      head: [['Entity', 'Type', 'Missing Endorsements']],
+      body: result.endorsementGapDetails.map((d) => [
+        d.entityName,
+        d.entityType.charAt(0).toUpperCase() + d.entityType.slice(1),
+        d.missingEndorsements.join(', '),
+      ]),
+      headStyles: {
+        fillColor: [...EMERALD],
+        textColor: [...WHITE],
+        fontStyle: 'bold',
+        fontSize: 9,
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [...SLATE_700],
+      },
+      alternateRowStyles: {
+        fillColor: [...SLATE_50],
+      },
+      styles: {
+        cellPadding: 3,
+        lineColor: [...SLATE_200],
+        lineWidth: 0.2,
+      },
+      columnStyles: {
+        0: { cellWidth: 55 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 80 },
+      },
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    y = (doc as any).lastAutoTable.finalY + 12;
+  }
 
   // ---- Coverage Type Breakdown ----
   y = ensureSpace(doc, y, 40);
@@ -676,12 +743,15 @@ function buildEntityDetails(
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...SLATE_700);
+    const entityHasEndorsementGaps = entity.coverageGaps.some((g) => g.gapType === 'endorsement');
     const exposureText =
       entity.totalExposure > 0
         ? `Exposure: ${formatDollars(entity.totalExposure)}`
         : entity.hasUnquantifiableRisk
           ? 'Exposure: Unquantifiable'
-          : '';
+          : entityHasEndorsementGaps
+            ? 'Endorsement Gaps'
+            : '';
     if (exposureText) {
       doc.text(exposureText, PAGE_WIDTH - MARGIN_RIGHT - 5, y + 12, {
         align: 'right',
@@ -738,7 +808,7 @@ function buildEntityDetails(
       y = (doc as any).lastAutoTable.finalY + 3;
     }
 
-    // Missing endorsements
+    // Missing endorsements — extract specific endorsement types from gap descriptions
     const endorsementGaps = entity.coverageGaps.filter(
       (g) => g.gapType === 'endorsement'
     );
@@ -747,11 +817,18 @@ function buildEntityDetails(
       doc.setFontSize(7.5);
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(...AMBER_600);
-      const endorsementText =
-        'Missing endorsements: ' +
-        endorsementGaps.map((g) => g.coverageTypeLabel).join(', ');
-      doc.text(endorsementText, MARGIN_LEFT + 5, y);
-      y += 4;
+      const missingTypes: string[] = [];
+      for (const g of endorsementGaps) {
+        const desc = g.gapDescription;
+        if (desc.includes('Additional Insured')) missingTypes.push(`Additional Insured (${g.coverageTypeLabel})`);
+        else if (desc.includes('Waiver of Subrogation')) missingTypes.push(`Waiver of Subrogation (${g.coverageTypeLabel})`);
+        else if (desc.includes('Primary')) missingTypes.push(`Primary & Non-Contributory (${g.coverageTypeLabel})`);
+        else missingTypes.push(g.coverageTypeLabel);
+      }
+      const endorsementText = 'Endorsement Missing: ' + missingTypes.join(', ');
+      const lines = doc.splitTextToSize(endorsementText, CONTENT_WIDTH - 10);
+      doc.text(lines, MARGIN_LEFT + 5, y);
+      y += lines.length * 3.5;
     }
 
     y += 6;

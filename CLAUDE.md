@@ -157,6 +157,30 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Compliance Audit Report $0 Exposure / Endorsement Detection (Apr 2026)
+
+Two bugs caused the compliance audit report to show $0 exposure and classify all gaps as "Endorsement Gap":
+
+**Bug #1 — `extracted_coverage_id` not persisted by `runAutoCompliance()`:**
+- `src/lib/actions/certificates.ts` `runAutoCompliance()` omitted `extracted_coverage_id` when inserting `compliance_results`. `calculateCompliance()` computed it correctly but the INSERT stripped it. `runComplianceForEntity()` in `properties.ts` saved it correctly.
+- **Fix:** Added `extracted_coverage_id: r.extracted_coverage_id` to the compliance_results INSERT in `runAutoCompliance()`.
+
+**Bug #2A — Compliance engine only checked Pass 1 endorsement flags:**
+- The compliance calculation in `calculate.ts` only checked coverage-level `additional_insured_listed` and `waiver_of_subrogation` flags (from Pass 1 ACORD 25 extraction). It never checked `certificates.endorsement_data` (from Pass 2 endorsement page scanning). Many COIs have endorsement pages but the ADDL INSD / SUBR WVD checkboxes aren't marked on page 1.
+- **Fix:** Added `endorsementData` option to `ComplianceOptions` interface. The endorsement check now falls back to certificate-level `endorsement_data` for CG 20 10/CG 20 37 (Additional Insured), Waiver of Subrogation, and Primary & Non-Contributory endorsements. Also added `requires_primary_noncontributory` to `RequirementInput`.
+- Both `runAutoCompliance()` (certificates.ts) and `runComplianceForEntity()` (properties.ts) now pass `cert.endorsement_data` through to the compliance engine.
+
+**Bug #2B — Endorsement gaps in risk quantification:**
+- Added `EndorsementGapDetail` interface and `endorsementGapDetails` array to `RiskQuantificationResult` in `risk-quantification.ts`. Each detail includes entity name, type, and which specific endorsements are missing (Additional Insured, Waiver of Subrogation, Primary & Non-Contributory).
+
+**Bug #2C — Audit report improvements:**
+- **Executive summary:** When `totalExposureGap` is $0 but endorsement gaps exist, the explanatory paragraph now specifically describes missing endorsements and their risk implications instead of the generic "no coverage gaps" message.
+- **Entity detail:** "Endorsement Gap" status label changed to "Endorsement Missing". Endorsement gap text now shows specific endorsement type per coverage (e.g., "Additional Insured (Commercial General Liability)").
+- **Portfolio overview:** Added "Endorsement Gaps" table showing per-entity breakdown of missing endorsements, positioned between the Compliance Status Distribution and Coverage Type Breakdown tables.
+- Entity header now shows "Endorsement Gaps" label when dollar exposure is $0 but endorsement gaps exist.
+
+**Coverage type matching confirmed working correctly** — both AI extraction and templates use identical Title Case strings, and `coverageTypeMatchScore()` in `coverage-utils.ts` handles variations with fuzzy matching (0.7 threshold).
+
 #### Fix: Onboarding Bulk Upload — Orphaned Certificates (Apr 2026)
 
 - **Root cause:** Onboarding bulk upload (`step-bulk-upload.tsx`) created certificate records without `entity_id`/`vendor_id`/`tenant_id`, then attempted to auto-assign entities via client-side Supabase calls that: (a) bypassed the `createEntity()` server action (no dual-write to legacy tables), (b) silently swallowed errors via try/catch, (c) ran auto-compliance before entity assignment (compliance returned early with "no entity"), and (d) never re-triggered compliance after assignment.
@@ -517,10 +541,7 @@ Full end-to-end audit of 7 critical user flows. **All 7 flows PASS** — no bloc
 
 - Anthropic API 529 errors during bulk upload (retry logic with exponential backoff in place — increased to 5 retries with up to 90s backoff)
 - Tutorial walkthrough positioning edge cases
-- **Compliance audit report shows $0 exposure / all "Endorsement Gap"** — Two bugs identified (Apr 2026):
-  1. **`extracted_coverage_id` not persisted by `runAutoCompliance()`:** `src/lib/actions/certificates.ts` lines 310-316 omit `extracted_coverage_id` when inserting `compliance_results`. `calculateCompliance()` computes it (calculate.ts:368,375) but `runAutoCompliance()` strips it. `runComplianceForEntity()` in `properties.ts:1215` saves it correctly. Impact: risk quantification can't look up matched coverage's `limit_amount` for shortfall calculations.
-  2. **Endorsement gaps classified with null dollarGap:** `risk-quantification.ts:183-198` classifies any gap whose `gap_description` contains "Additional Insured", "Waiver of Subrogation", or "Primary" as `gapType: 'endorsement'` with `dollarGap: null`. Since most industry templates require AI/WoS endorsements (`ai: true, wos: true` in industry-templates.ts), and endorsement detection from real COIs is unreliable (depends on ADDL INSD checkbox, endorsement pages), nearly ALL gaps are endorsement-type → $0 total exposure.
-  - **Coverage type matching itself works correctly** — both AI extraction and templates use identical Title Case strings ("Commercial General Liability", "Automobile Liability", etc.), and `coverageTypeMatchScore()` in `coverage-utils.ts:193-223` handles variations with fuzzy matching (0.7 threshold). The issue is NOT type mismatch — types match, limits are met, only endorsement checks fail.
+- ~~**Compliance audit report shows $0 exposure / all "Endorsement Gap"**~~ **FIXED** (Apr 2026) — see fix entry below
 
 ## Architecture Notes
 
