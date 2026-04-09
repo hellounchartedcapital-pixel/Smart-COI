@@ -136,6 +136,15 @@ const STATUS_CONFIG: Record<
     pillText: 'text-blue-600',
     dotColor: 'bg-blue-500',
   },
+  needs_setup: {
+    label: 'Needs Setup',
+    color: 'text-purple-600',
+    bgColor: 'bg-status-needs-setup',
+    borderColor: 'border-l-status-needs-setup',
+    pillBg: 'bg-purple-50 hover:bg-purple-100',
+    pillText: 'text-purple-600',
+    dotColor: 'bg-purple-500',
+  },
 };
 
 const ACTIVITY_ICONS: Record<ActivityAction, typeof Upload> = {
@@ -311,7 +320,7 @@ export function DashboardClient({
             {/* Status filter pills */}
             <div className="mt-5 flex flex-wrap gap-2">
               {(
-                ['compliant', 'expiring_soon', 'expired', 'non_compliant', 'pending'] as const
+                ['compliant', 'expiring_soon', 'expired', 'non_compliant', 'needs_setup', 'pending'] as const
               ).map((status) => {
                 const config = STATUS_CONFIG[status];
                 const count = statusDistribution[status];
@@ -410,7 +419,7 @@ function PropertyCard({ property }: { property: PropertyOverview }) {
     withCert > 0 ? Math.round((property.compliant / withCert) * 100) : null;
 
   const segments: { key: keyof StatusDistribution; count: number }[] = (
-    ['compliant', 'expiring_soon', 'non_compliant', 'expired', 'pending', 'under_review'] as const
+    ['compliant', 'expiring_soon', 'non_compliant', 'expired', 'needs_setup', 'pending', 'under_review'] as const
   )
     .map((key) => ({ key, count: property[key] }))
     .filter((s) => s.count > 0);
@@ -633,6 +642,9 @@ function ActionItemRow({ item, isLast, isFirst = false }: { item: ActionItem; is
       break;
     case 'under_review':
       description = 'COI processing';
+      break;
+    case 'needs_setup':
+      description = 'No requirements configured';
       break;
     default:
       description = item.status;

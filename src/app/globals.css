@@ -32,6 +32,7 @@
     --status-expired: 0 84% 60%;
     --status-pending: 215 20% 65%;
     --status-under-review: 213 94% 68%;
+    --status-needs-setup: 270 60% 65%;
 
     /* --- shadcn/ui theme tokens --- */
     --background: 0 0% 100%;

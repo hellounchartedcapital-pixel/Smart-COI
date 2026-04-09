@@ -24,6 +24,7 @@ export interface StatusDistribution {
   expired: number;
   pending: number;
   under_review: number;
+  needs_setup: number;
 }
 
 export interface ActionItem {
@@ -53,6 +54,7 @@ export interface PropertyOverview {
   expired: number;
   pending: number;
   under_review: number;
+  needs_setup: number;
   total: number;
 }
 
@@ -137,6 +139,7 @@ async function getDashboardData(orgId: string) {
     expired: 0,
     pending: 0,
     under_review: 0,
+    needs_setup: 0,
   };
   for (const e of allEntities) {
     if (e.status in statusCounts) {
@@ -324,9 +327,10 @@ async function getDashboardData(orgId: string) {
     expired: 0,
     non_compliant: 1,
     expiring_soon: 2,
-    under_review: 3,
-    pending: 4,
-    compliant: 5,
+    needs_setup: 3,
+    under_review: 4,
+    pending: 5,
+    compliant: 6,
   };
   actionItems.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
 
@@ -346,6 +350,7 @@ async function getDashboardData(orgId: string) {
       expired: propEntities.filter((e) => e.status === 'expired').length,
       pending: propEntities.filter((e) => e.status === 'pending').length,
       under_review: propEntities.filter((e) => e.status === 'under_review').length,
+      needs_setup: propEntities.filter((e) => e.status === 'needs_setup').length,
       total: propEntities.length,
     };
   });

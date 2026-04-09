@@ -35,6 +35,11 @@ const STATUS_CONFIG: Record<
     className: 'bg-blue-50 text-blue-700 border-blue-100',
     dotColor: 'bg-blue-500',
   },
+  needs_setup: {
+    label: 'NEEDS SETUP',
+    className: 'bg-purple-50 text-purple-700 border-purple-100',
+    dotColor: 'bg-purple-500',
+  },
 };
 
 export function ComplianceBadge({ status }: { status: ComplianceStatus }) {

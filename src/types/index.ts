@@ -70,7 +70,8 @@ export type ComplianceStatus =
   | 'expiring_soon'
   | 'expired'
   | 'pending'
-  | 'under_review';
+  | 'under_review'
+  | 'needs_setup';
 
 export type UploadSource = 'pm_upload' | 'portal_upload';
 
@@ -426,6 +427,7 @@ export interface ComplianceStats {
   expired: number;
   pending: number;
   under_review: number;
+  needs_setup: number;
 }
 
 // ============================================================================
