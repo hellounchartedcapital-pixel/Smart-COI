@@ -6,14 +6,14 @@ import { Footer } from '@/components/landing/footer';
 export const metadata: Metadata = {
   title: 'Best COI Tracking Software for Property Managers (2026)',
   description:
-    'Compare the top COI tracking software for commercial property managers. AI extraction, automated compliance, vendor portals, and transparent pricing.',
+    'Compare the top COI tracking software for property managers and operations teams. AI extraction, automated compliance, vendor portals, and transparent pricing.',
   alternates: {
     canonical: 'https://smartcoi.io/coi-tracking-software',
   },
   openGraph: {
     title: 'Best COI Tracking Software for Property Managers (2026)',
     description:
-      'Compare the top COI tracking software for commercial property managers. AI extraction, automated compliance, vendor portals, and transparent pricing.',
+      'Compare the top COI tracking software for property managers and operations teams. AI extraction, automated compliance, vendor portals, and transparent pricing.',
     type: 'website',
     url: 'https://smartcoi.io/coi-tracking-software',
   },
@@ -26,7 +26,7 @@ const jsonLd = {
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web',
   description:
-    'AI-powered COI tracking software for commercial property managers. Automate certificate of insurance collection, compliance verification, and expiration monitoring.',
+    'AI-powered COI tracking software for property managers, contractors, and operations teams. Automate certificate of insurance collection, compliance verification, and expiration monitoring.',
   offers: {
     '@type': 'Offer',
     price: '79',
@@ -53,7 +53,7 @@ export default function COITrackingSoftwarePage() {
             COI Tracking Software That Replaces Spreadsheets and Guesswork
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-slate-500">
-            SmartCOI is purpose-built COI tracking software for commercial property managers.
+            SmartCOI is purpose-built COI tracking software for property managers, contractors, and operations teams.
             Upload a certificate, get instant AI-powered compliance results, and track
             insurance status across your entire portfolio — all from one dashboard.
           </p>
@@ -87,9 +87,9 @@ export default function COITrackingSoftwarePage() {
               automated workflows.
             </p>
             <p>
-              For commercial property managers, COI tracking software solves a specific and painful
-              problem: ensuring that every third party operating on your properties carries the
-              insurance coverage required by their contract or lease. This includes verifying coverage
+              For operations teams, COI tracking software solves a specific and painful
+              problem: ensuring that every third party you work with carries the
+              insurance coverage required by their contract. This includes verifying coverage
               types, checking that policy limits meet your minimums, confirming that your entities are
               listed as additional insured, and monitoring expiration dates across your entire vendor
               and tenant base.

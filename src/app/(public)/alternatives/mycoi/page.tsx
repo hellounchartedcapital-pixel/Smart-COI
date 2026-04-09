@@ -4,14 +4,14 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'Best myCOI Alternatives for Property Managers (2025)',
+  title: 'Best myCOI Alternatives for Property Managers (2026)',
   description:
     'Looking for a myCOI alternative? Compare the best COI tracking options for property managers — including simpler setup, transparent pricing, and CRE-specific features.',
   alternates: {
     canonical: 'https://smartcoi.io/alternatives/mycoi',
   },
   openGraph: {
-    title: 'Best myCOI Alternatives for Property Managers (2025)',
+    title: 'Best myCOI Alternatives for Property Managers (2026)',
     description:
       'Looking for a myCOI alternative? Compare the best COI tracking options for property managers — including simpler setup, transparent pricing, and CRE-specific features.',
     type: 'website',
@@ -234,7 +234,7 @@ export default function MyCOIAlternativesPage() {
               If you&apos;re a mid-market property management firm that found myCOI too complex,
               too expensive, or simply not tailored to your CRE workflows,{' '}
               <strong className="text-slate-950">SmartCOI is the most direct alternative</strong>.
-              It&apos;s the only platform built exclusively for property managers, with transparent
+              It offers simple, affordable COI tracking with transparent
               pricing and self-serve onboarding.
             </p>
             <p>

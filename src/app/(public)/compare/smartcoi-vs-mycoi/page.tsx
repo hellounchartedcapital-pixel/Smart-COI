@@ -114,11 +114,10 @@ export default function SmartCOIvsMyCOIPage() {
               software.&quot;
             </p>
             <p>
-              <strong className="text-slate-950">Purpose-built for commercial real estate.</strong> SmartCOI
-              is designed specifically for property managers tracking vendor and tenant COIs. Every feature,
-              workflow, and default is optimized for CRE. myCOI serves construction, government, utilities,
-              and manufacturing alongside real estate — a generalist approach that means the product
-              isn&apos;t tailored to any single industry&apos;s needs.
+              <strong className="text-slate-950">Industry-specific templates and terminology.</strong> SmartCOI
+              adapts to your industry with pre-built compliance templates and terminology that matches how
+              your team works. myCOI takes a one-size-fits-all approach across construction, government,
+              utilities, and manufacturing — without the industry-specific defaults that save setup time.
             </p>
             <p>
               <strong className="text-slate-950">Bulk upload with instant AI extraction.</strong> Upload

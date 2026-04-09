@@ -8,11 +8,11 @@ const SESSION_COOKIE = 'smartcoi-session';
 const publicRoutes = [
   '/', '/login', '/signup', '/reset-password', '/opengraph-image', '/twitter-image', '/favicon.ico',
   // Marketing / SEO pages
-  '/terms', '/privacy', '/coi-tracking-software',
+  '/terms', '/privacy', '/coi-tracking-software', '/free-assessment',
   '/certificate-of-insurance-tracking', '/vendor-insurance-compliance',
   '/tenant-insurance-tracking', '/ai-coi-extraction', '/audit', '/llms.txt', '/og-image.png',
   // Infrastructure
-  '/api/health',
+  '/api/health', '/api/free-assessment',
 ];
 const publicPrefixes = [
   '/portal/', '/api/portal/', '/api/webhooks/', '/api/cron/', '/api/auth/',

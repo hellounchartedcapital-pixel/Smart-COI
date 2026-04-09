@@ -6,14 +6,14 @@ import { Footer } from '@/components/landing/footer';
 export const metadata: Metadata = {
   title: 'SmartCOI vs PINS: COI Tracking Comparison',
   description:
-    'PINS serves property management as one of six verticals with volume-based pricing. SmartCOI is built exclusively for property managers. See the full comparison.',
+    'PINS serves property management as one of six verticals with volume-based pricing. SmartCOI offers simple flat-rate pricing for property managers and operations teams. See the full comparison.',
   alternates: {
     canonical: 'https://smartcoi.io/compare/smartcoi-vs-pins',
   },
   openGraph: {
     title: 'SmartCOI vs PINS: COI Tracking Comparison',
     description:
-      'PINS serves property management as one of six verticals with volume-based pricing. SmartCOI is built exclusively for property managers. See the full comparison.',
+      'PINS serves property management as one of six verticals with volume-based pricing. SmartCOI offers simple flat-rate pricing for property managers and operations teams. See the full comparison.',
     type: 'website',
     url: 'https://smartcoi.io/compare/smartcoi-vs-pins',
   },
@@ -36,7 +36,7 @@ export default function SmartCOIvsPINSPage() {
           <p className="mt-6 text-lg leading-relaxed text-slate-500">
             PINS (PINS Advantage) is a compliance management platform that serves property management
             as one of six industry verticals alongside construction, transportation, healthcare,
-            energy, and manufacturing. SmartCOI is built exclusively for commercial property managers.
+            energy, and manufacturing. SmartCOI supports property management, construction, logistics, healthcare, manufacturing, hospitality, and retail.
             Here&apos;s what that difference means in practice.
           </p>
         </section>
@@ -163,8 +163,8 @@ export default function SmartCOIvsPINSPage() {
           <div className="mt-6 space-y-4 text-base leading-relaxed text-slate-600">
             <p>
               <strong className="text-slate-950">Choose SmartCOI</strong> if you&apos;re a property
-              management firm that wants a tool built exclusively for your industry. No features
-              designed for construction GCs or healthcare administrators — just CRE compliance
+              management firm or operations team that wants simple, affordable COI tracking with
+              industry-specific templates. Flat-rate pricing, AI-powered extraction, and compliance
               tracking that works in minutes.
             </p>
             <p>
@@ -201,7 +201,7 @@ export default function SmartCOIvsPINSPage() {
               Try SmartCOI Free for 14 Days
             </h2>
             <p className="mt-4 text-slate-400">
-              Purpose-built for property managers. No compromise, no complexity.
+              Simple COI tracking for every industry. No compromise, no complexity.
             </p>
             <Link
               href="/signup"

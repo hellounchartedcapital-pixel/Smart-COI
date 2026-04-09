@@ -107,11 +107,11 @@ export default function SmartCOIvsTrustLayerPage() {
               through a sales process to learn the cost.
             </p>
             <p>
-              <strong className="text-slate-950">Purpose-built for property managers.</strong> Every
-              feature in SmartCOI — from compliance templates to vendor categorization to tenant tracking —
-              is designed specifically for commercial real estate workflows. TrustLayer serves construction,
-              logistics, facility management, and real estate, meaning the product is built to generalize
-              across industries rather than optimize for one.
+              <strong className="text-slate-950">Built for simplicity.</strong> Every
+              feature in SmartCOI — from compliance templates to vendor categorization to entity tracking —
+              is designed for simplicity and speed. TrustLayer serves construction,
+              logistics, facility management, and real estate with enterprise-level complexity,
+              while SmartCOI focuses on making COI tracking accessible to mid-market teams.
             </p>
             <p>
               <strong className="text-slate-950">Right-sized for mid-market firms.</strong> SmartCOI

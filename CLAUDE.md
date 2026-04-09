@@ -124,6 +124,8 @@ SmartCOI now supports 8 industries. Key architectural components:
 - 7 vertical landing pages under /for/
 - 6 industry vertical pages under /for/ (Construction, Logistics, Healthcare, Manufacturing, Hospitality, Retail)
 - 2 alternatives pages under /alternatives/
+- Free assessment intake page at /free-assessment (email form → tony@smartcoi.io via Resend)
+- $299 COI compliance audit service page at /audit (Stripe payment link)
 - www to non-www 301 redirect
 - Session expiration (24h standard / 7d with "Remember me") with cookie-based middleware gate
 - Real-time dashboard & reporting
@@ -156,6 +158,65 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Free Assessment Page + Site-Wide Continuity Audit (Apr 2026)
+
+**Free Assessment Intake Page (`/free-assessment`):**
+- Created `src/app/free-assessment/page.tsx` — client-side intake form for free COI compliance assessment
+- Form fields: Full Name, Company Name, Email, Phone (optional), Vendor Count (dropdown), Message (optional)
+- Submits to `src/app/api/free-assessment/route.ts` which sends email notification to tony@smartcoi.io via Resend
+- Success state: "Thanks! We'll reach out within 24 hours with instructions to submit your COI files."
+- Subtle upsell to $299 paid audit below the form ("Learn About Our Full Audit — $299" → /audit)
+- SEO meta tags with canonical URL `https://smartcoi.io/free-assessment`, Open Graph tags
+- Added to middleware public routes (both page and API route)
+- Added to sitemap with priority 0.8
+- Added "Free Assessment" link to footer Resources section
+
+**Homepage CTA Fix:**
+- Changed "Not Ready for Software?" section CTA from `/audit` to `/free-assessment` — resolves free/paid confusion
+
+**Site-Wide Continuity Audit — Issues Found and Fixed:**
+
+*Dead links (2 fixes):*
+- `insurance-requirements/coverage/[slug]/page.tsx:293` — broken link `/blog/additional-insured-endorsements-explained` → fixed to `/blog/what-is-additional-insured-commercial-real-estate`
+- `insurance-requirements/coverage/[slug]/page.tsx:299` — broken link `/pricing` → fixed to `/#pricing`
+
+*Blog CTA links (5 fixes):*
+- `acord-28-evidence-of-property-insurance.mdx:138` — "Start your free trial" linked to homepage → fixed to `/signup`
+- `subcontractor-insurance-requirements.mdx:118` — same fix
+- `acord-25-certificate-explained.mdx:112` — "try it free" linked to homepage → fixed to `/signup`
+- `acord-25-certificate-explained.mdx:160` — "Start your free trial" linked to homepage → fixed to `/signup`
+- `coi-expiration-tracking-best-practices.mdx:128` — same fix
+
+*PM-exclusive language (15+ fixes across compare, alternatives, and SEO pages):*
+- `opengraph-image.tsx` — "for Commercial Property Managers" → "AI-Powered COI Tracking for Every Industry"
+- `compare/smartcoi-vs-pins/page.tsx` — removed all "built exclusively for property managers" language
+- `compare/smartcoi-vs-billy/page.tsx` — removed "purpose-built for commercial property managers"
+- `compare/smartcoi-vs-smartcompliance/page.tsx` — removed "purpose-built for property managers"
+- `compare/smartcoi-vs-trustlayer/page.tsx` — removed "Purpose-built for property managers"
+- `compare/smartcoi-vs-mycoi/page.tsx` — removed "Purpose-built for commercial real estate"
+- `compare/page.tsx` — removed "built exclusively for property managers" from PINS description
+- `alternatives/mycoi/page.tsx` — removed "the only platform built exclusively for property managers"
+- `alternatives/jones/page.tsx` — removed "Purpose-built for commercial real estate property managers"
+- `certificate-of-insurance-tracking/page.tsx` — meta descriptions broadened to include contractors and operations teams
+- `coi-tracking-software/page.tsx` — body text and JSON-LD broadened to include contractors and operations teams
+- `terms/page.tsx` — "for commercial property managers" → "for businesses across multiple industries"
+- `insurance-requirements/[property]/[coverage]/page.tsx` — removed "for property managers" from meta descriptions
+
+*Missing OG tags (3 fixes):*
+- `blog/page.tsx` — added openGraph metadata
+- `terms/page.tsx` — added openGraph metadata
+- `privacy/page.tsx` — added openGraph metadata
+
+*Blog meta description fix:*
+- `blog/page.tsx` — removed "for commercial property managers" from description
+
+*Pricing consistency fix:*
+- `best-coi-management-software.mdx` — added "(annual)" clarifier to Growth and Professional pricing
+
+*Stale dates (2 fixes):*
+- `alternatives/jones/page.tsx` — title year 2025 → 2026
+- `alternatives/mycoi/page.tsx` — title year 2025 → 2026
 
 #### Fix: P1 WARNING-Level Audit Findings (Apr 2026)
 
