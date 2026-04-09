@@ -1094,11 +1094,11 @@ export async function runComplianceForEntity(
   }
 
   // Find most recent certificate — check entity_id first, then legacy vendor_id/tenant_id
-  let cert: { id: string } | null = null;
+  let cert: { id: string; endorsement_data: unknown } | null = null;
 
   const { data: confirmedCert } = await supabase
     .from('certificates')
-    .select('id')
+    .select('id, endorsement_data')
     .or(`entity_id.eq.${entityId},vendor_id.eq.${entityId},tenant_id.eq.${entityId}`)
     .eq('organization_id', orgId)
     .in('processing_status', ['extracted', 'review_confirmed'])
@@ -1112,7 +1112,7 @@ export async function runComplianceForEntity(
     // Fall back to extracted
     const { data: extractedCert } = await supabase
       .from('certificates')
-      .select('id')
+      .select('id, endorsement_data')
       .or(`entity_id.eq.${entityId},vendor_id.eq.${entityId},tenant_id.eq.${entityId}`)
       .eq('organization_id', orgId)
       .eq('processing_status', 'extracted')
@@ -1200,6 +1200,7 @@ export async function runComplianceForEntity(
     {
       expirationThresholdDays: thresholdDays,
       acceptCertHolderInAdditionalInsured: acceptCertHolderInAI,
+      endorsementData: cert.endorsement_data as import('@/types').EndorsementRecord[] | null,
     },
   );
 

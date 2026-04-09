@@ -13,6 +13,7 @@ import type {
   ComplianceStatus,
   ComplianceResultStatus,
   EntityComplianceStatus,
+  EndorsementRecord,
 } from '@/types';
 
 // ============================================================================
@@ -47,6 +48,7 @@ export interface RequirementInput {
   limit_type: LimitType | null;
   requires_additional_insured: boolean;
   requires_waiver_of_subrogation: boolean;
+  requires_primary_noncontributory?: boolean;
 }
 
 export interface PropertyEntityInput {
@@ -268,6 +270,8 @@ function entityNameMatches(
 export interface ComplianceOptions {
   expirationThresholdDays?: number;
   acceptCertHolderInAdditionalInsured?: boolean;
+  /** Certificate-level endorsement data from Pass 2 (certificates.endorsement_data). */
+  endorsementData?: EndorsementRecord[] | null;
 }
 
 export function calculateCompliance(
@@ -282,6 +286,7 @@ export function calculateCompliance(
     : expirationThresholdDaysOrOptions;
   const expirationThresholdDays = options.expirationThresholdDays ?? 30;
   const acceptCertHolderInAI = options.acceptCertHolderInAdditionalInsured ?? false;
+  const endorsements = options.endorsementData ?? [];
   const coverageResults: CoverageResultRow[] = [];
   const entityResults: EntityResultRow[] = [];
 
@@ -352,14 +357,39 @@ export function calculateCompliance(
       gapDesc = `${fmtCov(req.coverage_type, req.limit_type)} limit could not be determined`;
     }
 
-    // Check endorsements
+    // Check endorsements — use coverage-level flags (Pass 1) first, then fall
+    // back to certificate-level endorsement_data (Pass 2) for verification.
     if (limitMet && req.requires_additional_insured && !match.additional_insured_listed) {
-      limitMet = false;
-      gapDesc = `${fmtCov(req.coverage_type, req.limit_type)} requires Additional Insured endorsement but it is not listed`;
+      // Pass 1 didn't detect AI — check Pass 2 endorsement pages for CG 20 10 / CG 20 37
+      const hasAIEndorsement = endorsements.some(
+        (e) => e.found && ['cg 20 10', 'cg 20 37', 'cg 20 26', 'additional insured'].some(
+          (t) => e.type.toLowerCase().includes(t)
+        )
+      );
+      if (!hasAIEndorsement) {
+        limitMet = false;
+        gapDesc = `${fmtCov(req.coverage_type, req.limit_type)} requires Additional Insured endorsement but it is not listed`;
+      }
     }
     if (limitMet && req.requires_waiver_of_subrogation && !match.waiver_of_subrogation) {
-      limitMet = false;
-      gapDesc = `${fmtCov(req.coverage_type, req.limit_type)} requires Waiver of Subrogation but it is not listed`;
+      // Pass 1 didn't detect WoS — check Pass 2 endorsement pages
+      const hasWoSEndorsement = endorsements.some(
+        (e) => e.found && e.type.toLowerCase().includes('waiver of subrogation')
+      );
+      if (!hasWoSEndorsement) {
+        limitMet = false;
+        gapDesc = `${fmtCov(req.coverage_type, req.limit_type)} requires Waiver of Subrogation but it is not listed`;
+      }
+    }
+    if (limitMet && req.requires_primary_noncontributory) {
+      // Check Pass 2 endorsement pages for Primary & Non-Contributory
+      const hasPNCEndorsement = endorsements.some(
+        (e) => e.found && e.type.toLowerCase().includes('primary')
+      );
+      if (!hasPNCEndorsement) {
+        limitMet = false;
+        gapDesc = `${fmtCov(req.coverage_type, req.limit_type)} requires Primary & Non-Contributory endorsement but it is not listed`;
+      }
     }
 
     if (limitMet) {

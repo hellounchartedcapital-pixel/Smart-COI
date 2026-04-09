@@ -99,6 +99,16 @@ export interface PriorityAction {
   topGaps: string[];
 }
 
+/** Per-entity detail of which endorsements are missing */
+export interface EndorsementGapDetail {
+  entityId: string;
+  entityName: string;
+  entityType: string;
+  propertyName: string | null;
+  /** Which endorsement types are missing (e.g., "Additional Insured", "Waiver of Subrogation") */
+  missingEndorsements: string[];
+}
+
 export interface RiskQuantificationResult {
   /** Sum of all quantifiable dollar gaps across all entities */
   totalExposureGap: number;
@@ -124,6 +134,8 @@ export interface RiskQuantificationResult {
   perCoverageTypeBreakdown: CoverageTypeBreakdown[];
   /** Top 5 highest-exposure entities with specific action items */
   topPriorityActions: PriorityAction[];
+  /** Details of which endorsements are missing per entity */
+  endorsementGapDetails: EndorsementGapDetail[];
 }
 
 // ============================================================================
@@ -329,6 +341,7 @@ export function quantifyRisk(
 
   const perEntityBreakdown: EntityRiskBreakdown[] = [];
   const coverageTypeMap = new Map<string, CoverageTypeBreakdown>();
+  const endorsementGapDetails: EndorsementGapDetail[] = [];
   let missingEndorsementCount = 0;
 
   // ---- Process each entity ----
@@ -384,9 +397,26 @@ export function quantifyRisk(
       if (gap.gapType === 'endorsement') ctBreakdown.endorsementGapCount++;
     }
 
-    // Track entities with endorsement gaps
-    const hasEndorsementGap = coverageGaps.some((g) => g.gapType === 'endorsement');
-    if (hasEndorsementGap) missingEndorsementCount++;
+    // Track entities with endorsement gaps and extract which endorsements are missing
+    const endorsementGapsForEntity = coverageGaps.filter((g) => g.gapType === 'endorsement');
+    const hasEndorsementGap = endorsementGapsForEntity.length > 0;
+    if (hasEndorsementGap) {
+      missingEndorsementCount++;
+      // Extract which specific endorsement types are missing from gap descriptions
+      const missingTypes = new Set<string>();
+      for (const g of endorsementGapsForEntity) {
+        if (g.gapDescription.includes('Additional Insured')) missingTypes.add('Additional Insured');
+        if (g.gapDescription.includes('Waiver of Subrogation')) missingTypes.add('Waiver of Subrogation');
+        if (g.gapDescription.includes('Primary')) missingTypes.add('Primary & Non-Contributory');
+      }
+      endorsementGapDetails.push({
+        entityId: entity.entityId,
+        entityName: entity.entityName,
+        entityType: entity.entityType,
+        propertyName: entity.propertyName,
+        missingEndorsements: [...missingTypes],
+      });
+    }
 
     const isExpired = entity.complianceStatus === 'expired';
     const earliestExpiration = getEarliestExpiration(entity.extractedCoverages);
@@ -477,5 +507,6 @@ export function quantifyRisk(
     perEntityBreakdown,
     perCoverageTypeBreakdown,
     topPriorityActions,
+    endorsementGapDetails,
   };
 }

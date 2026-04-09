@@ -302,6 +302,7 @@ export async function runAutoCompliance(
   // Run compliance
   const result = calculateCompliance(covInputs, entInputs, requirements, propEntities, {
     acceptCertHolderInAdditionalInsured: acceptCertHolderInAI,
+    endorsementData: cert.endorsement_data,
   });
 
   // Save compliance results
@@ -311,6 +312,7 @@ export async function runAutoCompliance(
       result.coverageResults.map((r) => ({
         certificate_id: certificateId,
         coverage_requirement_id: r.coverage_requirement_id,
+        extracted_coverage_id: r.extracted_coverage_id,
         status: r.status,
         gap_description: r.gap_description,
       }))
