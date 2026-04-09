@@ -29,9 +29,9 @@ export default function AuthLayout({
             simplified.
           </h1>
           <p className="mt-4 text-lg text-slate-950/70">
-            AI-powered COI tracking for commercial property managers.
-            Automate certificate collection, verify coverage requirements,
-            and stay ahead of expirations.
+            AI-powered COI tracking for property managers, contractors,
+            and operations teams. Automate certificate collection, verify
+            coverage requirements, and stay ahead of expirations.
           </p>
         </div>
 

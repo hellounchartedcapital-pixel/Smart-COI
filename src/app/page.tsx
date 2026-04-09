@@ -330,6 +330,30 @@ export default function LandingPage() {
         <FAQSection />
 
         {/* ================================================================ */}
+        {/* AUDIT SERVICE                                                    */}
+        {/* ================================================================ */}
+        <section className="bg-[#FAFAFA] py-20 sm:py-24">
+          <div className="mx-auto max-w-2xl px-6 text-center">
+            <h2 className="text-2xl font-bold text-[#111827] sm:text-3xl">
+              Not Ready for Software? Start With a Free Compliance Assessment
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-base text-[#6B7280] leading-relaxed">
+              Send us your COIs and we&apos;ll deliver a detailed compliance report showing exactly
+              where you&apos;re exposed — coverage gaps, expired policies, missing endorsements, and
+              non-compliant vendors.
+            </p>
+            <div className="mt-8">
+              <Link
+                href="/audit"
+                className="inline-flex items-center rounded-lg border border-[#E5E7EB] bg-white px-8 py-3.5 text-base font-semibold text-[#374151] transition-colors hover:bg-[#F9FAFB]"
+              >
+                Get Your Free Assessment
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ================================================================ */}
         {/* FINAL CTA                                                        */}
         {/* ================================================================ */}
         <section className="bg-white py-24 sm:py-32">
