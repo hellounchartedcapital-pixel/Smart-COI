@@ -14,11 +14,13 @@ interface TrialBannerProps {
 
 export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerProps) {
   const [dismissed, setDismissed] = useState(false);
+  const [clientNow, setClientNow] = useState<Date | null>(null);
 
   useEffect(() => {
     if (sessionStorage.getItem(DISMISSED_KEY) === 'true') {
       setDismissed(true);
     }
+    setClientNow(new Date());
   }, []);
 
   // Payment failed banner — NOT dismissible, takes priority
@@ -38,13 +40,6 @@ export function TrialBanner({ plan, trialEndsAt, paymentFailed }: TrialBannerPro
       </div>
     );
   }
-
-  const [clientNow, setClientNow] = useState<Date | null>(null);
-
-  useEffect(() => {
-    setClientNow(new Date());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Don't show for non-trial plans
   if (plan !== 'trial') return null;
