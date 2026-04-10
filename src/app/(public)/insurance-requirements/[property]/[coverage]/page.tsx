@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!pt || !ct) return {};
 
   const title = `${ct.name} Requirements for ${pt.plural} | SmartCOI`;
-  const description = `${ct.name} insurance requirements for ${pt.plural.toLowerCase()}. Learn minimum coverage limits, compliance best practices, and how SmartCOI automates COI tracking for property managers.`;
+  const description = `${ct.name} insurance requirements for ${pt.plural.toLowerCase()}. Learn minimum coverage limits, compliance best practices, and how SmartCOI automates COI tracking.`;
 
   return {
     title,

@@ -114,7 +114,7 @@ export default function OGImage() {
             marginTop: 16,
           }}
         >
-          for Commercial Property Managers
+          AI-Powered COI Tracking for Every Industry
         </div>
 
         {/* Domain pill */}

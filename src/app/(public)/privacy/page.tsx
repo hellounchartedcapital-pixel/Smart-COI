@@ -9,6 +9,13 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://smartcoi.io/privacy',
   },
+  openGraph: {
+    title: 'Privacy Policy | SmartCOI',
+    description:
+      'SmartCOI privacy policy — learn how we collect, use, and protect your data when you use our COI compliance tracking platform.',
+    type: 'website',
+    url: 'https://smartcoi.io/privacy',
+  },
 };
 
 export default function PrivacyPolicyPage() {

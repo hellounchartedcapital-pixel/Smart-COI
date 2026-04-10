@@ -9,6 +9,13 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://smartcoi.io/terms',
   },
+  openGraph: {
+    title: 'Terms of Service | SmartCOI',
+    description:
+      'SmartCOI terms of service — read about your rights and responsibilities when using our AI-powered COI compliance tracking platform.',
+    type: 'website',
+    url: 'https://smartcoi.io/terms',
+  },
 };
 
 export default function TermsOfServicePage() {
@@ -41,7 +48,7 @@ export default function TermsOfServicePage() {
             <h2>Service Description</h2>
             <p>
               SmartCOI provides AI-powered certificate of insurance (COI)
-              compliance tracking for commercial property managers. The service
+              compliance tracking for businesses across multiple industries. The service
               extracts data from uploaded PDF documents using artificial
               intelligence and checks coverage against user-configured
               requirements. It also provides tools for vendor and tenant

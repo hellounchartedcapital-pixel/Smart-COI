@@ -65,7 +65,7 @@ const comparisons = [
   {
     href: '/compare/smartcoi-vs-pins',
     title: 'SmartCOI vs PINS',
-    desc: 'PINS serves property management as one of six verticals. SmartCOI is built exclusively for property managers — not a generalist tool.',
+    desc: 'PINS serves property management as one of six verticals. SmartCOI offers simple flat-rate pricing with industry-specific templates.',
     badge: 'Multi-Industry Alternative',
   },
   {

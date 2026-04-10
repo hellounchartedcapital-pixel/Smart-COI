@@ -344,7 +344,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-8">
               <Link
-                href="/audit"
+                href="/free-assessment"
                 className="inline-flex items-center rounded-lg border border-[#E5E7EB] bg-white px-8 py-3.5 text-base font-semibold text-[#374151] transition-colors hover:bg-[#F9FAFB]"
               >
                 Get Your Free Assessment

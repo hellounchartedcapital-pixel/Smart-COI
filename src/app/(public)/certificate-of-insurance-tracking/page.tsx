@@ -6,14 +6,14 @@ import { Footer } from '@/components/landing/footer';
 export const metadata: Metadata = {
   title: 'Certificate of Insurance Tracking Software | SmartCOI',
   description:
-    'Automate certificate of insurance tracking with AI extraction and instant compliance checks. Built for commercial property managers. Free 14-day trial.',
+    'Automate certificate of insurance tracking with AI extraction and instant compliance checks. Built for property managers, contractors, and operations teams. Free 14-day trial.',
   alternates: {
     canonical: 'https://smartcoi.io/coi-tracking-software',
   },
   openGraph: {
     title: 'Certificate of Insurance Tracking Software | SmartCOI',
     description:
-      'Automate certificate of insurance tracking with AI extraction and instant compliance checks. Built for commercial property managers. Free 14-day trial.',
+      'Automate certificate of insurance tracking with AI extraction and instant compliance checks. Built for property managers, contractors, and operations teams. Free 14-day trial.',
     type: 'website',
     url: 'https://smartcoi.io/certificate-of-insurance-tracking',
   },
@@ -62,9 +62,9 @@ export default function CertificateOfInsuranceTrackingPage() {
               effective dates, expiration dates, and named entities.
             </p>
             <p>
-              For commercial property managers, COI tracking is a fundamental risk management
-              responsibility. Every vendor performing work on your property and every tenant occupying
-              space should carry adequate insurance. The certificate proves it — but only if someone
+              For any team managing third-party relationships, COI tracking is a fundamental risk management
+              responsibility. Every vendor, contractor, or tenant you work with
+              should carry adequate insurance. The certificate proves it — but only if someone
               actually collects it, reads it, verifies it against requirements, and monitors it for
               expiration.
             </p>

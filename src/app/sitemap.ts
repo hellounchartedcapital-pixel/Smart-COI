@@ -30,6 +30,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
 
+    // Free assessment
+    {
+      url: `${BASE_URL}/free-assessment`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+
     // Feature pages
     {
       url: `${BASE_URL}/features/coi-tracking`,

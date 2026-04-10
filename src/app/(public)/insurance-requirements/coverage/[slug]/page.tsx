@@ -290,13 +290,13 @@ export default async function CoverageGuidePage({ params }: PageProps) {
               The Complete Guide to COI Compliance
             </Link>
             <Link
-              href="/blog/additional-insured-endorsements-explained"
+              href="/blog/what-is-additional-insured-commercial-real-estate"
               className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline"
             >
               Additional Insured Endorsements Explained
             </Link>
             <Link
-              href="/pricing"
+              href="/#pricing"
               className="text-sm font-medium text-[#4CC78A] hover:text-[#3aae72] underline"
             >
               SmartCOI Pricing

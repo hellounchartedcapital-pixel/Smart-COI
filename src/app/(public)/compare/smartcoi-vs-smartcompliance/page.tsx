@@ -6,14 +6,14 @@ import { Footer } from '@/components/landing/footer';
 export const metadata: Metadata = {
   title: 'SmartCOI vs SmartCompliance: COI Tracking Comparison',
   description:
-    'SmartCompliance is a broad enterprise compliance platform with weeks-long implementation. SmartCOI is purpose-built for property managers with self-serve onboarding in minutes.',
+    'SmartCompliance is a broad enterprise compliance platform with weeks-long implementation. SmartCOI offers self-serve onboarding in minutes with flat-rate pricing.',
   alternates: {
     canonical: 'https://smartcoi.io/compare/smartcoi-vs-smartcompliance',
   },
   openGraph: {
     title: 'SmartCOI vs SmartCompliance: COI Tracking Comparison',
     description:
-      'SmartCompliance is a broad enterprise compliance platform with weeks-long implementation. SmartCOI is purpose-built for property managers with self-serve onboarding in minutes.',
+      'SmartCompliance is a broad enterprise compliance platform with weeks-long implementation. SmartCOI offers self-serve onboarding in minutes with flat-rate pricing.',
     type: 'website',
     url: 'https://smartcoi.io/compare/smartcoi-vs-smartcompliance',
   },
@@ -35,7 +35,7 @@ export default function SmartCOIvsSmartCompliancePage() {
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-slate-500">
             SmartCompliance is a broad enterprise compliance platform serving large organizations
-            across multiple industries. SmartCOI is purpose-built for mid-market property managers
+            across multiple industries. SmartCOI is built for mid-market teams
             who want to start tracking COI compliance in minutes, not weeks. Here&apos;s how they
             compare.
           </p>
@@ -101,9 +101,9 @@ export default function SmartCOIvsSmartCompliancePage() {
               and training.
             </p>
             <p>
-              <strong className="text-slate-950">Purpose-built simplicity for CRE.</strong> SmartCOI
-              does one thing exceptionally well: COI compliance tracking for property managers. Every
-              feature is designed for CRE workflows. SmartCompliance is a broad compliance platform
+              <strong className="text-slate-950">Purpose-built simplicity.</strong> SmartCOI
+              does one thing exceptionally well: COI compliance tracking. Every
+              feature is designed for speed and simplicity. SmartCompliance is a broad compliance platform
               that serves multiple industries and compliance types — which means more complexity for
               users who only need COI tracking.
             </p>

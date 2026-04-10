@@ -4,14 +4,14 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 
 export const metadata: Metadata = {
-  title: 'Best Jones Alternatives for Property Managers (2025)',
+  title: 'Best Jones Alternatives for Property Managers (2026)',
   description:
     'Looking for a Jones alternative? Compare the best COI tracking options for property managers who need simpler setup, transparent pricing, and faster time to value.',
   alternates: {
     canonical: 'https://smartcoi.io/alternatives/jones',
   },
   openGraph: {
-    title: 'Best Jones Alternatives for Property Managers (2025)',
+    title: 'Best Jones Alternatives for Property Managers (2026)',
     description:
       'Looking for a Jones alternative? Compare the best COI tracking options for property managers who need simpler setup, transparent pricing, and faster time to value.',
     type: 'website',
@@ -24,9 +24,9 @@ const alternatives = [
     name: 'SmartCOI',
     badge: 'Best for Mid-Market PMs',
     description:
-      'Purpose-built for commercial real estate property managers. AI-powered extraction, transparent pricing from $79/mo, and self-serve onboarding. No sales call needed — start tracking compliance in minutes.',
+      'AI-powered COI tracking for property managers, contractors, and operations teams. Transparent pricing from $79/mo, and self-serve onboarding. No sales call needed — start tracking compliance in minutes.',
     pros: [
-      'Built specifically for property managers',
+      'Industry-specific templates and terminology',
       'Transparent pricing ($79/$149/$249)',
       'Self-serve setup in minutes',
       'AI-powered bulk upload (50 COIs at once)',

@@ -6,14 +6,14 @@ import { Footer } from '@/components/landing/footer';
 export const metadata: Metadata = {
   title: 'SmartCOI vs Billy: COI Tracking Comparison',
   description:
-    'Billy is built for general contractors with deep Procore integration. SmartCOI is built for property managers with CRE-specific compliance. See the full comparison.',
+    'Billy is built for general contractors with deep Procore integration. SmartCOI offers simple flat-rate COI tracking for multiple industries. See the full comparison.',
   alternates: {
     canonical: 'https://smartcoi.io/compare/smartcoi-vs-billy',
   },
   openGraph: {
     title: 'SmartCOI vs Billy: COI Tracking Comparison',
     description:
-      'Billy is built for general contractors with deep Procore integration. SmartCOI is built for property managers with CRE-specific compliance. See the full comparison.',
+      'Billy is built for general contractors with deep Procore integration. SmartCOI offers simple flat-rate COI tracking for multiple industries. See the full comparison.',
     type: 'website',
     url: 'https://smartcoi.io/compare/smartcoi-vs-billy',
   },
@@ -36,8 +36,8 @@ export default function SmartCOIvsBillyPage() {
           <p className="mt-6 text-lg leading-relaxed text-slate-500">
             Billy is a COI tracking platform built for the construction industry, with deep
             Procore integration and workflows designed for general contractors managing
-            subcontractor compliance. SmartCOI is purpose-built for commercial property
-            managers. These are genuinely different products for different use cases.
+            subcontractor compliance. SmartCOI serves property managers, contractors, and
+            operations teams across multiple industries with simple flat-rate pricing.
           </p>
         </section>
 
@@ -94,8 +94,8 @@ export default function SmartCOIvsBillyPage() {
           </h2>
           <div className="mt-6 space-y-4 text-base leading-relaxed text-slate-600">
             <p>
-              <strong className="text-slate-950">Built specifically for property managers.</strong> SmartCOI
-              is designed for property management workflows: tracking vendor and tenant COIs across
+              <strong className="text-slate-950">Built for simplicity and transparency.</strong> SmartCOI
+              is designed for operations workflows: tracking vendor and contractor COIs across
               properties, managing compliance templates for CRE requirements, and handling the specific
               coverage types property managers need. Billy is designed for GCs managing subcontractors
               on construction projects — a fundamentally different workflow.
@@ -201,7 +201,7 @@ export default function SmartCOIvsBillyPage() {
               Try SmartCOI Free for 14 Days
             </h2>
             <p className="mt-4 text-slate-400">
-              Built for property managers, not general contractors. See the difference.
+              Simple COI tracking with transparent pricing. See the difference.
             </p>
             <Link
               href="/signup"

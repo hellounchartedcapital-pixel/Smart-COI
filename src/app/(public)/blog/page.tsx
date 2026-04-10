@@ -7,9 +7,16 @@ import { getAllPosts } from '@/lib/blog';
 export const metadata: Metadata = {
   title: 'COI Compliance & Insurance Tracking Blog',
   description:
-    'Practical guides on COI compliance, vendor insurance tracking, and risk management for commercial property managers. Written by the SmartCOI team.',
+    'Practical guides on COI compliance, vendor insurance tracking, and risk management. Written by the SmartCOI team.',
   alternates: {
     canonical: 'https://smartcoi.io/blog',
+  },
+  openGraph: {
+    title: 'COI Compliance & Insurance Tracking Blog',
+    description:
+      'Practical guides on COI compliance, vendor insurance tracking, and risk management. Written by the SmartCOI team.',
+    type: 'website',
+    url: 'https://smartcoi.io/blog',
   },
 };
 
