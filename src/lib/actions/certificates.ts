@@ -390,11 +390,15 @@ export async function autoAssignCertificateToEntity(input: {
   propertyId: string | null;
   insuredName: string;
   entityType: string; // CoveredEntityType
+  /** AI-inferred vendor trade/type (e.g., "electrician", "plumber") */
+  inferredVendorType?: string;
+  /** True when inference confidence is low — needs manual review */
+  vendorTypeNeedsReview?: boolean;
 }) {
   const { createServiceClient } = await import('@/lib/supabase/service');
   const supabase = createServiceClient();
 
-  const { certificateId, orgId, propertyId, entityType } = input;
+  const { certificateId, orgId, propertyId, entityType, inferredVendorType, vendorTypeNeedsReview } = input;
   // Clean address-like suffixes from AI-extracted insured names
   const insuredName = cleanExtractedEntityName(input.insuredName);
   const legacyType = entityType === 'tenant' ? 'tenant' : 'vendor';
@@ -426,6 +430,8 @@ export async function autoAssignCertificateToEntity(input: {
         name: insuredName,
         entity_type: entityType,
         compliance_status: 'under_review',
+        ...(inferredVendorType ? { entity_category: inferredVendorType } : {}),
+        ...(vendorTypeNeedsReview != null ? { vendor_type_needs_review: vendorTypeNeedsReview } : {}),
       })
       .select('id')
       .single();
@@ -444,6 +450,8 @@ export async function autoAssignCertificateToEntity(input: {
         property_id: propertyId,
         company_name: insuredName,
         compliance_status: 'under_review',
+        ...(inferredVendorType ? { vendor_type: inferredVendorType } : {}),
+        ...(vendorTypeNeedsReview != null ? { vendor_type_needs_review: vendorTypeNeedsReview } : {}),
       }).then(() => { /* best-effort */ });
     } else {
       await supabase.from('tenants').insert({
@@ -453,6 +461,34 @@ export async function autoAssignCertificateToEntity(input: {
         company_name: insuredName,
         compliance_status: 'under_review',
       }).then(() => { /* best-effort */ });
+    }
+  } else if (inferredVendorType) {
+    // Entity already exists — update vendor type if not already set
+    const { data: existingEntity } = await supabase
+      .from('entities')
+      .select('entity_category')
+      .eq('id', entityId)
+      .single();
+
+    if (existingEntity && !existingEntity.entity_category) {
+      await supabase
+        .from('entities')
+        .update({
+          entity_category: inferredVendorType,
+          vendor_type_needs_review: vendorTypeNeedsReview ?? false,
+        })
+        .eq('id', entityId);
+
+      if (legacyType === 'vendor') {
+        await supabase
+          .from('vendors')
+          .update({
+            vendor_type: inferredVendorType,
+            vendor_type_needs_review: vendorTypeNeedsReview ?? false,
+          })
+          .eq('id', entityId)
+          .then(() => { /* best-effort */ });
+      }
     }
   }
 

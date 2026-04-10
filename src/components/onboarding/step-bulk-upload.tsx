@@ -261,10 +261,10 @@ export function StepBulkUpload({
       .map((f) => f.certificateId!);
 
     if (certIds.length > 0) {
-      // Fetch final status for all certificates
+      // Fetch final status for all certificates (including inferred vendor type)
       const { data: certs } = await supabase
         .from('certificates')
-        .select('id, insured_name, processing_status')
+        .select('id, insured_name, processing_status, inferred_vendor_type, vendor_type_needs_review')
         .in('id', certIds);
 
       const { data: coverages } = await supabase
@@ -277,7 +277,7 @@ export function StepBulkUpload({
         coverageCounts[c.certificate_id] = (coverageCounts[c.certificate_id] || 0) + 1;
       });
 
-      // Auto-assign extracted certificates to entities
+      // Auto-assign extracted certificates to entities (with inferred vendor type)
       if (certs && coiType && orgId) {
         for (const cert of certs) {
           if (cert.processing_status === 'extracted') {
@@ -289,6 +289,8 @@ export function StepBulkUpload({
                 propertyId: propertyId ?? null,
                 insuredName,
                 entityType: coiType,
+                inferredVendorType: cert.inferred_vendor_type ?? undefined,
+                vendorTypeNeedsReview: cert.vendor_type_needs_review ?? undefined,
               });
             } catch (assignErr) {
               console.error('Auto-assign failed:', assignErr);

@@ -98,7 +98,8 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Contact capture during bulk upload (contact name, email pre-populated from extraction)
 - Auto-assignment of COIs to property created during onboarding
 - AI-powered data extraction (coverage types, limits, dates, named insureds, certificate holder, additional insured, endorsements)
-- Two-pass AI extraction: Pass 1 = ACORD 25 data (page 1), Pass 2 = endorsement verification (pages 2+)
+- Two-pass AI extraction: Pass 1 = ACORD 25 data (page 1), Pass 2 = endorsement verification (pages 2+), plus vendor type inference from insured name/description
+- AI-inferred vendor type (13 trade categories) with confidence flag and recommended coverage requirements mapping
 - Endorsement detection: CG 20 10, CG 20 37, Waiver of Subrogation, Primary & Non-Contributory
 - Three-state endorsement verification: Indicated / Verified / Warning
 - Automatic compliance calculation — COIs go directly from extraction to compliance check (no manual review step)
@@ -159,6 +160,33 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Feature: AI Vendor Type Inference in Extraction Pipeline (Apr 2026)
+
+Added vendor trade/type inference to the AI extraction pipeline. The AI now infers the vendor's trade from the insured name, description of operations, and coverage types on the certificate.
+
+**Supported vendor types:** plumber, electrician, hvac, landscaper, general_contractor, roofing, painting, cleaning_janitorial, fire_protection, elevator, security, pest_control, other
+
+**Files changed:**
+- `src/lib/ai/extraction.ts` — added `inferred_vendor_type` section to system prompt with vendor type enum and confidence instructions; added `AIVendorTypeInference` interface to `AIExtractionResponse`; added `inferredVendorType` and `vendorTypeNeedsReview` fields to `ExtractionResult`; `mapToDbRows()` maps the AI response to these fields
+- `src/lib/constants/vendor-requirements.ts` — **NEW** — vendor requirements mapping config; `getRecommendedRequirements(industry, vendorType)` returns recommended coverage types and minimum limits for a given industry + vendor type combination; property_management industry fully built out with per-trade requirements (e.g., electrician → GL $2M/$4M, WC, Auto, Umbrella $5M); other industries fall back to general_contractor defaults (Phase 2 stub)
+- `src/lib/actions/certificates.ts` — `autoAssignCertificateToEntity()` now accepts `inferredVendorType` and `vendorTypeNeedsReview` params; stores vendor type in `entity_category` on entities table and `vendor_type` on legacy vendors table; for existing entities, backfills vendor type only if `entity_category` is null
+- `src/app/api/certificates/extract/route.ts` — stores `inferred_vendor_type` and `vendor_type_needs_review` on certificate record; returns both in API response
+- `src/app/api/certificates/batch-extract/route.ts` — same: stores vendor type on certificate during background extraction
+- `src/components/onboarding/step-bulk-upload.tsx` — `handleBatchComplete` fetches `inferred_vendor_type` from certificates and passes to `autoAssignCertificateToEntity()`
+- `src/app/(dashboard)/dashboard/certificates/bulk-upload/page.tsx` — `FileEntry.extractedData` extended with `inferredVendorType` and `vendorTypeNeedsReview`; `handleBatchComplete` fetches vendor type from certificates
+- `src/types/index.ts` — added `vendor_type_needs_review` to Entity interface; added `inferred_vendor_type` and `vendor_type_needs_review` to Certificate interface
+- `supabase/migrations/20260410_add_vendor_type_inference.sql` — adds `vendor_type_needs_review` column to entities and vendors tables; adds `inferred_vendor_type` and `vendor_type_needs_review` columns to certificates table
+
+**Data flow:** COI PDF → AI extraction (infers vendor type + confidence) → stored on certificate record → passed to `autoAssignCertificateToEntity()` → stored on entity (`entity_category` + `vendor_type_needs_review`) → `getRecommendedRequirements()` available for compliance/template recommendation
+
+**Key behaviors:**
+- High confidence: vendor type stored directly (e.g., "ABC Plumbing Inc" → plumber/high)
+- Low confidence: type stored as "other" with `vendor_type_needs_review: true`
+- Existing entities: vendor type only backfilled if `entity_category` is currently null (preserves manual overrides)
+- Industry lookup stubbed to default to "property_management" (Phase 2 will add real org industry lookup)
+
+⚠️ ACTION REQUIRED: Run `supabase/migrations/20260410_add_vendor_type_inference.sql` in Supabase SQL Editor.
 
 #### Feature: Background COI Batch Processing (Apr 2026)
 

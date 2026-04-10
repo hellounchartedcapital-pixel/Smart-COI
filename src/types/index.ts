@@ -234,6 +234,8 @@ export interface Entity {
   name: string;
   entity_type: CoveredEntityType;
   entity_category: string | null;
+  /** True when AI-inferred vendor type has low confidence — UI should prompt review */
+  vendor_type_needs_review: boolean;
   contact_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
@@ -310,6 +312,10 @@ export interface Certificate {
   processing_status: ProcessingStatus;
   insured_name: string | null;
   endorsement_data: EndorsementRecord[] | null;
+  /** AI-inferred vendor trade/type from extraction (e.g., "electrician", "plumber") */
+  inferred_vendor_type: string | null;
+  /** True when vendor type inference had low confidence */
+  vendor_type_needs_review: boolean;
   uploaded_at: string;
   reviewed_at: string | null;
   reviewed_by: string | null;

@@ -235,13 +235,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Update certificate status, insured name, and endorsement data
+    // Update certificate status, insured name, endorsement data, and inferred vendor type
     await serviceClient
       .from('certificates')
       .update({
         processing_status: 'extracted',
         ...(result.insuredName ? { insured_name: result.insuredName } : {}),
         endorsement_data: result.endorsements.length > 0 ? result.endorsements : null,
+        inferred_vendor_type: result.inferredVendorType ?? null,
+        vendor_type_needs_review: result.vendorTypeNeedsReview ?? false,
       })
       .eq('id', certificateId);
 
@@ -271,12 +273,14 @@ export async function POST(req: NextRequest) {
       // Non-fatal — extraction still succeeded
     }
 
-    console.log(`[extract] ✓ Done certId=${certificateId}: ${result.coverages.length} coverages, ${result.entities.length} entities, insured="${result.insuredName}"`);
+    console.log(`[extract] ✓ Done certId=${certificateId}: ${result.coverages.length} coverages, ${result.entities.length} entities, insured="${result.insuredName}", vendorType="${result.inferredVendorType}"`);
     return NextResponse.json({
       success: true,
       certificateId,
       coverages: result.coverages.length,
       entities: result.entities.length,
+      inferredVendorType: result.inferredVendorType ?? null,
+      vendorTypeNeedsReview: result.vendorTypeNeedsReview ?? false,
     });
   } catch (err) {
     console.error('[extract] Certificate extraction error:', err);
