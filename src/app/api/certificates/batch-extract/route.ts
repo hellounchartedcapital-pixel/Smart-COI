@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { after } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { extractCOIFromPDF } from '@/lib/ai/extraction';
+import { extractCOIFromPDF, type ExtractionResult } from '@/lib/ai/extraction';
 import { MAX_FILE_SIZE } from '@/lib/utils/file-validation';
 import { checkExtractionLimit } from '@/lib/plan-limits';
 import { getActivePlanStatus, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
@@ -10,6 +11,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { runAutoCompliance } from '@/lib/actions/certificates';
 import { processConcurrentQueue } from '@/lib/utils/concurrent-queue';
 import { sendBatchCompleteEmail } from '@/lib/emails/batch-complete';
+import { withExtractionRetry } from '@/lib/utils/extraction-retry';
 
 const CONCURRENCY_LIMIT = 5;
 
@@ -311,15 +313,45 @@ async function extractSingleCertificate(
 
   const pdfBase64 = buffer.toString('base64');
 
-  // AI extraction
+  // AI extraction with automatic retries for non-rate-limit failures.
+  // Rate-limit (429) retries are handled inside extractCOIFromPDF itself.
   console.log(`[batch-extract] Extracting certId=${certificateId}`);
-  const result = await extractCOIFromPDF(pdfBase64);
 
-  if (!result.success) {
+  const retryResult = await withExtractionRetry<ExtractionResult>(
+    async () => {
+      const result = await extractCOIFromPDF(pdfBase64);
+      if (!result.success) {
+        throw new Error(result.userMessage ?? result.error ?? 'Extraction failed');
+      }
+      return result;
+    },
+    async (attempt, prevError) => {
+      await serviceClient
+        .from('certificates')
+        .update({
+          retry_count: attempt,
+          ...(prevError ? { last_error: prevError } : {}),
+        })
+        .eq('id', certificateId);
+    },
+  );
+
+  if (!retryResult.success) {
+    const errorMessage = retryResult.error ?? 'Extraction failed';
+
     await serviceClient
       .from('certificates')
-      .update({ processing_status: 'failed' })
+      .update({
+        processing_status: 'failed',
+        retry_count: retryResult.attempts,
+        last_error: errorMessage,
+      })
       .eq('id', certificateId);
+
+    Sentry.captureException(new Error(`COI extraction failed: ${errorMessage}`), {
+      tags: { flow: 'batch_extract', certificateId },
+      extra: { orgId, attempts: retryResult.attempts, errorMessage },
+    });
 
     await serviceClient.from('activity_log').insert({
       organization_id: orgId,
@@ -328,12 +360,14 @@ async function extractSingleCertificate(
       vendor_id: cert.vendor_id,
       tenant_id: cert.tenant_id,
       action: 'coi_processed',
-      description: `COI extraction failed: ${result.error}`,
+      description: `COI extraction failed after ${retryResult.attempts} attempt(s): ${errorMessage}`,
       performed_by: userId,
     });
 
-    throw new Error(result.userMessage ?? result.error ?? 'Extraction failed');
+    throw new Error(errorMessage);
   }
+
+  const result = retryResult.data!;
 
   // Store extraction results
   if (result.coverages.length > 0) {
@@ -359,7 +393,7 @@ async function extractSingleCertificate(
       console.error('[batch-extract] Failed to insert coverages:', covError);
       await serviceClient
         .from('certificates')
-        .update({ processing_status: 'failed' })
+        .update({ processing_status: 'failed', last_error: 'Failed to store extraction results' })
         .eq('id', certificateId);
       throw new Error('Failed to store extraction results');
     }
@@ -380,17 +414,19 @@ async function extractSingleCertificate(
       console.error('[batch-extract] Failed to insert entities:', entError);
       await serviceClient
         .from('certificates')
-        .update({ processing_status: 'failed' })
+        .update({ processing_status: 'failed', last_error: 'Failed to store extraction results' })
         .eq('id', certificateId);
       throw new Error('Failed to store extraction results');
     }
   }
 
-  // Update certificate status, insured name, endorsement data, and inferred vendor type
+  // Update certificate status
   await serviceClient
     .from('certificates')
     .update({
       processing_status: 'extracted',
+      retry_count: retryResult.attempts,
+      last_error: null,
       ...(result.insuredName ? { insured_name: result.insuredName } : {}),
       endorsement_data: result.endorsements.length > 0 ? result.endorsements : null,
       inferred_vendor_type: result.inferredVendorType ?? null,
@@ -406,7 +442,7 @@ async function extractSingleCertificate(
     vendor_id: cert.vendor_id,
     tenant_id: cert.tenant_id,
     action: 'coi_processed',
-    description: `COI processed successfully — ${result.coverages.length} coverage(s) and ${result.entities.length} entity/entities extracted.`,
+    description: `COI processed successfully — ${result.coverages.length} coverage(s) and ${result.entities.length} entity/entities extracted.${retryResult.attempts > 1 ? ` (${retryResult.attempts} attempts)` : ''}`,
     performed_by: userId,
   });
 

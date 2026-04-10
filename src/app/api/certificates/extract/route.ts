@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as Sentry from '@sentry/nextjs';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { extractCOIFromPDF } from '@/lib/ai/extraction';
+import { extractCOIFromPDF, type ExtractionResult } from '@/lib/ai/extraction';
 import { MAX_FILE_SIZE, MAX_FILE_SIZE_LABEL } from '@/lib/utils/file-validation';
 import { checkExtractionLimit } from '@/lib/plan-limits';
 import { getActivePlanStatus, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import { createServiceClient } from '@/lib/supabase/service';
 import { captureServerEvent } from '@/lib/posthog-server';
 import { runAutoCompliance } from '@/lib/actions/certificates';
+import { withExtractionRetry } from '@/lib/utils/extraction-retry';
 
 /**
  * Create a Supabase client using the request cookies (for auth).
@@ -151,19 +153,51 @@ export async function POST(req: NextRequest) {
 
     const pdfBase64 = buffer.toString('base64');
 
-    // ---- AI extraction ----
-    console.log(`[extract] Calling AI extraction for certId=${certificateId}, fileSize=${buffer.length} bytes`);
-    const extractStart = Date.now();
-    const result = await extractCOIFromPDF(pdfBase64);
-    console.log(`[extract] AI extraction completed for certId=${certificateId} in ${Date.now() - extractStart}ms, success=${result.success}`);
+    // ---- AI extraction with automatic retries for non-rate-limit failures ----
+    // Rate-limit (429) retries are handled inside extractCOIFromPDF itself.
+    // This layer retries other failures: parse errors, timeouts, malformed PDFs, etc.
+    console.log(`[extract] Starting extraction with retry for certId=${certificateId}, fileSize=${buffer.length} bytes`);
 
-    if (!result.success) {
+    const retryResult = await withExtractionRetry<ExtractionResult>(
+      async () => {
+        const result = await extractCOIFromPDF(pdfBase64);
+        if (!result.success) {
+          throw new Error(result.userMessage ?? result.error ?? 'Extraction failed');
+        }
+        return result;
+      },
+      async (attempt, prevError) => {
+        // Track retry attempts on the certificate record
+        await serviceClient
+          .from('certificates')
+          .update({
+            retry_count: attempt,
+            ...(prevError ? { last_error: prevError } : {}),
+          })
+          .eq('id', certificateId);
+      },
+    );
+
+    if (!retryResult.success) {
+      const errorMessage = retryResult.error ?? 'Extraction failed';
+
+      // Persist final failure state
       await serviceClient
         .from('certificates')
-        .update({ processing_status: 'failed' })
+        .update({
+          processing_status: 'failed',
+          retry_count: retryResult.attempts,
+          last_error: errorMessage,
+        })
         .eq('id', certificateId);
 
-      // Log failure (raw error for debugging)
+      // Log failure to Sentry with context
+      Sentry.captureException(new Error(`COI extraction failed: ${errorMessage}`), {
+        tags: { flow: 'single_extract', certificateId },
+        extra: { orgId, attempts: retryResult.attempts, errorMessage },
+      });
+
+      // Log failure to activity log
       await serviceClient.from('activity_log').insert({
         organization_id: orgId,
         certificate_id: certificateId,
@@ -171,16 +205,17 @@ export async function POST(req: NextRequest) {
         vendor_id: cert.vendor_id,
         tenant_id: cert.tenant_id,
         action: 'coi_processed',
-        description: `COI extraction failed: ${result.error}`,
+        description: `COI extraction failed after ${retryResult.attempts} attempt(s): ${errorMessage}`,
         performed_by: user.id,
       });
 
-      // Return user-friendly message to the client
       return NextResponse.json(
-        { error: result.userMessage ?? result.error },
+        { error: errorMessage },
         { status: 422 }
       );
     }
+
+    const result = retryResult.data!;
 
     // ---- Store extraction results ----
     // Insert extracted_coverages (explicitly pick known fields — never spread AI output)
@@ -207,7 +242,7 @@ export async function POST(req: NextRequest) {
         console.error('Failed to insert extracted_coverages:', covError);
         await serviceClient
           .from('certificates')
-          .update({ processing_status: 'failed' })
+          .update({ processing_status: 'failed', last_error: 'Failed to store extraction results' })
           .eq('id', certificateId);
         return NextResponse.json({ error: 'Failed to store extraction results' }, { status: 500 });
       }
@@ -229,7 +264,7 @@ export async function POST(req: NextRequest) {
         console.error('Failed to insert extracted_entities:', entError);
         await serviceClient
           .from('certificates')
-          .update({ processing_status: 'failed' })
+          .update({ processing_status: 'failed', last_error: 'Failed to store extraction results' })
           .eq('id', certificateId);
         return NextResponse.json({ error: 'Failed to store extraction results' }, { status: 500 });
       }
@@ -240,6 +275,8 @@ export async function POST(req: NextRequest) {
       .from('certificates')
       .update({
         processing_status: 'extracted',
+        retry_count: retryResult.attempts,
+        last_error: null,
         ...(result.insuredName ? { insured_name: result.insuredName } : {}),
         endorsement_data: result.endorsements.length > 0 ? result.endorsements : null,
         inferred_vendor_type: result.inferredVendorType ?? null,
@@ -255,7 +292,7 @@ export async function POST(req: NextRequest) {
       vendor_id: cert.vendor_id,
       tenant_id: cert.tenant_id,
       action: 'coi_processed',
-      description: `COI processed successfully — ${result.coverages.length} coverage(s) and ${result.entities.length} entity/entities extracted.`,
+      description: `COI processed successfully — ${result.coverages.length} coverage(s) and ${result.entities.length} entity/entities extracted.${retryResult.attempts > 1 ? ` (${retryResult.attempts} attempts)` : ''}`,
       performed_by: user.id,
     });
 
@@ -273,7 +310,7 @@ export async function POST(req: NextRequest) {
       // Non-fatal — extraction still succeeded
     }
 
-    console.log(`[extract] ✓ Done certId=${certificateId}: ${result.coverages.length} coverages, ${result.entities.length} entities, insured="${result.insuredName}", vendorType="${result.inferredVendorType}"`);
+    console.log(`[extract] ✓ Done certId=${certificateId}: ${result.coverages.length} coverages, ${result.entities.length} entities, insured="${result.insuredName}", vendorType="${result.inferredVendorType}" (${retryResult.attempts} attempt(s))`);
     return NextResponse.json({
       success: true,
       certificateId,
@@ -284,6 +321,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('[extract] Certificate extraction error:', err);
+    Sentry.captureException(err, { tags: { flow: 'single_extract' } });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
