@@ -1,6 +1,6 @@
 # SmartCOI
 
-*Last updated: April 9, 2026*
+*Last updated: April 10, 2026*
 
 SmartCOI — B2B SaaS platform automating Certificate of Insurance (COI) compliance tracking. Supports Property Management, Construction, Logistics, Healthcare, Manufacturing, Hospitality, Retail, and Other industries. Automates COI collection, AI extraction, compliance verification, and vendor/tenant follow-up notifications.
 
@@ -93,6 +93,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - COI Expiration column (color-coded dates, Current/Expired labels) in property vendor/tenant list
 - Status badges fixed to single line (whitespace-nowrap)
 - Bulk COI upload with AI extraction, parallel processing (5 concurrent files), per-item 429 retry with exponential backoff (4s/8s/16s)
+- Background batch processing — server-side extraction via `after()` so users can close the browser; email notification on completion; real-time progress polling
 - COI type selection (vendor vs tenant) during bulk upload
 - Contact capture during bulk upload (contact name, email pre-populated from extraction)
 - Auto-assignment of COIs to property created during onboarding
@@ -158,6 +159,31 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Feature: Background COI Batch Processing (Apr 2026)
+
+Added server-side background processing for bulk COI uploads using Next.js `after()` (Vercel Fluid Compute, 800s max). Users no longer need to keep the browser open during extraction.
+
+**Architecture:**
+- **Batch extraction API** (`src/app/api/certificates/batch-extract/route.ts`) — receives certificate IDs, creates a `processing_batches` record, returns immediately with batch ID, then processes extractions in the background via `after()` using `processConcurrentQueue()` with concurrency of 5
+- **Batch status polling API** (`src/app/api/certificates/batch-status/route.ts`) — GET returns batch progress (completed/failed counts), PATCH updates `client_active` flag for email decision
+- **Processing batches table** (`supabase/migrations/20260410_add_processing_batches.sql`) — tracks batch status, progress counts, certificate IDs, property/entity context, and client polling state; RLS scoped to org via `get_user_organization_id()`
+- **Batch completion email** (`src/lib/emails/batch-complete.ts`) — sent via Resend when batch completes and client has navigated away; subject "Your SmartCOI compliance report is ready"; includes cert count, compliance gaps, vendor count, and dashboard link
+- **BatchProgressTracker component** (`src/components/dashboard/batch-progress-tracker.tsx`) — polls batch status every 4s, shows progress bar with ETA, handles page unload via `sendBeacon` to mark `client_active = false`, shows "we'll email you" prompt after 2 min, auto-completes on batch finish
+
+**Client-side behavior:**
+- Upload phase (file → storage → cert record) runs client-side for immediate feedback
+- Extraction phase delegated to server background via batch-extract API
+- `BatchProgressTracker` polls for progress and shows real-time updates
+- On batch completion: fetches extracted data from DB, updates file statuses, transitions to next step
+- On page unload: `sendBeacon` marks batch as `client_active = false` → server sends email on completion
+- After 2 min wait: shows "This is taking a bit — we'll email you when it's ready" with dismiss option
+
+**Files changed:**
+- `src/components/onboarding/step-bulk-upload.tsx` — split upload/extraction phases; upload runs client-side, extraction delegated to batch-extract API; added `BatchProgressTracker` for background progress
+- `src/app/(dashboard)/dashboard/certificates/bulk-upload/page.tsx` — same split; removed client-side `processConcurrentQueue` usage; added `BatchProgressTracker` and `handleBatchComplete` callback
+
+⚠️ ACTION REQUIRED: Run `supabase/migrations/20260410_add_processing_batches.sql` in Supabase SQL Editor to create the `processing_batches` table.
 
 #### Refactor: Parallel COI Bulk Upload Processing (Apr 2026)
 
@@ -966,7 +992,7 @@ Notable columns:
 - **Middleware** (`src/middleware.ts`) checks for `smartcoi-session` cookie before refreshing auth tokens. No cookie = expired session = redirect to `/login`. Redirects unauthenticated users to `/login`.
 - **Session management** (`src/lib/session.ts`) uses a browser cookie (`smartcoi-session`) as a server-readable session marker (24h or 7d max-age) plus localStorage for inactivity tracking. `SessionGuard` component in the dashboard layout checks both.
 - **Compliance pipeline:** No manual review step. Extraction → automatic compliance calculation. Fuzzy name matching for certificate holder and additional insured.
-- **Bulk upload:** Parallel processing (5 concurrent files) via `processConcurrentQueue()` utility (`src/lib/utils/concurrent-queue.ts`). Client-side 429 backoff retry (4s/8s/16s, max 3 retries). Server-side extraction retry (5s/15s/30s/60s/90s — 5 retries) on Anthropic API 529 errors.
+- **Bulk upload:** Two-phase architecture: (1) client uploads files to Supabase Storage + creates certificate records, (2) sends certificate IDs to `/api/certificates/batch-extract` which returns immediately and processes extractions in the background via `after()` using `processConcurrentQueue()` utility (`src/lib/utils/concurrent-queue.ts`) with concurrency of 5. Client polls `/api/certificates/batch-status` every 4s. Completion email sent via Resend if client disconnects. Server-side extraction retry (5s/15s/30s/60s/90s — 5 retries) on Anthropic API 529 errors.
 - **Google OAuth:** Handled via Supabase Auth callback at `/api/auth/callback`. Uses request-aware `createServerClient` (not `cookies()` from next/headers) to ensure auth tokens are set on the redirect response. Trial period assigned on org creation for both email and OAuth signups.
 - **Lease extraction:** API route at `/api/leases/extract`. Uses `src/lib/ai/lease-extraction.ts` with lease-specific prompt. Counts against extraction credits via `checkExtractionLimit()`.
 

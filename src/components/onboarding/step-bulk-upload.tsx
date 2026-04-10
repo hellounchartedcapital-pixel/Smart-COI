@@ -5,7 +5,7 @@ import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash } from '@/lib/utils/file-validation';
 import { autoAssignCertificateToEntity } from '@/lib/actions/certificates';
-import { processConcurrentQueue } from '@/lib/utils/concurrent-queue';
+import { BatchProgressTracker } from '@/components/dashboard/batch-progress-tracker';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, X, CheckCircle2, Loader2, AlertTriangle, Building2, Users, RotateCcw } from 'lucide-react';
 import { getTerminology } from '@/lib/constants/terminology';
@@ -38,9 +38,7 @@ interface StepBulkUploadProps {
   saving: boolean;
 }
 
-// Config — parallel processing with concurrency pool
-const CONCURRENCY_LIMIT = 5;
-const FETCH_TIMEOUT_MS = 120_000;
+// Config
 const MAX_FREE_UPLOADS = 50;
 
 let nextFileId = 0;
@@ -81,6 +79,10 @@ export function StepBulkUpload({
   const [allDone, setAllDone] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef(false);
+
+  // Background batch processing state
+  const [batchId, setBatchId] = useState<string | null>(null);
+  const [batchTotalCerts, setBatchTotalCerts] = useState(0);
 
   // Bootstrap auth
   useEffect(() => {
@@ -148,7 +150,7 @@ export function StepBulkUpload({
     if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
   }, [addFiles]);
 
-  // Process files: upload → extract (parallel with concurrency pool)
+  // Process files: upload to storage, then hand off extraction to background batch
   const processFiles = useCallback(async () => {
     if (!orgId || !userId) return;
 
@@ -158,177 +160,170 @@ export function StepBulkUpload({
 
     const pendingFiles = files.filter((f) => f.status === 'pending' || f.status === 'failed');
 
-    // Build an index map so we can update the right file in state
-    const pendingIds = pendingFiles.map((f) => f.id);
+    // Phase 1: Upload all files to storage + create certificate records (client-side, fast)
+    const certificateIds: string[] = [];
 
-    // Create an AbortController that respects both the abort ref and per-request timeouts
-    const queueController = new AbortController();
+    for (const entry of pendingFiles) {
+      if (abortRef.current) break;
 
-    // Watch the abort ref and propagate to the controller
-    const abortCheckInterval = setInterval(() => {
-      if (abortRef.current && !queueController.signal.aborted) {
-        queueController.abort();
-      }
-    }, 200);
+      setFiles((prev) =>
+        prev.map((f) => (f.id === entry.id ? { ...f, status: 'uploading', error: undefined } : f))
+      );
 
-    // Single-item processor — same logic as before, but driven by the queue
-    async function processOneItem(entry: FileEntry, signal: AbortSignal) {
-      if (signal.aborted) throw new Error('Cancelled');
+      try {
+        let certId = entry.certificateId;
 
-      // Phase 1: Upload file to storage + create certificate record
-      let certId = entry.certificateId;
-      let fileHash = entry.fileHash;
+        if (!certId) {
+          const fileHash = await computeFileHash(entry.file);
+          const storagePath = `bulk/${orgId}/${Date.now()}_${entry.file.name}`;
 
-      if (!certId) {
-        fileHash = await computeFileHash(entry.file);
-        const storagePath = `bulk/${orgId}/${Date.now()}_${entry.file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from('coi-documents')
+            .upload(storagePath, entry.file, { upsert: false });
+          if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
 
-        const { error: uploadError } = await supabase.storage
-          .from('coi-documents')
-          .upload(storagePath, entry.file, { upsert: false });
-        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+          const { data: cert, error: certError } = await supabase
+            .from('certificates')
+            .insert({
+              organization_id: orgId,
+              file_path: storagePath,
+              file_hash: fileHash,
+              upload_source: 'user_upload',
+              processing_status: 'processing',
+            })
+            .select('id')
+            .single();
 
-        const { data: cert, error: certError } = await supabase
-          .from('certificates')
-          .insert({
-            organization_id: orgId,
-            file_path: storagePath,
-            file_hash: fileHash,
-            upload_source: 'user_upload',
-            processing_status: 'processing',
-          })
-          .select('id')
-          .single();
+          if (certError || !cert) throw new Error(`Record failed: ${certError?.message}`);
+          certId = cert.id;
+          posthog.capture('coi_uploaded', { source: 'onboarding_bulk' });
 
-        if (certError || !cert) throw new Error(`Record failed: ${certError?.message}`);
-        certId = cert.id;
-        posthog.capture('coi_uploaded', { source: 'onboarding_bulk' });
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === entry.id ? { ...f, status: 'extracting', certificateId: certId, fileHash } : f
+            )
+          );
+        } else {
+          setFiles((prev) =>
+            prev.map((f) => (f.id === entry.id ? { ...f, status: 'extracting', error: undefined } : f))
+          );
+        }
 
-        // Update state with certId so retries skip upload
+        certificateIds.push(certId!);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Upload failed';
         setFiles((prev) =>
           prev.map((f) =>
-            f.id === entry.id ? { ...f, status: 'extracting', certificateId: certId, fileHash } : f
+            f.id === entry.id
+              ? { ...f, status: 'failed', error: `Processing failed: ${message}`, attempts: (f.attempts || 0) + 1 }
+              : f
           )
         );
-      } else {
-        setFiles((prev) =>
-          prev.map((f) => (f.id === entry.id ? { ...f, status: 'extracting', error: undefined } : f))
-        );
       }
-
-      // Phase 2: Call extraction API
-      if (signal.aborted) throw new Error('Cancelled');
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-      // Abort extraction if the queue-level signal fires
-      const onQueueAbort = () => controller.abort();
-      signal.addEventListener('abort', onQueueAbort, { once: true });
-
-      let extractRes: Response;
-      try {
-        extractRes = await fetch('/api/certificates/extract', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ certificateId: certId }),
-          signal: controller.signal,
-        });
-      } catch (fetchErr) {
-        clearTimeout(timeoutId);
-        signal.removeEventListener('abort', onQueueAbort);
-        const isTimeout = fetchErr instanceof DOMException && fetchErr.name === 'AbortError';
-        throw new Error(isTimeout ? 'Extraction timed out' : 'Network error');
-      }
-      clearTimeout(timeoutId);
-      signal.removeEventListener('abort', onQueueAbort);
-
-      if (!extractRes.ok) {
-        const body = await extractRes.json().catch(() => ({}));
-        throw new Error(body.error ?? `Failed (HTTP ${extractRes.status})`);
-      }
-
-      const extractBody = await extractRes.json();
-      const { data: updatedCert } = await supabase
-        .from('certificates')
-        .select('insured_name')
-        .eq('id', certId!)
-        .single();
-
-      // Phase 3: Auto-assign certificate to entity
-      const insuredName = updatedCert?.insured_name || entry.file.name.replace(/\.pdf$/i, '');
-      if (coiType) {
-        try {
-          await autoAssignCertificateToEntity({
-            certificateId: certId!,
-            orgId: orgId!,
-            propertyId: propertyId ?? null,
-            insuredName,
-            entityType: coiType,
-          });
-        } catch (assignErr) {
-          console.error('Auto-assign failed:', assignErr);
-        }
-      }
-
-      return {
-        insuredName: updatedCert?.insured_name ?? null,
-        coverageCount: extractBody.coverages ?? 0,
-      };
     }
 
-    await processConcurrentQueue({
-      items: pendingFiles,
-      concurrency: CONCURRENCY_LIMIT,
-      signal: queueController.signal,
-      maxRetries: 3,
-      processFn: processOneItem,
-      onStatusChange: (index, status, error, result) => {
-        const fileId = pendingIds[index];
-        if (status === 'processing') {
-          setFiles((prev) =>
-            prev.map((f) => (f.id === fileId ? { ...f, status: 'uploading', error: undefined } : f))
-          );
-        } else if (status === 'complete') {
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.id === fileId
-                ? {
-                    ...f,
-                    status: 'done',
-                    error: undefined,
-                    attempts: 1,
-                    extractedData: {
-                      insuredName: result?.insuredName ?? null,
-                      coverageCount: result?.coverageCount ?? 0,
-                    },
-                  }
-                : f
-            )
-          );
-        } else if (status === 'failed') {
-          const entry = pendingFiles[index];
-          // Mark as failed in DB if we have a certificate ID
-          if (entry.certificateId) {
-            supabase
-              .from('certificates')
-              .update({ processing_status: 'failed' })
-              .eq('id', entry.certificateId)
-              .then(() => { /* fire and forget */ });
-          }
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.id === fileId
-                ? { ...f, status: 'failed', error: `Processing failed: ${error}`, attempts: (f.attempts || 0) + 1 }
-                : f
-            )
-          );
-        }
-      },
-    });
+    if (certificateIds.length === 0) return;
 
-    clearInterval(abortCheckInterval);
+    // Phase 2: Submit all cert IDs to background batch extraction
+    try {
+      const res = await fetch('/api/certificates/batch-extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          certificateIds,
+          propertyId: propertyId ?? null,
+          entityType: coiType ?? 'vendor',
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Batch failed (HTTP ${res.status})`);
+      }
+
+      const { batchId: newBatchId, totalCerts } = await res.json();
+      setBatchId(newBatchId);
+      setBatchTotalCerts(totalCerts);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Batch submission failed';
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.status === 'extracting' ? { ...f, status: 'failed', error: message } : f
+        )
+      );
+    }
   }, [orgId, userId, propertyId, coiType, files, supabase]);
+
+  // Handle batch completion: fetch results, auto-assign entities, mark done
+  const handleBatchComplete = useCallback(async () => {
+    const certIds = files
+      .filter((f) => f.certificateId && f.status === 'extracting')
+      .map((f) => f.certificateId!);
+
+    if (certIds.length > 0) {
+      // Fetch final status for all certificates
+      const { data: certs } = await supabase
+        .from('certificates')
+        .select('id, insured_name, processing_status')
+        .in('id', certIds);
+
+      const { data: coverages } = await supabase
+        .from('extracted_coverages')
+        .select('certificate_id')
+        .in('certificate_id', certIds);
+
+      const coverageCounts: Record<string, number> = {};
+      coverages?.forEach((c) => {
+        coverageCounts[c.certificate_id] = (coverageCounts[c.certificate_id] || 0) + 1;
+      });
+
+      // Auto-assign extracted certificates to entities
+      if (certs && coiType && orgId) {
+        for (const cert of certs) {
+          if (cert.processing_status === 'extracted') {
+            const insuredName = cert.insured_name || 'Unknown';
+            try {
+              await autoAssignCertificateToEntity({
+                certificateId: cert.id,
+                orgId,
+                propertyId: propertyId ?? null,
+                insuredName,
+                entityType: coiType,
+              });
+            } catch (assignErr) {
+              console.error('Auto-assign failed:', assignErr);
+            }
+          }
+        }
+      }
+
+      // Update file statuses based on cert processing_status
+      setFiles((prev) =>
+        prev.map((f) => {
+          if (!f.certificateId) return f;
+          const cert = certs?.find((c) => c.id === f.certificateId);
+          if (!cert) return f;
+
+          if (cert.processing_status === 'extracted') {
+            return {
+              ...f,
+              status: 'done' as const,
+              error: undefined,
+              extractedData: {
+                insuredName: cert.insured_name ?? null,
+                coverageCount: coverageCounts[cert.id] ?? 0,
+              },
+            };
+          } else if (cert.processing_status === 'failed') {
+            return { ...f, status: 'failed' as const, error: 'Extraction failed' };
+          }
+          return f;
+        })
+      );
+    }
+
+    setBatchId(null);
+  }, [files, supabase, coiType, orgId, propertyId]);
 
   // Stats
   const pendingCount = files.filter((f) => f.status === 'pending').length;
@@ -465,8 +460,17 @@ export function StepBulkUpload({
             )}
           </div>
 
-          {/* Progress bar during processing */}
-          {(processing || allDone) && (
+          {/* Background batch progress tracker */}
+          {batchId && (
+            <BatchProgressTracker
+              batchId={batchId}
+              totalCerts={batchTotalCerts}
+              onComplete={handleBatchComplete}
+            />
+          )}
+
+          {/* Progress bar during upload phase (before batch handoff) */}
+          {!batchId && (processing || allDone) && (
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
               <div
                 className="h-full rounded-full bg-brand transition-all duration-500"
@@ -564,11 +568,11 @@ export function StepBulkUpload({
           </Button>
         )}
 
-        {processing && (
+        {processing && !batchId && (
           <>
             <Button size="lg" className="w-full font-semibold" disabled>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing {activeCount} of {totalCount} files...
+              Uploading files...
             </Button>
             <Button
               size="lg"

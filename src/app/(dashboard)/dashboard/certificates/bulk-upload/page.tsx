@@ -6,9 +6,9 @@ import Link from 'next/link';
 import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
 import { validatePDFFile, computeFileHash, formatFileSize, MAX_FILE_SIZE_LABEL } from '@/lib/utils/file-validation';
-import { processConcurrentQueue } from '@/lib/utils/concurrent-queue';
 import { isPlanInactiveError, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
+import { BatchProgressTracker } from '@/components/dashboard/batch-progress-tracker';
 import {
   getBulkUploadCapacity,
   createVendor,
@@ -107,13 +107,7 @@ interface RosterRow {
 
 type BulkStep = 'files' | 'processing' | 'review' | 'summary';
 
-// Parallel processing concurrency limit
-const CONCURRENCY_LIMIT = 5;
-
-// Per-request fetch timeout (ms) — prevents indefinite hangs
-const FETCH_TIMEOUT_MS = 120_000;
-
-// Rough estimate per file for initial ETA before any complete (faster with parallelism)
+// Rough estimate per file for initial ETA before any complete
 const EST_SECONDS_PER_FILE = 8;
 
 let nextFileId = 0;
@@ -157,6 +151,11 @@ export default function BulkUploadPage() {
   const [processingMessage, setProcessingMessage] = useState<string | null>(null);
   const [processStartTime, setProcessStartTime] = useState<number | null>(null);
   const completedCountRef = useRef(0);
+
+  // Step 2b: Background batch processing
+  const [batchId, setBatchId] = useState<string | null>(null);
+  const [batchTotalCerts, setBatchTotalCerts] = useState(0);
+  const [uploadPhaseComplete, setUploadPhaseComplete] = useState(false);
 
   // Step 3: Review roster
   const [roster, setRoster] = useState<RosterRow[]>([]);
@@ -345,7 +344,7 @@ export default function BulkUploadPage() {
     [addFiles]
   );
 
-  // ---- Step 2: Process all files (upload + extract with parallel concurrency pool) ----
+  // ---- Step 2: Upload files then hand off extraction to background batch ----
   const processFiles = useCallback(async () => {
     if (!orgId || !userId) return;
 
@@ -359,193 +358,186 @@ export default function BulkUploadPage() {
     setProcessStartTime(Date.now());
     completedCountRef.current = 0;
     abortRef.current = false;
+    setUploadPhaseComplete(false);
 
     const pendingFiles = files.filter((f) => f.status === 'pending' || f.status === 'failed');
-    const pendingIds = pendingFiles.map((f) => f.id);
 
-    // Create an AbortController that respects the abort ref
-    const queueController = new AbortController();
-    const abortCheckInterval = setInterval(() => {
-      if (abortRef.current && !queueController.signal.aborted) {
-        queueController.abort();
-      }
-    }, 200);
+    // Phase 1: Upload all files to storage + create certificate records (client-side)
+    const certificateIds: string[] = [];
 
-    // Process a single file: upload → create record → extract
-    async function processOneItem(entry: FileEntry, signal: AbortSignal) {
-      if (signal.aborted) throw new Error('Cancelled');
+    for (const entry of pendingFiles) {
+      if (abortRef.current) break;
 
-      console.log(`[bulk] Starting file: ${entry.file.name} (id=${entry.id})`);
+      setFiles((prev) =>
+        prev.map((f) => (f.id === entry.id ? { ...f, status: 'uploading', error: undefined } : f))
+      );
 
-      // Phase 1: Upload file to storage + create certificate record
-      let certId = entry.certificateId;
-      let fileHash = entry.fileHash;
+      try {
+        let certId = entry.certificateId;
 
-      if (!certId) {
-        fileHash = await computeFileHash(entry.file);
+        if (!certId) {
+          const fileHash = await computeFileHash(entry.file);
+          const isDuplicate = files.some(
+            (f) => f.id !== entry.id && f.fileHash === fileHash && f.status === 'done'
+          );
 
-        // Check for duplicate in batch (same hash)
-        const isDuplicate = files.some(
-          (f) => f.id !== entry.id && f.fileHash === fileHash && f.status === 'done'
-        );
+          const storagePath = `bulk/${orgId}/${Date.now()}_${entry.file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from('coi-documents')
+            .upload(storagePath, entry.file, { upsert: false });
+          if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
 
-        // Upload to storage
-        const storagePath = `bulk/${orgId}/${Date.now()}_${entry.file.name}`;
-        console.log(`[bulk] Uploading ${entry.file.name} → ${storagePath}`);
-        const { error: uploadError } = await supabase.storage
-          .from('coi-documents')
-          .upload(storagePath, entry.file, { upsert: false });
+          const { data: cert, error: certError } = await supabase
+            .from('certificates')
+            .insert({
+              organization_id: orgId,
+              file_path: storagePath,
+              file_hash: fileHash,
+              upload_source: 'user_upload',
+              processing_status: 'processing',
+            })
+            .select('id')
+            .single();
 
-        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+          if (certError || !cert) throw new Error(`Record failed: ${certError?.message}`);
+          certId = cert.id;
+          posthog.capture('coi_uploaded', { source: 'bulk' });
 
-        // Create certificate record (without vendor/tenant yet)
-        const { data: cert, error: certError } = await supabase
-          .from('certificates')
-          .insert({
-            organization_id: orgId,
-            file_path: storagePath,
-            file_hash: fileHash,
-            upload_source: 'user_upload',
-            processing_status: 'processing',
-          })
-          .select('id')
-          .single();
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === entry.id
+                ? { ...f, status: 'extracting', certificateId: certId, fileHash, isDuplicate }
+                : f
+            )
+          );
+        } else {
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === entry.id ? { ...f, status: 'extracting', error: undefined } : f
+            )
+          );
+        }
 
-        if (certError || !cert) throw new Error(`Record failed: ${certError?.message}`);
-        certId = cert.id;
-        posthog.capture('coi_uploaded', { source: 'bulk' });
-        console.log(`[bulk] Uploaded ${entry.file.name} → certId=${certId}`);
-
-        // Update with cert ID so retries skip upload
+        certificateIds.push(certId!);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Upload failed';
+        if (isPlanInactiveError(message)) {
+          showUpgradeModal(message.replace(PLAN_INACTIVE_TAG, '').trim());
+          abortRef.current = true;
+        }
         setFiles((prev) =>
           prev.map((f) =>
             f.id === entry.id
-              ? { ...f, status: 'extracting', certificateId: certId, fileHash, isDuplicate }
+              ? { ...f, status: 'failed', error: message, attempts: (f.attempts || 0) + 1 }
               : f
           )
         );
-      } else {
-        console.log(`[bulk] Resuming extraction for ${entry.file.name} (certId=${certId})`);
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.id === entry.id ? { ...f, status: 'extracting', error: undefined } : f
-          )
-        );
       }
-
-      // Phase 2: Call extraction API
-      if (signal.aborted) throw new Error('Cancelled');
-
-      console.log(`[bulk] Extracting ${entry.file.name} (certId=${certId})`);
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-      // Abort extraction if the queue-level signal fires
-      const onQueueAbort = () => controller.abort();
-      signal.addEventListener('abort', onQueueAbort, { once: true });
-
-      let extractRes: Response;
-      try {
-        extractRes = await fetch('/api/certificates/extract', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ certificateId: certId }),
-          signal: controller.signal,
-        });
-      } catch (fetchErr) {
-        clearTimeout(timeoutId);
-        signal.removeEventListener('abort', onQueueAbort);
-        const isTimeout = fetchErr instanceof DOMException && fetchErr.name === 'AbortError';
-        const errorMsg = isTimeout ? 'Extraction timed out' : 'Network error';
-        console.warn(`[bulk] Fetch error for ${entry.file.name}: ${errorMsg}`);
-        throw new Error(errorMsg);
-      }
-      clearTimeout(timeoutId);
-      signal.removeEventListener('abort', onQueueAbort);
-
-      console.log(`[bulk] Extract response for ${entry.file.name}: status=${extractRes.status}`);
-
-      if (!extractRes.ok) {
-        const body = await extractRes.json().catch(() => ({}));
-        const lastError = body.error ?? `Extraction failed (HTTP ${extractRes.status})`;
-        console.warn(`[bulk] ✗ Failed: ${entry.file.name} — ${lastError} (status=${extractRes.status})`);
-        throw new Error(lastError);
-      }
-
-      const extractBody = await extractRes.json();
-
-      // Fetch the insured name from the updated certificate
-      const { data: updatedCert } = await supabase
-        .from('certificates')
-        .select('insured_name')
-        .eq('id', certId!)
-        .single();
-
-      console.log(`[bulk] ✓ Done: ${entry.file.name} — insured="${updatedCert?.insured_name}", coverages=${extractBody.coverages}`);
-
-      return {
-        insuredName: updatedCert?.insured_name ?? null,
-        coverageCount: extractBody.coverages ?? 0,
-        entityCount: extractBody.entities ?? 0,
-      };
     }
 
-    console.log(`[bulk] Starting queue: ${pendingFiles.length} files, concurrency=${CONCURRENCY_LIMIT}`);
+    if (certificateIds.length === 0) {
+      console.log('[bulk] No files uploaded successfully — skipping batch extraction');
+      return;
+    }
 
-    await processConcurrentQueue({
-      items: pendingFiles,
-      concurrency: CONCURRENCY_LIMIT,
-      signal: queueController.signal,
-      maxRetries: 3,
-      processFn: processOneItem,
-      onStatusChange: (index, status, error, result) => {
-        const fileId = pendingIds[index];
-        if (status === 'processing') {
-          setFiles((prev) =>
-            prev.map((f) => (f.id === fileId ? { ...f, status: 'uploading', error: undefined } : f))
-          );
-        } else if (status === 'complete') {
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.id === fileId
-                ? {
-                    ...f,
-                    status: 'done',
-                    error: undefined,
-                    attempts: 1,
-                    extractedData: {
-                      insuredName: result?.insuredName ?? null,
-                      coverageCount: result?.coverageCount ?? 0,
-                      entityCount: result?.entityCount ?? 0,
-                    },
-                  }
-                : f
-            )
-          );
-          completedCountRef.current += 1;
-        } else if (status === 'failed') {
-          const message = error ?? 'Processing failed';
-          console.error(`[bulk] ✗ Final failure: ${pendingFiles[index].file.name} — ${message}`);
-          if (isPlanInactiveError(message)) {
-            showUpgradeModal(message.replace(PLAN_INACTIVE_TAG, '').trim());
-            abortRef.current = true;
-          }
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.id === fileId
-                ? { ...f, status: 'failed', error: message, attempts: (f.attempts || 0) + 1 }
-                : f
-            )
-          );
-          completedCountRef.current += 1;
-        }
-      },
-    });
+    // Phase 2: Submit all cert IDs to background batch extraction
+    console.log(`[bulk] Submitting ${certificateIds.length} certs to batch-extract`);
+    setUploadPhaseComplete(true);
 
-    clearInterval(abortCheckInterval);
-    console.log(`[bulk] Queue complete. Aborted=${abortRef.current}`);
-  }, [orgId, userId, selectedPropertyId, files, supabase, showUpgradeModal, extractionsRemaining]);
+    try {
+      const res = await fetch('/api/certificates/batch-extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          certificateIds,
+          propertyId: selectedPropertyId || null,
+          entityType: defaultEntityType,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Batch failed (HTTP ${res.status})`);
+      }
+
+      const { batchId: newBatchId, totalCerts } = await res.json();
+      console.log(`[bulk] Batch ${newBatchId} created — ${totalCerts} certs processing in background`);
+      setBatchId(newBatchId);
+      setBatchTotalCerts(totalCerts);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Batch submission failed';
+      console.error('[bulk] Batch submission failed:', message);
+      setGlobalError(`Batch processing failed: ${message}`);
+      // Mark all extracting files as failed
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.status === 'extracting' ? { ...f, status: 'failed', error: message } : f
+        )
+      );
+    }
+  }, [orgId, userId, selectedPropertyId, defaultEntityType, files, supabase, showUpgradeModal, extractionsRemaining]);
+
+  // ---- Handle batch completion: fetch extracted data and transition to roster ----
+  const handleBatchComplete = useCallback(async (batchStatus: { completedCount: number; failedCount: number }) => {
+    console.log(`[bulk] Batch complete: ${batchStatus.completedCount} done, ${batchStatus.failedCount} failed`);
+
+    // Fetch insured names for all certs that were in the batch
+    const certIds = files
+      .filter((f) => f.certificateId && f.status === 'extracting')
+      .map((f) => f.certificateId!);
+
+    if (certIds.length > 0) {
+      const { data: certs } = await supabase
+        .from('certificates')
+        .select('id, insured_name, processing_status')
+        .in('id', certIds);
+
+      if (certs) {
+        // Count coverages per cert
+        const { data: coverages } = await supabase
+          .from('extracted_coverages')
+          .select('certificate_id')
+          .in('certificate_id', certIds);
+
+        const coverageCounts: Record<string, number> = {};
+        coverages?.forEach((c) => {
+          coverageCounts[c.certificate_id] = (coverageCounts[c.certificate_id] || 0) + 1;
+        });
+
+        setFiles((prev) =>
+          prev.map((f) => {
+            if (!f.certificateId) return f;
+            const cert = certs.find((c) => c.id === f.certificateId);
+            if (!cert) return f;
+
+            if (cert.processing_status === 'extracted') {
+              return {
+                ...f,
+                status: 'done',
+                error: undefined,
+                extractedData: {
+                  insuredName: cert.insured_name ?? null,
+                  coverageCount: coverageCounts[cert.id] ?? 0,
+                  entityCount: 0,
+                },
+              };
+            } else if (cert.processing_status === 'failed') {
+              return {
+                ...f,
+                status: 'failed',
+                error: 'Extraction failed',
+              };
+            }
+            return f;
+          })
+        );
+      }
+    }
+
+    // Reset batch state so the UI shows the standard completion view
+    setBatchId(null);
+    setProcessingStarted(true); // Keep processing started so allProcessed logic works
+  }, [files, supabase]);
 
   // ---- Build roster from extracted data ----
   const buildRoster = useCallback(() => {
@@ -1060,85 +1052,79 @@ export default function BulkUploadPage() {
       {/* ================================================================ */}
       {step === 'processing' && (
         <div className="space-y-6">
-          {/* Progress bar */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">
-                {allProcessed
-                  ? `Processing complete — ${doneCount} of ${files.length} extracted successfully`
-                  : `Processing ${finishedCount} of ${files.length} files...`}
-              </span>
-              {!allProcessed && estimatedTimeRemaining && (
-                <span className="text-muted-foreground">
-                  {estimatedTimeRemaining} remaining
+          {/* Upload phase progress (before batch handoff) */}
+          {!uploadPhaseComplete && !batchId && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium">
+                  Uploading files to storage...
                 </span>
-              )}
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-              <div
-                className="h-full rounded-full bg-brand transition-all duration-300"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-            {/* Pacing / status message */}
-            {!allProcessed && processingMessage && (
-              <p className="text-xs text-muted-foreground italic">
-                {processingMessage}
-              </p>
-            )}
-          </div>
-
-          {/* High failure warning */}
-          {hasHighFailures && !allProcessed && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <AlertTriangle className="mr-1.5 inline h-4 w-4" />
-              Some extractions are failing due to high demand. You can retry failed files after the batch completes.
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                <div
+                  className="h-full rounded-full bg-blue-500 transition-all duration-300"
+                  style={{
+                    width: `${files.length > 0
+                      ? (files.filter((f) => f.status === 'extracting' || f.status === 'done').length / files.length) * 100
+                      : 0}%`,
+                  }}
+                />
+              </div>
             </div>
           )}
 
-          {/* File status list — successful and in-progress */}
-          <div className="max-h-80 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
-            {files.filter((e) => e.status !== 'failed').map((entry) => (
-              <div
-                key={entry.id}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm"
-              >
-                {entry.status === 'pending' && (
-                  <div className="h-4 w-4 rounded-full border-2 border-slate-300" />
-                )}
-                {entry.status === 'uploading' && (
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                )}
-                {entry.status === 'extracting' && (
-                  <Loader2 className="h-4 w-4 animate-spin text-brand" />
-                )}
-                {entry.status === 'done' && (
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{entry.file.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {entry.status === 'uploading' && 'Uploading...'}
-                    {entry.status === 'extracting' &&
-                      (entry.error
-                        ? entry.error
-                        : 'Extracting data...')}
-                    {entry.status === 'done' &&
-                      entry.extractedData &&
-                      `${entry.extractedData.insuredName ?? 'Unknown'} — ${entry.extractedData.coverageCount} coverages`}
-                  </p>
+          {/* Background batch processing via BatchProgressTracker */}
+          {batchId && (
+            <BatchProgressTracker
+              batchId={batchId}
+              totalCerts={batchTotalCerts}
+              onComplete={handleBatchComplete}
+              onDismiss={() => router.push('/dashboard')}
+            />
+          )}
+
+          {/* File status list — shown during upload phase and after batch completion */}
+          {!batchId && (
+            <div className="max-h-80 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+              {files.filter((e) => e.status !== 'failed').map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm"
+                >
+                  {entry.status === 'pending' && (
+                    <div className="h-4 w-4 rounded-full border-2 border-slate-300" />
+                  )}
+                  {entry.status === 'uploading' && (
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                  )}
+                  {entry.status === 'extracting' && (
+                    <Loader2 className="h-4 w-4 animate-spin text-brand" />
+                  )}
+                  {entry.status === 'done' && (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{entry.file.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {entry.status === 'uploading' && 'Uploading...'}
+                      {entry.status === 'extracting' && 'Waiting for extraction...'}
+                      {entry.status === 'done' &&
+                        entry.extractedData &&
+                        `${entry.extractedData.insuredName ?? 'Unknown'} — ${entry.extractedData.coverageCount} coverages`}
+                    </p>
+                  </div>
+                  {entry.isDuplicate && (
+                    <Badge variant="outline" className="text-xs text-amber-600 border-amber-200">
+                      Duplicate
+                    </Badge>
+                  )}
                 </div>
-                {entry.isDuplicate && (
-                  <Badge variant="outline" className="text-xs text-amber-600 border-amber-200">
-                    Duplicate
-                  </Badge>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Failed — Needs Retry section */}
-          {files.some((e) => e.status === 'failed') && (
+          {!batchId && files.some((e) => e.status === 'failed') && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-red-700 flex items-center gap-1.5">
@@ -1187,7 +1173,7 @@ export default function BulkUploadPage() {
           )}
 
           {/* Completion summary & actions */}
-          {allProcessed && (
+          {!batchId && allProcessed && (
             <div className="space-y-4">
               {/* Summary banner */}
               {failedCount > 0 ? (
