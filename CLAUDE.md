@@ -112,6 +112,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Recheck Compliance button (free, re-runs compliance against current template)
 - Re-extract Certificate button (uses AI credits, re-processes PDF)
 - Compliance report export (PDF and CSV)
+- Compliance report page at `/report/[reportId]` — visual report with donut chart, issue lists, vendor breakdown, action items, and upgrade CTA
 - Waiver/override tracking with reason, expiration, audit trail
 - Coverage gap details with specific shortfalls (e.g., "GL limit is $500K but requirement is $1M")
 - Vendor/tenant detail pages: two-column layout (PDF viewer left, compliance checklist right)
@@ -160,6 +161,28 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Feature: Compliance Report Page at /report/[reportId] (Apr 2026)
+
+Created a client-rendered compliance report page that fetches data from `GET /api/reports/compliance` and displays a full visual report. Requires authentication (middleware-gated, not in publicRoutes).
+
+**Route:** `/report/[reportId]` — outside /dashboard route group, no dashboard shell/sidebar
+
+**Page sections:**
+1. **Hero** — large donut/ring chart (SVG) showing compliance score with red/amber/green color coding, total compliance gaps (big number), total dollar exposure estimate (big number)
+2. **Critical Issues** — expired policies, missing required coverages. Red background/border styling. Green "No critical issues" banner when empty.
+3. **Warnings** — expiring within 30 days, insufficient limits, missing endorsements. Amber styling. Green "No warnings" banner when empty.
+4. **Vendor-by-Vendor Breakdown** — expandable cards per vendor: name + inferred type badge (or "Unclassified" if `vendorTypeNeedsReview`), status badge (compliant/non-compliant/expired/etc.), expandable detail with coverages on file table and requirements table with gap highlighting
+5. **Recommended Actions** — numbered list ranked by severity (critical → warning → info), with vendor name, dollar exposure, action description, and top gap details
+6. **Summary Stats** — 4-stat grid (total vendors, compliant %, expired, expiring in 30d) + coverage breakdown table by type (vendors affected, missing, insufficient, exposure)
+7. **Vendors We Couldn't Classify** — entities with `vendorTypeNeedsReview: true`, shown with amber styling and current inferred type badge
+8. **Upgrade CTA** — factual tone: "This report is accurate as of [date]. Certificates expire, vendors change..." with "Start Monitoring — $79/month" button linking to /#pricing
+
+**Design:** shadcn/ui components (Card, Badge, Button, Skeleton), Lucide icons, Tailwind CSS. Emerald/slate palette matching SmartCOI dashboard. Mobile responsive. Loading skeleton while fetching. Error state with login link for 401s.
+
+**Files created:**
+- `src/app/report/[reportId]/page.tsx` — server component with metadata, renders ReportClient
+- `src/app/report/[reportId]/report-client.tsx` — client component: fetches `/api/reports/compliance`, renders all 8 sections with SVG donut chart, expandable vendor cards, issue lists, and upgrade CTA
 
 #### Feature: Compliance Report JSON API Endpoint (Apr 2026)
 
