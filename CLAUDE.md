@@ -159,6 +159,12 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Professional Plan Limits Match "Unlimited" Marketing (Apr 2026)
+
+- `src/lib/plan-limits.ts` — raised Professional plan caps from 250 vendors/tenants + 200 extractions/month to 10,000 each (effectively unlimited), matching "Unlimited certificates" marketing
+- Updated upgrade prompt messages from "250 vendors & tenants" / "200 extractions" to "unlimited"
+- Starter and Growth plan limits unchanged
+
 #### Free Assessment Page + Site-Wide Continuity Audit (Apr 2026)
 
 **Free Assessment Intake Page (`/free-assessment`):**
