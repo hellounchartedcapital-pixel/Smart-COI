@@ -480,22 +480,31 @@ export default function BulkUploadPage() {
   }, [orgId, userId, selectedPropertyId, defaultEntityType, files, supabase, showUpgradeModal, extractionsRemaining]);
 
   // ---- Handle batch completion: fetch extracted data and transition to roster ----
-  const handleBatchComplete = useCallback(async (batchStatus: { completedCount: number; failedCount: number }) => {
-    console.log(`[bulk] Batch complete: ${batchStatus.completedCount} done, ${batchStatus.failedCount} failed`);
+  const handleBatchComplete = useCallback(async () => {
+    // Read cert IDs from the CURRENT files state (not the stale closure)
+    // by collecting them inside a setFiles callback first
+    let certIds: string[] = [];
+    setFiles((prev) => {
+      certIds = prev
+        .filter((f) => f.certificateId && f.status === 'extracting')
+        .map((f) => f.certificateId!);
+      return prev; // no change — just reading
+    });
 
-    // Fetch insured names for all certs that were in the batch
-    const certIds = files
-      .filter((f) => f.certificateId && f.status === 'extracting')
-      .map((f) => f.certificateId!);
-
+    // Fetch extraction results from DB and update file statuses
     if (certIds.length > 0) {
-      const { data: certs } = await supabase
-        .from('certificates')
-        .select('id, insured_name, processing_status, inferred_vendor_type, vendor_type_needs_review')
-        .in('id', certIds);
+      try {
+        // Use a minimal select that won't fail if optional columns are missing
+        const { data: certs, error: certsError } = await supabase
+          .from('certificates')
+          .select('id, insured_name, processing_status')
+          .in('id', certIds);
 
-      if (certs) {
-        // Count coverages per cert
+        if (certsError) {
+          console.error('[bulk] Failed to fetch certs after batch completion:', certsError);
+        }
+
+        // Also try to get coverage counts
         const { data: coverages } = await supabase
           .from('extracted_coverages')
           .select('certificate_id')
@@ -506,42 +515,82 @@ export default function BulkUploadPage() {
           coverageCounts[c.certificate_id] = (coverageCounts[c.certificate_id] || 0) + 1;
         });
 
+        // Try fetching vendor type data separately (columns may not exist yet)
+        let vendorTypeMap: Record<string, { type: string | null; needsReview: boolean }> = {};
+        try {
+          const { data: vtData } = await supabase
+            .from('certificates')
+            .select('id, inferred_vendor_type, vendor_type_needs_review')
+            .in('id', certIds);
+          if (vtData) {
+            for (const row of vtData) {
+              vendorTypeMap[row.id] = {
+                type: row.inferred_vendor_type ?? null,
+                needsReview: row.vendor_type_needs_review ?? false,
+              };
+            }
+          }
+        } catch {
+          // Columns may not exist — non-fatal
+        }
+
         setFiles((prev) =>
           prev.map((f) => {
-            if (!f.certificateId) return f;
-            const cert = certs.find((c) => c.id === f.certificateId);
-            if (!cert) return f;
+            if (!f.certificateId || f.status !== 'extracting') return f;
+
+            const cert = certs?.find((c) => c.id === f.certificateId);
+            if (!cert) {
+              // Cert not found in DB — mark done anyway (batch said it completed)
+              return { ...f, status: 'done' as const, extractedData: { insuredName: null, coverageCount: 0, entityCount: 0 } };
+            }
 
             if (cert.processing_status === 'extracted') {
+              const vt = vendorTypeMap[cert.id];
               return {
                 ...f,
-                status: 'done',
+                status: 'done' as const,
                 error: undefined,
                 extractedData: {
                   insuredName: cert.insured_name ?? null,
                   coverageCount: coverageCounts[cert.id] ?? 0,
                   entityCount: 0,
-                  inferredVendorType: cert.inferred_vendor_type ?? null,
-                  vendorTypeNeedsReview: cert.vendor_type_needs_review ?? false,
+                  inferredVendorType: vt?.type ?? null,
+                  vendorTypeNeedsReview: vt?.needsReview ?? false,
                 },
               };
             } else if (cert.processing_status === 'failed') {
-              return {
-                ...f,
-                status: 'failed',
-                error: 'Extraction failed',
-              };
+              return { ...f, status: 'failed' as const, error: 'Extraction failed' };
             }
-            return f;
+            // Unknown status — mark done so UI doesn't get stuck
+            return { ...f, status: 'done' as const, extractedData: { insuredName: cert.insured_name ?? null, coverageCount: coverageCounts[cert.id] ?? 0, entityCount: 0 } };
           })
         );
+      } catch (err) {
+        console.error('[bulk] Error fetching batch results:', err);
+        // Fallback: mark all extracting files as done so the UI transitions
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.status === 'extracting'
+              ? { ...f, status: 'done' as const, extractedData: { insuredName: null, coverageCount: 0, entityCount: 0 } }
+              : f
+          )
+        );
       }
+    } else {
+      // No cert IDs found — still transition extracting files to done
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.status === 'extracting'
+            ? { ...f, status: 'done' as const, extractedData: { insuredName: null, coverageCount: 0, entityCount: 0 } }
+            : f
+        )
+      );
     }
 
     // Reset batch state so the UI shows the standard completion view
     setBatchId(null);
     setProcessingStarted(true); // Keep processing started so allProcessed logic works
-  }, [files, supabase]);
+  }, [supabase]);
 
   // ---- Build roster from extracted data ----
   const buildRoster = useCallback(() => {

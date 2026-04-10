@@ -161,6 +161,22 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Batch Completion UI Stuck on "Waiting for extraction..." (Apr 2026)
+
+After batch processing completed (processing_batches showed status=complete), the bulk upload UI stayed stuck showing "Waiting for extraction..." instead of transitioning to the Review Roster step. Two root causes found and fixed:
+
+**Root cause 1 — DB query silently failing on optional columns:**
+- `handleBatchComplete` queried `inferred_vendor_type` and `vendor_type_needs_review` columns on the certificates table in a single SELECT. If the vendor type inference migration hadn't been run, PostgREST returned an error (data=null). The `if (certs)` check skipped the `setFiles` call, so files stayed in `'extracting'` status → `allProcessed` never became true → no "Continue to Review" button.
+- **Fix:** Split into two queries: a core query (`id, insured_name, processing_status`) that always works, and a separate try/catch query for vendor type columns that fails gracefully. If the core query also fails, a fallback marks all extracting files as `'done'` so the UI always transitions.
+
+**Root cause 2 — Stale `files` closure in `handleBatchComplete`:**
+- `handleBatchComplete` was `useCallback([files, supabase])` and used `files` from the closure to compute `certIds`. If `files` was stale (captured before upload phase completed), `certIds` could be empty → no DB query → no status update.
+- **Fix:** Read cert IDs from current state using `setFiles((prev) => { certIds = prev.filter(...); return prev; })` pattern. Removed `files` from `useCallback` deps.
+
+**Files changed:**
+- `src/app/(dashboard)/dashboard/certificates/bulk-upload/page.tsx` — rewrote `handleBatchComplete` with resilient DB queries, stale-closure fix, and fallback transitions
+- `src/components/onboarding/step-bulk-upload.tsx` — same fixes applied to onboarding `handleBatchComplete`
+
 #### Fix: All Certificate CHECK Constraints Blocking Batch Processing (Apr 2026)
 
 Bulk uploads were failing with `certificates_upload_source_check` violation after the previous `certificates_has_entity_check` fix. Root cause: the v2 migration (`20260217_v2_schema_migration.sql`) created an inline CHECK on `upload_source` that only allows `('pm_upload', 'portal_upload')` — missing `'user_upload'` which all 4 client-side upload paths use.
