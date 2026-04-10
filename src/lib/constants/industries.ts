@@ -9,9 +9,11 @@ export interface IndustryOption {
 
 export const INDUSTRY_OPTIONS: IndustryOption[] = [
   { value: 'property_management', label: 'Property Management', icon: 'Building2' },
+  { value: 'general_contractor', label: 'General Contractor', icon: 'HardHat' },
   { value: 'construction', label: 'Construction', icon: 'HardHat' },
   { value: 'logistics', label: 'Logistics & Transportation', icon: 'Truck' },
   { value: 'healthcare', label: 'Healthcare', icon: 'Hospital' },
+  { value: 'professional_services', label: 'Professional Services', icon: 'Briefcase' },
   { value: 'manufacturing', label: 'Manufacturing', icon: 'Factory' },
   { value: 'hospitality', label: 'Hospitality', icon: 'Hotel' },
   { value: 'retail', label: 'Retail', icon: 'Store' },

@@ -9,9 +9,11 @@
 
 export type Industry =
   | 'property_management'
+  | 'general_contractor'
   | 'construction'
   | 'logistics'
   | 'healthcare'
+  | 'professional_services'
   | 'manufacturing'
   | 'hospitality'
   | 'retail'
