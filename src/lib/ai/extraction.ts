@@ -37,6 +37,11 @@ interface AIEndorsement {
   description: string | null;
 }
 
+interface AIVendorTypeInference {
+  vendor_type: string;
+  confidence: 'high' | 'low';
+}
+
 interface AIExtractionResponse {
   coverages: AICoverage[];
   named_insured: string;
@@ -44,6 +49,7 @@ interface AIExtractionResponse {
   additional_insured_entities: AIEntity[];
   endorsements: AIEndorsement[];
   page_count: number;
+  inferred_vendor_type?: AIVendorTypeInference;
 }
 
 // ============================================================================
@@ -78,6 +84,10 @@ export interface ExtractionResult {
   entities: ExtractedEntityRow[];
   endorsements: EndorsementRecord[];
   insuredName: string | null;
+  /** AI-inferred vendor trade/type (e.g., "electrician", "plumber", "other") */
+  inferredVendorType?: string;
+  /** True when vendor type inference confidence is low — UI should prompt review */
+  vendorTypeNeedsReview?: boolean;
   error?: string;
   /** User-facing error message (friendly wording, no raw status codes) */
   userMessage?: string;
@@ -133,7 +143,11 @@ Return a JSON object with exactly this structure:
       "named_parties": ["string"],
       "description": "string or null"
     }
-  ]
+  ],
+  "inferred_vendor_type": {
+    "vendor_type": "plumber" | "electrician" | "hvac" | "landscaper" | "general_contractor" | "roofing" | "painting" | "cleaning_janitorial" | "fire_protection" | "elevator" | "security" | "pest_control" | "other",
+    "confidence": "high" | "low"
+  }
 }
 
 === PASS 1 — ACORD 25 FORM (Page 1) ===
@@ -191,6 +205,29 @@ Look for these specific endorsements:
 - Waiver of Subrogation endorsement (CG 24 04 or similar): Record form number and confirmation
 - Primary and Non-Contributory endorsement: Record form number and confirmation
 - Any other endorsement types: Record form number and brief description
+
+=== VENDOR TYPE INFERENCE ===
+
+Infer the vendor's trade/type from the named insured name, the description of operations, and any other clues on the certificate (coverage types held, carrier specializations, etc.).
+
+Supported vendor types:
+- "plumber" — plumbing, water/sewer, pipe fitting
+- "electrician" — electrical contractors, wiring, power systems
+- "hvac" — heating, ventilation, air conditioning, refrigeration
+- "landscaper" — landscaping, lawn care, tree service, irrigation
+- "general_contractor" — general construction, building, renovation, demolition
+- "roofing" — roofing contractors, roof repair
+- "painting" — painting contractors, coatings, wall covering
+- "cleaning_janitorial" — janitorial, cleaning services, maid services, pressure washing
+- "fire_protection" — fire sprinklers, fire alarm, fire suppression
+- "elevator" — elevator maintenance, escalator service
+- "security" — security guards, alarm monitoring, surveillance
+- "pest_control" — pest control, extermination, fumigation
+- "other" — does not clearly fit any of the above categories
+
+Set confidence to "high" when the insured name or description of operations clearly indicates the trade (e.g., "ABC Plumbing Inc" → plumber/high, "Smith Electric Co" → electrician/high).
+Set confidence to "low" when the type is ambiguous or you are guessing (e.g., "Johnson Services LLC" → other/low).
+When genuinely unsure, use vendor_type "other" with confidence "low".
 
 KEY RULES:
 - Dollar amounts from endorsement pages (policy terms, conditions, definitions) must NEVER override or replace the ACORD 25 limits from page 1. The limits array should ONLY contain values from the ACORD 25 form.
@@ -544,6 +581,11 @@ function mapToDbRows(parsed: AIExtractionResponse): ExtractionResult {
     description: e.description || null,
   }));
 
+  // Map vendor type inference
+  const vendorTypeInference = parsed.inferred_vendor_type;
+  const inferredVendorType = vendorTypeInference?.vendor_type || 'other';
+  const vendorTypeNeedsReview = !vendorTypeInference || vendorTypeInference.confidence === 'low';
+
   // Reject extractions with zero coverages — likely not a COI document
   if (coverages.length === 0) {
     return {
@@ -552,6 +594,8 @@ function mapToDbRows(parsed: AIExtractionResponse): ExtractionResult {
       entities,
       endorsements,
       insuredName: parsed.named_insured || null,
+      inferredVendorType,
+      vendorTypeNeedsReview,
       error: 'no_coverages',
       userMessage: 'No insurance coverage data found in this document. Please upload a valid Certificate of Insurance (COI).',
     };
@@ -563,5 +607,7 @@ function mapToDbRows(parsed: AIExtractionResponse): ExtractionResult {
     entities,
     endorsements,
     insuredName: parsed.named_insured || null,
+    inferredVendorType,
+    vendorTypeNeedsReview,
   };
 }

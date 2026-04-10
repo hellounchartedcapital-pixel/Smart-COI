@@ -386,13 +386,15 @@ async function extractSingleCertificate(
     }
   }
 
-  // Update certificate status
+  // Update certificate status, insured name, endorsement data, and inferred vendor type
   await serviceClient
     .from('certificates')
     .update({
       processing_status: 'extracted',
       ...(result.insuredName ? { insured_name: result.insuredName } : {}),
       endorsement_data: result.endorsements.length > 0 ? result.endorsements : null,
+      inferred_vendor_type: result.inferredVendorType ?? null,
+      vendor_type_needs_review: result.vendorTypeNeedsReview ?? false,
     })
     .eq('id', certificateId);
 
@@ -418,6 +420,8 @@ async function extractSingleCertificate(
   return {
     coverages: result.coverages.length,
     entities: result.entities.length,
+    inferredVendorType: result.inferredVendorType ?? null,
+    vendorTypeNeedsReview: result.vendorTypeNeedsReview ?? false,
   };
 }
 

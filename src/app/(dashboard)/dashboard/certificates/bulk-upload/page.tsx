@@ -75,6 +75,8 @@ interface FileEntry {
     insuredName: string | null;
     coverageCount: number;
     entityCount: number;
+    inferredVendorType?: string | null;
+    vendorTypeNeedsReview?: boolean;
   };
 }
 
@@ -489,7 +491,7 @@ export default function BulkUploadPage() {
     if (certIds.length > 0) {
       const { data: certs } = await supabase
         .from('certificates')
-        .select('id, insured_name, processing_status')
+        .select('id, insured_name, processing_status, inferred_vendor_type, vendor_type_needs_review')
         .in('id', certIds);
 
       if (certs) {
@@ -519,6 +521,8 @@ export default function BulkUploadPage() {
                   insuredName: cert.insured_name ?? null,
                   coverageCount: coverageCounts[cert.id] ?? 0,
                   entityCount: 0,
+                  inferredVendorType: cert.inferred_vendor_type ?? null,
+                  vendorTypeNeedsReview: cert.vendor_type_needs_review ?? false,
                 },
               };
             } else if (cert.processing_status === 'failed') {
