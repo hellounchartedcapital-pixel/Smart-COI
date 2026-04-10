@@ -161,6 +161,25 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Bulk Upload Entity Check Constraint Blocking Batch Processing (Apr 2026)
+
+All bulk uploads were failing with: `new row for relation 'certificates' violates check constraint 'certificates_has_entity_check'`.
+
+**Root cause:** The `certificates_has_entity_check` constraint (from `20260409_add_certificate_fk_check.sql`) required at least one of `entity_id`, `vendor_id`, or `tenant_id` to be non-null at INSERT time. But the batch processing flow (Phase 1B) creates certificate records before extraction and entity assignment — the cert is uploaded to storage first, then extracted in the background, then assigned to an entity after.
+
+**Fix:** Modified the CHECK constraint to allow NULL entity FKs when `processing_status = 'processing'` (cert just created, extraction pending). All other statuses still require at least one entity FK to be set.
+
+**Migration:** `supabase/migrations/20260410_fix_certificate_entity_check.sql` — drops old constraint, adds relaxed version
+
+**Affected flows (2 broken, 3 unaffected):**
+- `step-bulk-upload.tsx` (onboarding bulk) — inserts cert with no entity IDs, assigns later → **was broken, now fixed**
+- `bulk-upload/page.tsx` (dashboard bulk) — inserts cert with no entity IDs, assigns during roster step → **was broken, now fixed**
+- `entity-creation-wizard.tsx` — sets vendor_id/tenant_id at insert → unaffected
+- `portal/[token]/upload/route.ts` — sets entity IDs at insert → unaffected
+- `certificates/upload/page.tsx` (single upload) — sets all 3 IDs at insert → unaffected
+
+⚠️ ACTION REQUIRED: Run `supabase/migrations/20260410_fix_certificate_entity_check.sql` in Supabase SQL Editor.
+
 #### Fix: Bulk Upload Page Crash — Radix Select Empty Value + Polling Loop (Apr 2026)
 
 The dashboard bulk upload page at `/dashboard/certificates/bulk-upload` was crashing with "Something went wrong" error boundary. Two issues found and fixed:
