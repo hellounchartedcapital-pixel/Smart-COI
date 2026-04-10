@@ -161,6 +161,21 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: All Certificate CHECK Constraints Blocking Batch Processing (Apr 2026)
+
+Bulk uploads were failing with `certificates_upload_source_check` violation after the previous `certificates_has_entity_check` fix. Root cause: the v2 migration (`20260217_v2_schema_migration.sql`) created an inline CHECK on `upload_source` that only allows `('pm_upload', 'portal_upload')` — missing `'user_upload'` which all 4 client-side upload paths use.
+
+Rather than fixing constraints one at a time, created a comprehensive migration that drops ALL existing CHECK constraints on the certificates table and re-creates them with correct values:
+
+**Migration:** `supabase/migrations/20260410_fix_all_certificate_checks.sql`
+- Dynamically finds and drops all CHECK constraints via `pg_constraint`
+- Re-creates 3 named constraints:
+  - `certificates_upload_source_check` — allows `'user_upload'`, `'pm_upload'`, `'portal_upload'`
+  - `certificates_processing_status_check` — allows `'processing'`, `'extracted'`, `'review_confirmed'`, `'failed'`
+  - `certificates_has_entity_check` — requires entity FK unless `processing_status = 'processing'`
+
+⚠️ ACTION REQUIRED: Run `supabase/migrations/20260410_fix_all_certificate_checks.sql` in Supabase SQL Editor. This supersedes the previous `20260410_fix_certificate_entity_check.sql` — run this one instead (or after, it's idempotent).
+
 #### Fix: Bulk Upload Entity Check Constraint Blocking Batch Processing (Apr 2026)
 
 All bulk uploads were failing with: `new row for relation 'certificates' violates check constraint 'certificates_has_entity_check'`.
