@@ -162,6 +162,34 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Feature: PDF Export on Compliance Report Page (Apr 2026)
+
+Added client-side PDF export to the compliance report page at `/report/[reportId]`. Uses jsPDF + jspdf-autotable (same stack as the existing audit report) with dynamic import for code-splitting.
+
+**UI changes:**
+- "Download PDF" button in report page header (top-right, outline variant)
+- Disabled state with "Generating..." text while PDF builds
+- jsPDF dynamically imported on click to avoid loading the library upfront
+
+**PDF contents (matching web report sections):**
+1. **Header** — emerald banner with org name, date, "Prepared by SmartCOI"
+2. **Executive summary** — compliance score circle, 6-stat grid (gaps, exposure, compliant count, expired, expiring, endorsements)
+3. **Critical issues** — red accent bars with entity name + description
+4. **Warnings** — amber accent bars with entity name + description
+5. **Vendor-by-vendor breakdown** — per-vendor header with type label + status badge, coverages on file table, requirements table with status (MET/NOT MET/MISSING) and gap highlighting in red
+6. **Recommended actions** — numbered priority badges (red/amber/slate), action text, top gap bullets
+7. **Summary statistics** — 4-stat boxes + coverage breakdown table with emerald header
+8. **Vendors we couldn't classify** — amber rows with inferred type
+9. **Upgrade CTA** — factual copy + emerald "Start Monitoring" button
+
+**Design:** A4 portrait, Helvetica, emerald/slate palette matching audit report. Color-coded status text in tables (green MET, red NOT MET/MISSING, red exposure amounts). Alternating row shading. Page footers with page numbers and "Confidential" label.
+
+**Files created:**
+- `src/app/report/[reportId]/generate-report-pdf.ts` — client-side PDF generator using jsPDF + jspdf-autotable
+
+**Files changed:**
+- `src/app/report/[reportId]/report-client.tsx` — added Download PDF button, dynamic import of PDF generator, generating state
+
 #### Feature: Compliance Report Page at /report/[reportId] (Apr 2026)
 
 Created a client-rendered compliance report page that fetches data from `GET /api/reports/compliance` and displays a full visual report. Requires authentication (middleware-gated, not in publicRoutes).

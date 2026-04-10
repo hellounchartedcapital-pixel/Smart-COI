@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Clock,
+  Download,
   ShieldAlert,
   ShieldCheck,
   ShieldX,
@@ -453,6 +454,20 @@ export function ReportClient() {
   const [report, setReport] = useState<ComplianceReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  const handleDownloadPdf = useCallback(async () => {
+    if (!report || generatingPdf) return;
+    setGeneratingPdf(true);
+    try {
+      const { generateReportPDF } = await import('./generate-report-pdf');
+      generateReportPDF(report);
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }, [report, generatingPdf]);
 
   useEffect(() => {
     async function fetchReport() {
@@ -515,17 +530,29 @@ export function ReportClient() {
       <div className="max-w-5xl mx-auto px-6 py-10 sm:py-14">
 
         {/* ---- Header ---- */}
-        <div className="mb-10">
-          <div className="flex items-center gap-2 mb-1">
-            <ShieldCheck className="h-5 w-5 text-emerald-600" />
-            <span className="text-sm font-medium text-emerald-700">SmartCOI</span>
+        <div className="mb-10 flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <ShieldCheck className="h-5 w-5 text-emerald-600" />
+              <span className="text-sm font-medium text-emerald-700">SmartCOI</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">
+              Compliance Report
+            </h1>
+            <p className="text-sm text-slate-500">
+              {report.organizationName} &middot; Generated {generatedDate}
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">
-            Compliance Report
-          </h1>
-          <p className="text-sm text-slate-500">
-            {report.organizationName} &middot; Generated {generatedDate}
-          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadPdf}
+            disabled={generatingPdf}
+            className="flex-shrink-0 mt-1"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {generatingPdf ? 'Generating...' : 'Download PDF'}
+          </Button>
         </div>
 
         {/* ---- Hero: Score + Stats ---- */}
