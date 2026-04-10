@@ -92,7 +92,7 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Vendor/tenant names clickable in property list
 - COI Expiration column (color-coded dates, Current/Expired labels) in property vendor/tenant list
 - Status badges fixed to single line (whitespace-nowrap)
-- Bulk COI upload with AI extraction, retry logic (exponential backoff: 2s/4s/8s), batch processing (5 concurrent files)
+- Bulk COI upload with AI extraction, parallel processing (5 concurrent files), per-item 429 retry with exponential backoff (4s/8s/16s)
 - COI type selection (vendor vs tenant) during bulk upload
 - Contact capture during bulk upload (contact name, email pre-populated from extraction)
 - Auto-assignment of COIs to property created during onboarding
@@ -158,6 +158,17 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Refactor: Parallel COI Bulk Upload Processing (Apr 2026)
+
+Refactored bulk upload from sequential (one-at-a-time with 2s pause) to parallel processing with a concurrency pool of 5, reducing ~40 min for 50 COIs to ~10 min.
+
+- Created `src/lib/utils/concurrent-queue.ts` — generic `processConcurrentQueue()` utility with configurable concurrency limit (default 5), per-item error isolation, progress callbacks, AbortSignal support, and 429 rate-limit exponential backoff retry (max 3 retries with 4s/8s/16s backoff)
+- **Onboarding bulk upload** (`src/components/onboarding/step-bulk-upload.tsx`) — replaced sequential `for` loop with `processConcurrentQueue()` call; removed `BATCH_PAUSE_MS` constant; added `CONCURRENCY_LIMIT = 5`
+- **Dashboard bulk upload** (`src/app/(dashboard)/dashboard/certificates/bulk-upload/page.tsx`) — replaced sequential `for` loop with `processConcurrentQueue()` call; removed `FILE_PAUSE_MS` constant; added `CONCURRENCY_LIMIT = 5`; reduced `EST_SECONDS_PER_FILE` from 25 to 8 for more accurate parallel ETA
+- Both upload flows retain: per-file error handling (one failure doesn't block others), cancel/abort support, retry UI for failed files, duplicate detection, plan limit enforcement
+- AI extraction logic (`src/lib/ai/extraction.ts`) and compliance calculation untouched — only the client-side orchestration layer changed
+- Server-side retry (5 retries with 5s/15s/30s/60s/90s backoff for 529 errors) still runs per-request inside the extraction API route
 
 #### Fix: Professional Plan Limits Match "Unlimited" Marketing (Apr 2026)
 
@@ -619,7 +630,7 @@ Every certificate MUST have entity_id AND vendor_id/tenant_id set.
 - **Fixed certificate lookup in compliance calculation:** Certificate queries now use `or(entity_id, vendor_id, tenant_id)` filter instead of only legacy `vendor_id`/`tenant_id` match, ensuring certificates linked via `entity_id` are found.
 - **Fixed compliance status dual-write:** Status updates now write to both `entities` table and legacy table (was only writing to legacy table). Activity log now includes `entity_id`.
 - **Increased AI extraction retries from 3 to 5:** `BACKOFF_MS` in `src/lib/ai/extraction.ts` expanded from `[5s, 15s, 30s]` to `[5s, 15s, 30s, 60s, 90s]` to better handle Anthropic API 529 (overloaded) errors during bulk upload.
-- **Bulk upload concurrency already optimal:** Verified processing is sequential (1 file at a time) with 2-second pause between files — no concurrency reduction needed.
+- **Bulk upload concurrency:** Processing uses parallel concurrency pool of 5 files via `processConcurrentQueue()` utility.
 - **Retry UI already exists:** Verified "Retry All Failed" button and per-file "Retry" buttons are present in bulk upload UI.
 - **Admin recheck route:** Created `src/app/api/admin/recheck-compliance/route.ts` — one-time POST endpoint (auth via `CRON_SECRET`) that finds all entities with `compliance_status = 'under_review'` or `null`, recalculates compliance using the fixed logic, and returns a summary with per-entity before/after status. Logs `compliance_checked` activity for each recalculated entity.
 
@@ -707,7 +718,7 @@ Every certificate MUST have entity_id AND vendor_id/tenant_id set.
 - UI refresh: Inter font, clean white design
 - Redesigned 9 email templates (welcome, trial sequence, compliance alerts, portal requests)
 - Redesigned landing page with industry-agnostic positioning
-- Improved bulk upload reliability from 48% to 90%+ (sequential processing, removed retry amplification)
+- Improved bulk upload reliability from 48% to 90%+ (removed retry amplification, parallel processing with concurrency pool of 5)
 
 #### SEO Overhaul (Apr 2026)
 
@@ -955,7 +966,7 @@ Notable columns:
 - **Middleware** (`src/middleware.ts`) checks for `smartcoi-session` cookie before refreshing auth tokens. No cookie = expired session = redirect to `/login`. Redirects unauthenticated users to `/login`.
 - **Session management** (`src/lib/session.ts`) uses a browser cookie (`smartcoi-session`) as a server-readable session marker (24h or 7d max-age) plus localStorage for inactivity tracking. `SessionGuard` component in the dashboard layout checks both.
 - **Compliance pipeline:** No manual review step. Extraction → automatic compliance calculation. Fuzzy name matching for certificate holder and additional insured.
-- **Bulk upload:** Sequential processing (1 file at a time) with 2-second pause between files, exponential backoff retry (5s/15s/30s/60s/90s — 5 retries) on Anthropic API 529 errors.
+- **Bulk upload:** Parallel processing (5 concurrent files) via `processConcurrentQueue()` utility (`src/lib/utils/concurrent-queue.ts`). Client-side 429 backoff retry (4s/8s/16s, max 3 retries). Server-side extraction retry (5s/15s/30s/60s/90s — 5 retries) on Anthropic API 529 errors.
 - **Google OAuth:** Handled via Supabase Auth callback at `/api/auth/callback`. Uses request-aware `createServerClient` (not `cookies()` from next/headers) to ensure auth tokens are set on the redirect response. Trial period assigned on org creation for both email and OAuth signups.
 - **Lease extraction:** API route at `/api/leases/extract`. Uses `src/lib/ai/lease-extraction.ts` with lease-specific prompt. Counts against extraction credits via `checkExtractionLimit()`.
 
