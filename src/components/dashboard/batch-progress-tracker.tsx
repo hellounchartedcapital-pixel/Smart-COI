@@ -45,6 +45,11 @@ export function BatchProgressTracker({
   const [pollError, setPollError] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(Date.now());
+  // Use refs for callback and state to avoid recreating the polling effect
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  const showEmailPromptRef = useRef(showEmailPrompt);
+  showEmailPromptRef.current = showEmailPrompt;
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -64,12 +69,12 @@ export function BatchProgressTracker({
           clearInterval(pollRef.current);
           pollRef.current = null;
         }
-        onComplete(data);
+        onCompleteRef.current(data);
       }
 
       // Show email prompt after 2 min of waiting
       if (
-        !showEmailPrompt &&
+        !showEmailPromptRef.current &&
         Date.now() - startTimeRef.current > LONG_WAIT_THRESHOLD_MS &&
         data.status === 'processing'
       ) {
@@ -78,9 +83,9 @@ export function BatchProgressTracker({
     } catch {
       setPollError('Network error — retrying...');
     }
-  }, [batchId, onComplete, showEmailPrompt]);
+  }, [batchId]); // Only depends on batchId — stable across renders
 
-  // Start polling on mount
+  // Start polling on mount (only re-runs if batchId changes)
   useEffect(() => {
     // Initial fetch immediately
     fetchStatus();
@@ -91,6 +96,7 @@ export function BatchProgressTracker({
     return () => {
       if (pollRef.current) {
         clearInterval(pollRef.current);
+        pollRef.current = null;
       }
     };
   }, [fetchStatus]);

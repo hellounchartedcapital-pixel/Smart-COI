@@ -161,6 +161,25 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Bulk Upload Page Crash — Radix Select Empty Value + Polling Loop (Apr 2026)
+
+The dashboard bulk upload page at `/dashboard/certificates/bulk-upload` was crashing with "Something went wrong" error boundary. Two issues found and fixed:
+
+**Root cause 1 — Radix Select `value=""` runtime error:**
+- `@radix-ui/react-select@2.x` throws at runtime: "A \<Select.Item /\> must have a value prop that is not an empty string"
+- The Property select had `<SelectItem value="">No property — org level</SelectItem>` which crashed immediately on render
+- **Fix:** Changed to sentinel value `__none__` — `<SelectItem value="__none__">` with value mapping in `onValueChange` to convert back to empty string
+
+**Root cause 2 — BatchProgressTracker infinite polling loop:**
+- `fetchStatus` callback depended on `onComplete` and `showEmailPrompt` via useCallback deps
+- `onComplete` was recreated on every render (parent's `handleBatchComplete` depends on `files` state)
+- This caused `fetchStatus` → `useEffect` → `setInterval` to re-run on every state update, stacking intervals
+- **Fix:** Used refs (`onCompleteRef`, `showEmailPromptRef`) to read latest values without adding them to callback deps. `fetchStatus` now depends only on `[batchId]` — stable across renders
+
+**Files changed:**
+- `src/app/(dashboard)/dashboard/certificates/bulk-upload/page.tsx` — fixed empty-string SelectItem value
+- `src/components/dashboard/batch-progress-tracker.tsx` — fixed useCallback/useEffect dependency loop with refs
+
 #### Fix: Extraction Retry Logic + Failure Tracking + Sentry (Apr 2026)
 
 Added automatic retries and structured failure tracking for COI extraction. Failures are no longer silently dropped — they persist in the DB with retry metadata and are reported to Sentry.
