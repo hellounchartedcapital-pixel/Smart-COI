@@ -7,8 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { CreateTemplateDialog } from './create-template-dialog';
 import { ExtractLeaseDialog } from './extract-lease-dialog';
-import { toast } from 'sonner';
-import { useUpgradeModal } from '@/components/dashboard/upgrade-modal';
 import { useTerminology } from '@/hooks/useTerminology';
 import {
   RISK_LEVEL_LABELS,
@@ -30,15 +28,13 @@ interface TemplateWithUsage extends RequirementTemplate {
 interface TemplatesListClientProps {
   vendorTemplates: TemplateWithUsage[];
   tenantTemplates: TemplateWithUsage[];
-  hasCustomTemplates: boolean;
+  hasCustomTemplates?: boolean;
 }
 
 export function TemplatesListClient({
   vendorTemplates,
   tenantTemplates,
-  hasCustomTemplates,
 }: TemplatesListClientProps) {
-  const { showUpgradeModal } = useUpgradeModal();
   const { terminology } = useTerminology();
   const [createOpen, setCreateOpen] = useState(false);
   const [leaseOpen, setLeaseOpen] = useState(false);

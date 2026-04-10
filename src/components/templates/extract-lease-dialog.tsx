@@ -29,7 +29,6 @@ import {
   LIMIT_TYPE_LABELS,
   COMMON_COVERAGE_TYPES,
   ALL_LIMIT_TYPES,
-  formatLimit,
 } from './template-labels';
 import { AlertTriangle } from 'lucide-react';
 import { useTerminology } from '@/hooks/useTerminology';
@@ -227,7 +226,7 @@ export function ExtractLeaseDialog({ open, onOpenChange, entityName }: ExtractLe
     } finally {
       setSaving(false);
     }
-  }, [requirements, templateName, category, showUpgradeModal, router]);
+  }, [requirements, templateName, category, showUpgradeModal, router, additionalInsuredName, certificateHolderName, handleClose]);
 
   const reqLabel = terms.hasTenants ? 'Lease Requirements' : 'Requirements';
   const defaultName = entityName?.trim()

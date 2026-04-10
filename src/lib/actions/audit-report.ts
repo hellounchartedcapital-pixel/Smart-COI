@@ -107,7 +107,6 @@ export async function generateAuditReportPDF(): Promise<
   ]);
 
   // Deduplicate and pick latest cert per entity
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allCerts = [
     ...(entityCertsRes.data ?? []),
     ...(vendorCertsRes.data ?? []),

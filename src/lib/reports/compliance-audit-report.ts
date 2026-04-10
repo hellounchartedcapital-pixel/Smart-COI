@@ -494,7 +494,6 @@ function buildExecutiveSummary(
 function buildPortfolioOverview(
   doc: jsPDF,
   result: RiskQuantificationResult,
-  meta: AuditReportOrgMetadata
 ): void {
   doc.addPage();
   addPageFooter(doc);
@@ -1218,7 +1217,7 @@ export function generateComplianceAuditReport(
 
   // Build each section
   buildExecutiveSummary(doc, result, meta);
-  buildPortfolioOverview(doc, result, meta);
+  buildPortfolioOverview(doc, result);
   buildEntityDetails(doc, result, meta);
   buildExpirationCalendar(doc, result);
   buildRecommendations(doc, result);

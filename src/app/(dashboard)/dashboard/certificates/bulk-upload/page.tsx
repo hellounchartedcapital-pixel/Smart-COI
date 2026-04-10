@@ -109,8 +109,7 @@ interface RosterRow {
 
 type BulkStep = 'files' | 'processing' | 'review' | 'summary';
 
-// Rough estimate per file for initial ETA before any complete
-const EST_SECONDS_PER_FILE = 8;
+// (ETA calculation now handled by BatchProgressTracker)
 
 let nextFileId = 0;
 function generateFileId(): string {
@@ -150,9 +149,7 @@ export default function BulkUploadPage() {
   // Step 2: Processing
   const [processingStarted, setProcessingStarted] = useState(false);
   const abortRef = useRef(false);
-  const [processingMessage, setProcessingMessage] = useState<string | null>(null);
-  const [processStartTime, setProcessStartTime] = useState<number | null>(null);
-  const completedCountRef = useRef(0);
+  // (processingMessage, processStartTime, completedCountRef removed — batch tracker handles progress)
 
   // Step 2b: Background batch processing
   const [batchId, setBatchId] = useState<string | null>(null);
@@ -357,8 +354,6 @@ export default function BulkUploadPage() {
     }
 
     setProcessingStarted(true);
-    setProcessStartTime(Date.now());
-    completedCountRef.current = 0;
     abortRef.current = false;
     setUploadPhaseComplete(false);
 
@@ -516,7 +511,7 @@ export default function BulkUploadPage() {
         });
 
         // Try fetching vendor type data separately (columns may not exist yet)
-        let vendorTypeMap: Record<string, { type: string | null; needsReview: boolean }> = {};
+        const vendorTypeMap: Record<string, { type: string | null; needsReview: boolean }> = {};
         try {
           const { data: vtData } = await supabase
             .from('certificates')
@@ -824,37 +819,6 @@ export default function BulkUploadPage() {
   function getTemplatesForType(entityType: 'vendor' | 'tenant') {
     return templates.filter((t) => t.category === entityType);
   }
-
-  // ---- Progress for step 2 ----
-  const finishedCount = doneCount + failedCount;
-  const progressPercent =
-    files.length > 0 ? (finishedCount / files.length) * 100 : 0;
-
-  // Time estimate
-  const estimatedTimeRemaining = (() => {
-    if (!processStartTime) return null;
-    const remaining = files.length - finishedCount;
-    if (remaining <= 0) return null;
-
-    let remainMs: number;
-    if (finishedCount > 0) {
-      // Use actual average once we have data
-      const elapsed = Date.now() - processStartTime;
-      const avgPerFile = elapsed / finishedCount;
-      remainMs = avgPerFile * remaining;
-    } else {
-      // Initial rough estimate before any file completes
-      remainMs = remaining * EST_SECONDS_PER_FILE * 1000;
-    }
-
-    const mins = Math.ceil(remainMs / 60_000);
-    if (mins <= 1) return 'less than a minute';
-    return `~${mins} minute${mins !== 1 ? 's' : ''}`;
-  })();
-
-  // High failure detection
-  const failureRate = files.length > 0 ? failedCount / files.length : 0;
-  const hasHighFailures = failedCount >= 3 && failureRate > 0.3;
 
   // ============================================================================
   // Render

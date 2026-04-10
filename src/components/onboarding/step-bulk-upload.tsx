@@ -288,7 +288,7 @@ export function StepBulkUpload({
         });
 
         // Try fetching vendor type data separately (columns may not exist yet)
-        let vendorTypeMap: Record<string, { type: string | null; needsReview: boolean }> = {};
+        const vendorTypeMap: Record<string, { type: string | null; needsReview: boolean }> = {};
         try {
           const { data: vtData } = await supabase
             .from('certificates')

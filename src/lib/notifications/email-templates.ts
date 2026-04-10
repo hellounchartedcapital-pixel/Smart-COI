@@ -45,7 +45,6 @@ interface EmailTemplate {
 // ============================================================================
 
 const FONT_STACK = "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://smartcoi.io';
 
 function emailShell(body: string): string {
   return `<!DOCTYPE html>
