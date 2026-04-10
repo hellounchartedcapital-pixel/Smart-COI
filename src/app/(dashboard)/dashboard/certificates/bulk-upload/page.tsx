@@ -879,12 +879,12 @@ export default function BulkUploadPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs font-medium">Property <span className="text-muted-foreground font-normal">(optional)</span></Label>
-              <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+              <Select value={selectedPropertyId || '__none__'} onValueChange={(v) => setSelectedPropertyId(v === '__none__' ? '' : v)}>
                 <SelectTrigger className="text-sm">
                   <SelectValue placeholder="No property — org level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No property — org level</SelectItem>
+                  <SelectItem value="__none__">No property — org level</SelectItem>
                   {properties.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
