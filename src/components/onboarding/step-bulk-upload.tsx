@@ -256,76 +256,127 @@ export function StepBulkUpload({
 
   // Handle batch completion: fetch results, auto-assign entities, mark done
   const handleBatchComplete = useCallback(async () => {
-    const certIds = files
-      .filter((f) => f.certificateId && f.status === 'extracting')
-      .map((f) => f.certificateId!);
+    // Read cert IDs from the CURRENT files state (not the stale closure)
+    let certIds: string[] = [];
+    setFiles((prev) => {
+      certIds = prev
+        .filter((f) => f.certificateId && f.status === 'extracting')
+        .map((f) => f.certificateId!);
+      return prev; // no change — just reading
+    });
 
     if (certIds.length > 0) {
-      // Fetch final status for all certificates (including inferred vendor type)
-      const { data: certs } = await supabase
-        .from('certificates')
-        .select('id, insured_name, processing_status, inferred_vendor_type, vendor_type_needs_review')
-        .in('id', certIds);
+      try {
+        // Use a minimal select that won't fail if optional columns are missing
+        const { data: certs, error: certsError } = await supabase
+          .from('certificates')
+          .select('id, insured_name, processing_status')
+          .in('id', certIds);
 
-      const { data: coverages } = await supabase
-        .from('extracted_coverages')
-        .select('certificate_id')
-        .in('certificate_id', certIds);
+        if (certsError) {
+          console.error('[onboarding-bulk] Failed to fetch certs:', certsError);
+        }
 
-      const coverageCounts: Record<string, number> = {};
-      coverages?.forEach((c) => {
-        coverageCounts[c.certificate_id] = (coverageCounts[c.certificate_id] || 0) + 1;
-      });
+        const { data: coverages } = await supabase
+          .from('extracted_coverages')
+          .select('certificate_id')
+          .in('certificate_id', certIds);
 
-      // Auto-assign extracted certificates to entities (with inferred vendor type)
-      if (certs && coiType && orgId) {
-        for (const cert of certs) {
-          if (cert.processing_status === 'extracted') {
-            const insuredName = cert.insured_name || 'Unknown';
-            try {
-              await autoAssignCertificateToEntity({
-                certificateId: cert.id,
-                orgId,
-                propertyId: propertyId ?? null,
-                insuredName,
-                entityType: coiType,
-                inferredVendorType: cert.inferred_vendor_type ?? undefined,
-                vendorTypeNeedsReview: cert.vendor_type_needs_review ?? undefined,
-              });
-            } catch (assignErr) {
-              console.error('Auto-assign failed:', assignErr);
+        const coverageCounts: Record<string, number> = {};
+        coverages?.forEach((c) => {
+          coverageCounts[c.certificate_id] = (coverageCounts[c.certificate_id] || 0) + 1;
+        });
+
+        // Try fetching vendor type data separately (columns may not exist yet)
+        const vendorTypeMap: Record<string, { type: string | null; needsReview: boolean }> = {};
+        try {
+          const { data: vtData } = await supabase
+            .from('certificates')
+            .select('id, inferred_vendor_type, vendor_type_needs_review')
+            .in('id', certIds);
+          if (vtData) {
+            for (const row of vtData) {
+              vendorTypeMap[row.id] = {
+                type: row.inferred_vendor_type ?? null,
+                needsReview: row.vendor_type_needs_review ?? false,
+              };
+            }
+          }
+        } catch {
+          // Columns may not exist — non-fatal
+        }
+
+        // Auto-assign extracted certificates to entities
+        if (certs && coiType && orgId) {
+          for (const cert of certs) {
+            if (cert.processing_status === 'extracted') {
+              const insuredName = cert.insured_name || 'Unknown';
+              const vt = vendorTypeMap[cert.id];
+              try {
+                await autoAssignCertificateToEntity({
+                  certificateId: cert.id,
+                  orgId,
+                  propertyId: propertyId ?? null,
+                  insuredName,
+                  entityType: coiType,
+                  inferredVendorType: vt?.type ?? undefined,
+                  vendorTypeNeedsReview: vt?.needsReview ?? undefined,
+                });
+              } catch (assignErr) {
+                console.error('Auto-assign failed:', assignErr);
+              }
             }
           }
         }
+
+        // Update file statuses
+        setFiles((prev) =>
+          prev.map((f) => {
+            if (!f.certificateId || f.status !== 'extracting') return f;
+            const cert = certs?.find((c) => c.id === f.certificateId);
+            if (!cert) {
+              return { ...f, status: 'done' as const, extractedData: { insuredName: null, coverageCount: 0 } };
+            }
+            if (cert.processing_status === 'extracted') {
+              return {
+                ...f,
+                status: 'done' as const,
+                error: undefined,
+                extractedData: {
+                  insuredName: cert.insured_name ?? null,
+                  coverageCount: coverageCounts[cert.id] ?? 0,
+                },
+              };
+            } else if (cert.processing_status === 'failed') {
+              return { ...f, status: 'failed' as const, error: 'Extraction failed' };
+            }
+            return { ...f, status: 'done' as const, extractedData: { insuredName: cert.insured_name ?? null, coverageCount: coverageCounts[cert.id] ?? 0 } };
+          })
+        );
+      } catch (err) {
+        console.error('[onboarding-bulk] Error fetching batch results:', err);
+        // Fallback: mark all extracting files as done so the UI transitions
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.status === 'extracting'
+              ? { ...f, status: 'done' as const, extractedData: { insuredName: null, coverageCount: 0 } }
+              : f
+          )
+        );
       }
-
-      // Update file statuses based on cert processing_status
+    } else {
+      // No cert IDs found — still transition extracting files
       setFiles((prev) =>
-        prev.map((f) => {
-          if (!f.certificateId) return f;
-          const cert = certs?.find((c) => c.id === f.certificateId);
-          if (!cert) return f;
-
-          if (cert.processing_status === 'extracted') {
-            return {
-              ...f,
-              status: 'done' as const,
-              error: undefined,
-              extractedData: {
-                insuredName: cert.insured_name ?? null,
-                coverageCount: coverageCounts[cert.id] ?? 0,
-              },
-            };
-          } else if (cert.processing_status === 'failed') {
-            return { ...f, status: 'failed' as const, error: 'Extraction failed' };
-          }
-          return f;
-        })
+        prev.map((f) =>
+          f.status === 'extracting'
+            ? { ...f, status: 'done' as const, extractedData: { insuredName: null, coverageCount: 0 } }
+            : f
+        )
       );
     }
 
     setBatchId(null);
-  }, [files, supabase, coiType, orgId, propertyId]);
+  }, [supabase, coiType, orgId, propertyId]);
 
   // Stats
   const pendingCount = files.filter((f) => f.status === 'pending').length;

@@ -159,8 +159,7 @@ export function PropertyDetailClient({
   ].filter(Boolean);
   const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : null;
 
-  const certHolders = entities.filter((e) => e.entity_type === 'certificate_holder');
-  const additionalInsured = entities.filter((e) => e.entity_type === 'additional_insured');
+
 
   // Sort + filter logic
   function sortItems<T extends { company_name: string; compliance_status: ComplianceStatus }>(

@@ -11,22 +11,12 @@ import type { Industry } from '@/types';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://app.smartcoi.io';
 const SITE_URL = 'https://smartcoi.io';
-const TONY_FROM = 'Tony from SmartCOI <contact@smartcoi.io>';
 
 // Email IDs for tracking which have been sent
 type TrialEmailId = 'day1_welcome' | 'day3_feature' | 'day7_checkin' | 'day12_ending' | 'day14_expired';
 
 interface TrialEmailsSent {
   [key: string]: string; // emailId → ISO date sent
-}
-
-interface OrgTrialData {
-  id: string;
-  plan: string;
-  trial_ends_at: string;
-  trial_emails_sent: TrialEmailsSent | null;
-  created_at: string;
-  industry: string | null;
 }
 
 interface OrgUser {

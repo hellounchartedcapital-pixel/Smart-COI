@@ -145,10 +145,10 @@ export async function POST(req: NextRequest) {
           items: certificateIds as string[],
           concurrency: CONCURRENCY_LIMIT,
           maxRetries: 3,
-          processFn: async (certificateId: string, signal: AbortSignal) => {
+          processFn: async (certificateId: string) => {
             return await extractSingleCertificate(bgService, certificateId, orgId, userId);
           },
-          onStatusChange: async (index, status, error) => {
+          onStatusChange: async (_index, status) => {
             if (status === 'complete') {
               await bgService
                 .from('processing_batches')
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
 
         if (finalBatch && !finalBatch.client_active && userEmail) {
           // Gather compliance stats for the email
-          const stats = await gatherBatchStats(bgService, certificateIds as string[], orgId);
+          const stats = await gatherBatchStats(bgService, certificateIds as string[]);
           try {
             await sendBatchCompleteEmail({
               to: userEmail,
@@ -467,7 +467,6 @@ async function extractSingleCertificate(
 async function gatherBatchStats(
   client: ReturnType<typeof createServiceClient>,
   certificateIds: string[],
-  orgId: string
 ): Promise<{ complianceGaps: number; vendorCount: number }> {
   try {
     // Count compliance gaps
