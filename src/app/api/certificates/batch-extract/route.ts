@@ -8,10 +8,12 @@ import { MAX_FILE_SIZE } from '@/lib/utils/file-validation';
 import { checkExtractionLimit } from '@/lib/plan-limits';
 import { getActivePlanStatus, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import { createServiceClient } from '@/lib/supabase/service';
-import { runAutoCompliance } from '@/lib/actions/certificates';
+import { autoAssignCertificateToEntity, runAutoCompliance } from '@/lib/actions/certificates';
 import { processConcurrentQueue } from '@/lib/utils/concurrent-queue';
 import { sendBatchCompleteEmail } from '@/lib/emails/batch-complete';
 import { withExtractionRetry } from '@/lib/utils/extraction-retry';
+import { getRecommendedRequirements } from '@/lib/constants/vendor-requirements';
+import type { Industry } from '@/types';
 
 const CONCURRENCY_LIMIT = 5;
 
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
     const serviceClient = createServiceClient();
     const { data: orgForPlan, error: orgPlanError } = await serviceClient
       .from('organizations')
-      .select('plan, trial_ends_at, payment_failed, name')
+      .select('plan, trial_ends_at, payment_failed, name, industry')
       .eq('id', orgId)
       .single();
     if (orgPlanError || !orgForPlan) {
@@ -134,6 +136,9 @@ export async function POST(req: NextRequest) {
     const userId = user.id;
     const userEmail = user.email;
     const orgName = orgForPlan.name ?? 'your organization';
+    const orgIndustry = (orgForPlan.industry as Industry) ?? null;
+    const batchPropertyId = propertyId ?? null;
+    const batchEntityType = entityType ?? 'vendor';
 
     // ---- Background processing via after() ----
     after(async () => {
@@ -148,7 +153,8 @@ export async function POST(req: NextRequest) {
           processFn: async (certificateId: string) => {
             return await extractSingleCertificate(bgService, certificateId, orgId, userId);
           },
-          onStatusChange: async (_index, status) => {
+          onStatusChange: async (index, status, _error, result) => {
+            const certId = (certificateIds as string[])[index];
             if (status === 'complete') {
               await bgService
                 .from('processing_batches')
@@ -156,6 +162,35 @@ export async function POST(req: NextRequest) {
                   completed_count: (await getCurrentCounts(bgService, batchId)).completed + 1,
                 })
                 .eq('id', batchId);
+
+              // Auto-assign entity from extraction results
+              if (result?.insuredName) {
+                try {
+                  const assignResult = await autoAssignCertificateToEntity({
+                    certificateId: certId,
+                    orgId,
+                    propertyId: batchPropertyId,
+                    insuredName: result.insuredName,
+                    entityType: batchEntityType,
+                    inferredVendorType: result.inferredVendorType ?? undefined,
+                    vendorTypeNeedsReview: result.vendorTypeNeedsReview ?? undefined,
+                  });
+
+                  // Auto-apply recommended requirements template if entity was newly created
+                  if (assignResult && 'entityId' in assignResult && assignResult.entityId && result.inferredVendorType) {
+                    await autoApplyRecommendedTemplate(
+                      bgService,
+                      assignResult.entityId,
+                      orgId,
+                      orgIndustry,
+                      result.inferredVendorType,
+                      batchEntityType,
+                    );
+                  }
+                } catch (assignErr) {
+                  console.error(`[batch-extract] Auto-assign failed for cert=${certId}:`, assignErr);
+                }
+              }
             } else if (status === 'failed') {
               await bgService
                 .from('processing_batches')
@@ -269,7 +304,7 @@ async function extractSingleCertificate(
   certificateId: string,
   orgId: string,
   userId: string
-): Promise<{ coverages: number; entities: number; inferredVendorType: string | null; vendorTypeNeedsReview: boolean }> {
+): Promise<{ coverages: number; entities: number; insuredName: string | null; inferredVendorType: string | null; vendorTypeNeedsReview: boolean }> {
   // Fetch certificate record
   const { data: cert, error: certError } = await serviceClient
     .from('certificates')
@@ -456,9 +491,90 @@ async function extractSingleCertificate(
   return {
     coverages: result.coverages.length,
     entities: result.entities.length,
+    insuredName: result.insuredName,
     inferredVendorType: result.inferredVendorType ?? null,
     vendorTypeNeedsReview: result.vendorTypeNeedsReview ?? false,
   };
+}
+
+/**
+ * Auto-create and assign a recommended requirements template to an entity
+ * based on the org's industry and the inferred vendor type.
+ * Skips if the entity already has a template assigned.
+ */
+async function autoApplyRecommendedTemplate(
+  client: ReturnType<typeof createServiceClient>,
+  entityId: string,
+  orgId: string,
+  industry: Industry | null,
+  vendorType: string,
+  entityType: string,
+) {
+  try {
+    // Check if entity already has a template
+    const { data: entity } = await client
+      .from('entities')
+      .select('template_id')
+      .eq('id', entityId)
+      .single();
+
+    if (entity?.template_id) return; // Already has a template
+
+    const requirements = getRecommendedRequirements(industry, vendorType);
+    if (requirements.length === 0) return;
+
+    const templateName = `${vendorType.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())} — AI Recommended`;
+    const category = entityType === 'tenant' ? 'tenant' : 'vendor';
+
+    // Create template
+    const { data: template, error: templateErr } = await client
+      .from('requirement_templates')
+      .insert({
+        organization_id: orgId,
+        name: templateName,
+        description: `Auto-generated requirements for ${vendorType.replace(/_/g, ' ')} vendors`,
+        category,
+        risk_level: 'standard',
+        is_system_default: false,
+        source_type: 'ai_recommended',
+      })
+      .select('id')
+      .single();
+
+    if (templateErr || !template) {
+      console.error('[batch-extract] Failed to create recommended template:', templateErr);
+      return;
+    }
+
+    // Insert coverage requirements
+    const rows = requirements.map((r) => ({
+      template_id: template.id,
+      coverage_type: r.coverage_type,
+      is_required: r.is_required,
+      minimum_limit: r.minimum_limit,
+      limit_type: r.limit_type,
+      requires_additional_insured: r.requires_additional_insured,
+      requires_waiver_of_subrogation: r.requires_waiver_of_subrogation,
+    }));
+
+    await client.from('template_coverage_requirements').insert(rows);
+
+    // Assign template to entity (both entities + legacy table)
+    await client
+      .from('entities')
+      .update({ template_id: template.id })
+      .eq('id', entityId);
+
+    const legacyTable = entityType === 'tenant' ? 'tenants' : 'vendors';
+    await client
+      .from(legacyTable)
+      .update({ template_id: template.id })
+      .eq('id', entityId);
+
+    console.log(`[batch-extract] Auto-applied template "${templateName}" (${template.id}) to entity ${entityId}`);
+  } catch (err) {
+    console.error(`[batch-extract] Failed to auto-apply template for entity ${entityId}:`, err);
+  }
 }
 
 /**
