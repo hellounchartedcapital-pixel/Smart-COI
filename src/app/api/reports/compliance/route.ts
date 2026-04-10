@@ -65,7 +65,6 @@ export async function GET() {
     const orgName = org?.name ?? 'Organization';
 
     // ---- 2. Fetch all active entities with property & template info ----
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type EntityRow = {
       id: string;
       name: string;
@@ -77,7 +76,7 @@ export async function GET() {
       template_id: string | null;
       contact_name: string | null;
       contact_email: string | null;
-      properties: { name: string } | null;
+      properties: { name: string }[] | { name: string } | null;
     };
 
     const { data: entities } = await supabase
@@ -218,7 +217,10 @@ export async function GET() {
     const entityComplianceData: EntityComplianceData[] = (entities as EntityRow[]).map((entity) => {
       const cert = entityCertMap.get(entity.id);
       const certId = cert?.id;
-      const propertyName = entity.properties?.name ?? null;
+      const props = entity.properties;
+      const propertyName = Array.isArray(props)
+        ? (props[0]?.name ?? null)
+        : (props?.name ?? null);
 
       return {
         entityId: entity.id,
