@@ -161,6 +161,24 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Feature: Auto-Entity Creation During Batch Extraction (Apr 2026)
+
+After batch extraction completes for each certificate, the server now automatically creates vendor entities from the extracted insured names — no manual roster review step needed during onboarding.
+
+**Changes to `src/app/api/certificates/batch-extract/route.ts`:**
+- `extractSingleCertificate()` now returns `insuredName` in addition to vendor type data
+- `onStatusChange` callback in the `after()` block now calls `autoAssignCertificateToEntity()` after each successful extraction, passing `insuredName`, `inferredVendorType`, `vendorTypeNeedsReview`, `propertyId`, and `entityType` from the batch context
+- New `autoApplyRecommendedTemplate()` helper: after entity creation, looks up recommended coverage requirements via `getRecommendedRequirements(industry, vendorType)` and creates an AI-recommended template with those requirements, then assigns it to the entity
+- Fetches org `industry` from the organizations table to pass to the requirements lookup
+- Entity type defaults to `'vendor'` when not specified by the client (onboarding flow)
+- Template creation is skipped if entity already has a template assigned (idempotent)
+
+**Data flow:** COI PDF → AI extraction → `extractSingleCertificate` → `autoAssignCertificateToEntity` (creates entity with vendor type) → `autoApplyRecommendedTemplate` (creates template with recommended requirements, assigns to entity) → `runAutoCompliance` (calculates compliance against the new template)
+
+**Works for both flows:**
+- **Onboarding:** entities auto-created, templates auto-assigned → user goes straight to dashboard
+- **Dashboard bulk upload:** entities auto-created in background → roster review step shows pre-matched entities
+
 #### Refactor: Simplified 2-Step Onboarding Flow (Apr 2026)
 
 Replaced the 6-step onboarding wizard with a streamlined 2-step flow: select industry → upload COIs → dashboard.
