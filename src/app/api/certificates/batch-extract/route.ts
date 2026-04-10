@@ -267,7 +267,7 @@ async function extractSingleCertificate(
   certificateId: string,
   orgId: string,
   userId: string
-): Promise<{ coverages: number; entities: number }> {
+): Promise<{ coverages: number; entities: number; inferredVendorType: string | null; vendorTypeNeedsReview: boolean }> {
   // Fetch certificate record
   const { data: cert, error: certError } = await serviceClient
     .from('certificates')
