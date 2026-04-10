@@ -161,6 +161,30 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Extraction Retry Logic + Failure Tracking + Sentry (Apr 2026)
+
+Added automatic retries and structured failure tracking for COI extraction. Failures are no longer silently dropped — they persist in the DB with retry metadata and are reported to Sentry.
+
+**Retry architecture (three non-conflicting layers):**
+1. **`extraction.ts` (Anthropic API layer):** retries 429/529/502/503 with 5s→15s→30s→60s→90s backoff (5 retries) — handles transient Anthropic API issues
+2. **`concurrent-queue.ts` (queue layer, batch only):** retries 429 rate-limit errors at the queue level with 4s→8s→16s backoff (3 retries) — prevents batch-wide rate-limit cascading
+3. **`extraction-retry.ts` (route layer, NEW):** retries all OTHER failures (malformed PDFs, parse errors, timeouts, storage errors) with 2s→4s→8s backoff (3 retries) — 429 errors pass through to the lower layers
+
+**Files changed:**
+- `src/lib/utils/extraction-retry.ts` — **NEW** — `withExtractionRetry()` wrapper; retries non-rate-limit extraction failures up to 3 times with exponential backoff; provides `onAttempt` callback for per-attempt DB tracking
+- `src/app/api/certificates/extract/route.ts` — wrapped AI extraction call with `withExtractionRetry()`; stores `retry_count` and `last_error` on certificate; reports failures to Sentry with `tags: { flow: 'single_extract', certificateId }` and `extra: { attempts, errorMessage }`
+- `src/app/api/certificates/batch-extract/route.ts` — same retry wrapper in `extractSingleCertificate()`; Sentry reports with `tags: { flow: 'batch_extract' }`
+- `supabase/migrations/20260410_add_extraction_retry_tracking.sql` — adds `retry_count INTEGER DEFAULT 0` and `last_error TEXT` columns to certificates table
+
+**Key behaviors:**
+- On success after retries: `retry_count` records total attempts, `last_error` cleared to null
+- On final failure: `processing_status: 'failed'`, `retry_count` records total attempts, `last_error` stores the error message
+- Activity log entries include attempt count: "COI extraction failed after 4 attempt(s): ..."
+- Sentry receives structured error with flow tag, certificateId, orgId, and attempt count
+- 429 rate-limit errors are NOT retried at this layer — they pass through immediately to the lower extraction.ts / concurrent-queue.ts layers that already handle them
+
+⚠️ ACTION REQUIRED: Run `supabase/migrations/20260410_add_extraction_retry_tracking.sql` in Supabase SQL Editor.
+
 #### Feature: AI Vendor Type Inference in Extraction Pipeline (Apr 2026)
 
 Added vendor trade/type inference to the AI extraction pipeline. The AI now infers the vendor's trade from the insured name, description of operations, and coverage types on the certificate.
