@@ -1,52 +1,76 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import posthog from 'posthog-js';
 import { createClient } from '@/lib/supabase/client';
 import { createOrgAfterSignup, completeOnboarding } from '@/lib/actions/auth';
-import { StepIndustry } from '@/components/onboarding/step-industry';
-import { StepOrgSetup, type OrgSetupData } from '@/components/onboarding/step-org-setup';
-import { StepProperty, type PropertyData } from '@/components/onboarding/step-property';
-import { StepBulkUpload } from '@/components/onboarding/step-bulk-upload';
-import { StepTemplates, type SelectedTemplate } from '@/components/onboarding/step-templates';
-import { StepAssignRequirements } from '@/components/onboarding/step-assign-requirements';
-import type { Industry, CoveredEntityType } from '@/types';
-import { getTerminology } from '@/lib/constants/terminology';
+import { validatePDFFile, computeFileHash } from '@/lib/utils/file-validation';
+import { BatchProgressTracker } from '@/components/dashboard/batch-progress-tracker';
+import { INDUSTRY_OPTIONS } from '@/lib/constants/industries';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Upload, FileText, X, CheckCircle2, Loader2 } from 'lucide-react';
+import type { Industry } from '@/types';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type OnboardingStep = 'industry' | 'upload';
+
+interface FileEntry {
+  file: File;
+  id: string;
+  status: 'pending' | 'uploading' | 'extracting' | 'done' | 'failed';
+  error?: string;
+  certificateId?: string;
+  fileHash?: string;
+}
+
+const MAX_FREE_UPLOADS = 50;
+
+let nextFileId = 0;
+function generateFileId(): string {
+  return `ob_file_${Date.now()}_${nextFileId++}`;
+}
+
+// ---------------------------------------------------------------------------
+// Onboarding page — simplified 2-step flow (industry → upload)
+// ---------------------------------------------------------------------------
 
 export default function OnboardingSetupPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [currentStep, setCurrentStep] = useState(1);
+  const [step, setStep] = useState<OnboardingStep>('industry');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Data from each step
-  const [selectedIndustry, setSelectedIndustry] = useState<Industry | null>(null);
+  // Auth state
   const [orgId, setOrgId] = useState<string | null>(null);
-  const [orgData, setOrgData] = useState<OrgSetupData>({
-    companyName: '',
-    certificateHolder: null,
-    additionalInsured: [],
-  });
-  const [propertyData, setPropertyData] = useState<PropertyData | null>(null);
-  const [propertyId, setPropertyId] = useState<string | null>(null);
-  const [propertyName, setPropertyName] = useState('');
-  const [coiType, setCoiType] = useState<CoveredEntityType | null>(null);
-  const [uploadedCount, setUploadedCount] = useState(0);
-
-  // Dynamic step labels based on industry
-  const terms = getTerminology(selectedIndustry);
-  const STEP_LABELS = ['Industry', 'Organization', terms.location, 'Upload COIs', 'Requirements', 'Assign'];
-  const TOTAL_STEPS = STEP_LABELS.length;
-
-  // Store auth user ID for creating org/profile when missing
   const authUserIdRef = useRef<string | null>(null);
   const authEmailRef = useRef<string | null>(null);
   const authNameRef = useRef<string | null>(null);
 
-  // Load the current user's org ID on mount (run once)
+  // Step 1: Industry
+  const [selectedIndustry, setSelectedIndustry] = useState<Industry | null>(null);
+
+  // Step 2: Upload
+  const [files, setFiles] = useState<FileEntry[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [batchId, setBatchId] = useState<string | null>(null);
+  const [batchTotalCerts, setBatchTotalCerts] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ---- Bootstrap auth (run once) ----
   const didLoad = useRef(false);
   useEffect(() => {
     if (didLoad.current) return;
@@ -74,18 +98,16 @@ export default function OnboardingSetupPage() {
       if (profile?.organization_id) {
         setOrgId(profile.organization_id);
 
-        // Pre-fill org data if the org already exists
+        // If industry already selected, skip to upload step
         const { data: org } = await supabase
           .from('organizations')
-          .select('name, industry')
+          .select('industry')
           .eq('id', profile.organization_id)
           .single();
 
         if (org?.industry) {
           setSelectedIndustry(org.industry as Industry);
-        }
-        if (org?.name && !org.name.endsWith("'s Organization")) {
-          setOrgData((prev) => ({ ...prev, companyName: org.name }));
+          setStep('upload');
         }
       }
     }
@@ -93,10 +115,9 @@ export default function OnboardingSetupPage() {
     loadUserOrg();
   }, [supabase, router]);
 
-  // Helper: ensure org and user profile exist, return orgId
-  async function ensureOrgAndProfile(_companyName: string): Promise<string> {
+  // ---- Ensure org exists ----
+  async function ensureOrgAndProfile(): Promise<string> {
     if (orgId) return orgId;
-
     if (!authUserIdRef.current) throw new Error('Not authenticated. Please refresh and try again.');
 
     const { orgId: newOrgId } = await createOrgAfterSignup(
@@ -104,50 +125,40 @@ export default function OnboardingSetupPage() {
       authEmailRef.current ?? '',
       authNameRef.current ?? '',
     );
-
     setOrgId(newOrgId);
     return newOrgId;
   }
 
-  // Skip to dashboard from any step
-  async function handleSkipToDashboard() {
-    setSaving(true);
-    setError(null);
-    try {
-      // Ensure org exists before completing
-      let currentOrgId = orgId;
-      if (!currentOrgId) {
-        currentOrgId = await ensureOrgAndProfile(orgData.companyName || 'My Organization');
-      }
-      await completeOnboarding(currentOrgId);
-      posthog.capture('onboarding_skipped', { step: currentStep });
-      router.push('/dashboard');
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to finish setup');
-    } finally {
-      setSaving(false);
+  // ---- Finish onboarding → dashboard ----
+  async function finishOnboarding() {
+    let currentOrgId = orgId;
+    if (!currentOrgId) {
+      currentOrgId = await ensureOrgAndProfile();
     }
+    await completeOnboarding(currentOrgId);
+    posthog.capture('onboarding_completed');
+    router.push('/dashboard');
+    router.refresh();
   }
 
-  // Step 1: Save industry
-  async function handleIndustryNext(industry: Industry) {
+  // ---- Step 1: Save industry → advance to upload ----
+  async function handleIndustrySubmit() {
+    if (!selectedIndustry) return;
     setSaving(true);
     setError(null);
-    setSelectedIndustry(industry);
 
     try {
-      const currentOrgId = await ensureOrgAndProfile(orgData.companyName || 'My Organization');
+      const currentOrgId = await ensureOrgAndProfile();
 
       const { error: updateError } = await supabase
         .from('organizations')
-        .update({ industry })
+        .update({ industry: selectedIndustry })
         .eq('id', currentOrgId);
 
       if (updateError) throw updateError;
 
-      posthog.capture('onboarding_step_completed', { step: 'select_industry', industry });
-      setCurrentStep(2);
+      posthog.capture('onboarding_step_completed', { step: 'select_industry', industry: selectedIndustry });
+      setStep('upload');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save industry');
     } finally {
@@ -155,280 +166,167 @@ export default function OnboardingSetupPage() {
     }
   }
 
-  // Step 2: Save org name
-  async function handleOrgSetupNext(data: OrgSetupData) {
-    setSaving(true);
-    setError(null);
-    setOrgData(data);
-
-    try {
-      const currentOrgId = await ensureOrgAndProfile(data.companyName);
-
-      // Update organization name
-      const { error: orgError } = await supabase
-        .from('organizations')
-        .update({ name: data.companyName })
-        .eq('id', currentOrgId);
-
-      if (orgError) throw orgError;
-
-      // Save default entities if provided
-      if (data.certificateHolder || data.additionalInsured.length > 0) {
-        await supabase
-          .from('organization_default_entities')
-          .delete()
-          .eq('organization_id', currentOrgId);
-
-        const entitiesToInsert: {
-          organization_id: string;
-          entity_name: string;
-          entity_address: string;
-          entity_type: 'certificate_holder' | 'additional_insured';
-        }[] = [];
-
-        if (data.certificateHolder && data.certificateHolder.entity_name) {
-          entitiesToInsert.push({
-            organization_id: currentOrgId,
-            entity_name: data.certificateHolder.entity_name,
-            entity_address: data.certificateHolder.entity_address,
-            entity_type: 'certificate_holder',
-          });
-        }
-
-        for (const ai of data.additionalInsured) {
-          if (ai.entity_name.trim()) {
-            entitiesToInsert.push({
-              organization_id: currentOrgId,
-              entity_name: ai.entity_name,
-              entity_address: ai.entity_address,
-              entity_type: 'additional_insured',
-            });
-          }
-        }
-
-        if (entitiesToInsert.length > 0) {
-          const { error: entError } = await supabase
-            .from('organization_default_entities')
-            .insert(entitiesToInsert);
-          if (entError) throw entError;
-        }
-      }
-
-      posthog.capture('onboarding_step_completed', { step: 'create_org' });
-      setCurrentStep(3);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save organization');
-    } finally {
-      setSaving(false);
+  // ---- Step 2: Upload files → batch extract ----
+  async function addFiles(newFiles: FileList | File[]) {
+    const entries: FileEntry[] = [];
+    for (const f of Array.from(newFiles)) {
+      const validation = await validatePDFFile(f);
+      entries.push(
+        validation.valid
+          ? { file: f, id: generateFileId(), status: 'pending' }
+          : { file: f, id: generateFileId(), status: 'failed', error: validation.error }
+      );
     }
+    setFiles((prev) => {
+      const combined = [...prev, ...entries];
+      return combined.length > MAX_FREE_UPLOADS ? combined.slice(0, MAX_FREE_UPLOADS) : combined;
+    });
   }
 
-  // Step 3: Save property
-  async function handlePropertyNext(data: PropertyData) {
-    if (!orgId) {
-      setError('Organization not set up. Please go back to Step 2.');
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    setPropertyData(data);
-
-    try {
-      const { data: property, error: propError } = await supabase
-        .from('properties')
-        .insert({
-          organization_id: orgId,
-          name: data.name,
-          address: data.address || null,
-          city: data.city || null,
-          state: data.state || null,
-          zip: data.zip || null,
-          property_type: data.property_type,
-        })
-        .select('id')
-        .single();
-
-      if (propError) throw propError;
-
-      // Insert property entities
-      if (data.entities.length > 0) {
-        const entityRows = data.entities.map((e) => ({
-          property_id: property.id,
-          entity_name: e.entity_name,
-          entity_address: e.entity_address || null,
-          entity_type: e.entity_type,
-        }));
-
-        const { error: entError } = await supabase
-          .from('property_entities')
-          .insert(entityRows);
-        if (entError) throw entError;
-      }
-
-      setPropertyId(property.id);
-      setPropertyName(data.name);
-      posthog.capture('onboarding_step_completed', { step: 'add_property' });
-      setCurrentStep(4);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save property');
-    } finally {
-      setSaving(false);
-    }
+  function removeFile(id: string) {
+    setFiles((prev) => prev.filter((f) => f.id !== id));
   }
 
-  function handlePropertySkip() {
-    setPropertyId(null);
-    setPropertyName('');
-    setCurrentStep(4);
-  }
+  async function handleStartUpload() {
+    if (!orgId) return;
+    const pending = files.filter((f) => f.status === 'pending');
+    if (pending.length === 0) return;
 
-  // Step 4: Bulk upload complete → move to requirements
-  function handleBulkUploadNext(count: number, type?: CoveredEntityType | null) {
-    setUploadedCount(count);
-    if (type) setCoiType(type);
-    posthog.capture('onboarding_step_completed', { step: 'bulk_upload' });
-    setCurrentStep(5);
-  }
-
-  // Step 5: Save templates → move to step 6 (assign requirements)
-  async function handleTemplatesNext(selected: SelectedTemplate[]) {
-    if (!orgId) {
-      setError('Organization not set up. Please go back to Step 2.');
-      return;
-    }
-    setSaving(true);
+    setUploading(true);
     setError(null);
 
-    try {
-      for (const { template, adjustedRequirements } of selected) {
-        const { data: newTemplate, error: tplError } = await supabase
-          .from('requirement_templates')
+    // Phase 1: Upload all files to storage + create certificate records
+    const certificateIds: string[] = [];
+
+    for (const entry of pending) {
+      setFiles((prev) =>
+        prev.map((f) => (f.id === entry.id ? { ...f, status: 'uploading', error: undefined } : f))
+      );
+
+      try {
+        const fileHash = await computeFileHash(entry.file);
+        const storagePath = `bulk/${orgId}/${Date.now()}_${entry.file.name}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('coi-documents')
+          .upload(storagePath, entry.file, { upsert: false });
+        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+        const { data: cert, error: certError } = await supabase
+          .from('certificates')
           .insert({
             organization_id: orgId,
-            name: template.name,
-            description: template.description,
-            category: template.category,
-            risk_level: template.risk_level,
-            is_system_default: false,
+            file_path: storagePath,
+            file_hash: fileHash,
+            upload_source: 'user_upload',
+            processing_status: 'processing',
           })
           .select('id')
           .single();
 
-        if (tplError) throw tplError;
+        if (certError || !cert) throw new Error(`Record failed: ${certError?.message}`);
+        posthog.capture('coi_uploaded', { source: 'onboarding' });
 
-        if (adjustedRequirements.length > 0) {
-          const reqRows = adjustedRequirements.map((r) => ({
-            template_id: newTemplate.id,
-            coverage_type: r.coverage_type,
-            is_required: r.is_required,
-            minimum_limit: r.minimum_limit,
-            limit_type: r.limit_type,
-            requires_additional_insured: r.requires_additional_insured,
-            requires_waiver_of_subrogation: r.requires_waiver_of_subrogation,
-          }));
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === entry.id ? { ...f, status: 'extracting', certificateId: cert.id, fileHash } : f
+          )
+        );
+        certificateIds.push(cert.id);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Upload failed';
+        setFiles((prev) =>
+          prev.map((f) => (f.id === entry.id ? { ...f, status: 'failed', error: message } : f))
+        );
+      }
+    }
 
-          const { error: reqError } = await supabase
-            .from('template_coverage_requirements')
-            .insert(reqRows);
-          if (reqError) throw reqError;
-        }
+    if (certificateIds.length === 0) {
+      setUploading(false);
+      return;
+    }
+
+    // Phase 2: Submit to background batch extraction
+    try {
+      const res = await fetch('/api/certificates/batch-extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ certificateIds }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Batch failed (HTTP ${res.status})`);
       }
 
-      posthog.capture('onboarding_step_completed', { step: 'select_templates' });
-
-      // If there are uploaded COIs, go to step 6 to assign requirements
-      if (uploadedCount > 0) {
-        setCurrentStep(6);
-      } else {
-        // No COIs uploaded — complete onboarding
-        await completeOnboarding(orgId);
-        router.push('/dashboard');
-        router.refresh();
-      }
+      const { batchId: newBatchId, totalCerts } = await res.json();
+      setBatchId(newBatchId);
+      setBatchTotalCerts(totalCerts);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save templates');
-    } finally {
-      setSaving(false);
+      const message = err instanceof Error ? err.message : 'Batch submission failed';
+      setError(message);
+      setFiles((prev) =>
+        prev.map((f) => (f.status === 'extracting' ? { ...f, status: 'failed', error: message } : f))
+      );
+      setUploading(false);
     }
   }
 
-  async function handleTemplatesSkip() {
-    if (!orgId) {
-      setError('Organization not set up. Please go back to Step 2.');
-      return;
+  const handleBatchComplete = useCallback(async () => {
+    setBatchId(null);
+    setUploading(false);
+
+    // Mark all extracting files as done
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.status === 'extracting' ? { ...f, status: 'done' } : f
+      )
+    );
+
+    // Complete onboarding and go to dashboard
+    try {
+      await finishOnboarding();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete setup');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
+
+  // ---- Skip upload → finish onboarding ----
+  async function handleSkipUpload() {
     setSaving(true);
     setError(null);
     try {
-      // If there are uploaded COIs, go to step 6 to assign requirements
-      if (uploadedCount > 0) {
-        setCurrentStep(6);
-        setSaving(false);
-        return;
-      }
-      await completeOnboarding(orgId);
-      router.push('/dashboard');
-      router.refresh();
+      await finishOnboarding();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to finish onboarding');
+      setError(err instanceof Error ? err.message : 'Failed to finish setup');
     } finally {
       setSaving(false);
     }
   }
 
-  // Step 6: Assign requirements complete → complete onboarding and go to dashboard
-  async function handleAssignNext() {
-    if (!orgId) {
-      setError('Organization not set up.');
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      await completeOnboarding(orgId);
-      posthog.capture('onboarding_step_completed', { step: 'assign_requirements' });
-      router.push('/dashboard');
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to finish onboarding');
-    } finally {
-      setSaving(false);
-    }
-  }
+  // ---- Derived state ----
+  const pendingCount = files.filter((f) => f.status === 'pending').length;
+  const doneCount = files.filter((f) => f.status === 'done').length;
+  const failedCount = files.filter((f) => f.status === 'failed').length;
+  const stepNumber = step === 'industry' ? 1 : 2;
 
-  async function handleAssignSkip() {
-    if (!orgId) {
-      setError('Organization not set up.');
-      return;
-    }
-    setSaving(true);
-    setError(null);
-    try {
-      await completeOnboarding(orgId);
-      posthog.capture('onboarding_skipped', { step: 6 });
-      // Redirect with a query param so the dashboard can show the banner
-      router.push('/dashboard?assign_pending=1');
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to finish onboarding');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const progressPercent = (currentStep / TOTAL_STEPS) * 100;
+  // ============================================================================
+  // Render
+  // ============================================================================
 
   return (
     <div className="space-y-10">
-      {/* Step indicator — dots connected by lines */}
+      {/* Step indicator */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          {STEP_LABELS.map((label, idx) => {
-            const stepNum = idx + 1;
-            const isActive = stepNum === currentStep;
-            const isComplete = stepNum < currentStep;
+        <div className="flex items-center justify-center gap-4">
+          {['Select Industry', 'Upload COIs'].map((label, idx) => {
+            const num = idx + 1;
+            const isActive = num === stepNumber;
+            const isComplete = num < stepNumber;
             return (
               <React.Fragment key={label}>
+                {idx > 0 && <div className="h-px w-10 bg-slate-200" />}
                 <div className="flex items-center gap-2">
                   <div
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors ${
@@ -436,45 +334,33 @@ export default function OnboardingSetupPage() {
                         ? 'bg-brand text-white'
                         : isActive
                           ? 'bg-brand text-white'
-                          : 'border-2 border-[#D1D5DB] bg-white text-[#9CA3AF]'
+                          : 'border-2 border-slate-300 bg-white text-slate-400'
                     }`}
                   >
                     {isComplete ? (
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
+                      <CheckCircle2 className="h-4 w-4" />
                     ) : (
-                      stepNum
+                      num
                     )}
                   </div>
                   <span
-                    className={`hidden text-sm sm:inline ${
-                      isActive ? 'font-semibold text-[#111827]' : isComplete ? 'font-medium text-brand-dark' : 'font-medium text-[#9CA3AF]'
+                    className={`text-sm ${
+                      isActive ? 'font-semibold text-foreground' : isComplete ? 'font-medium text-brand-dark' : 'text-muted-foreground'
                     }`}
                   >
                     {label}
                   </span>
                 </div>
-                {idx < STEP_LABELS.length - 1 && (
-                  <div className="hidden h-px flex-1 bg-[#E5E7EB] sm:block mx-2" />
-                )}
               </React.Fragment>
             );
           })}
         </div>
-
-        {/* Progress bar */}
-        <div className="h-1 w-full overflow-hidden rounded-full bg-[#F3F4F6]">
+        <div className="h-1 w-full overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full rounded-full bg-brand transition-all duration-500 ease-out"
-            style={{ width: `${progressPercent}%` }}
+            className="h-full rounded-full bg-brand transition-all duration-500"
+            style={{ width: `${(stepNumber / 2) * 100}%` }}
           />
         </div>
-
-        {/* Mobile step label */}
-        <p className="text-center text-sm text-muted-foreground sm:hidden">
-          Step {currentStep} of {TOTAL_STEPS}: {STEP_LABELS[currentStep - 1]}
-        </p>
       </div>
 
       {/* Error banner */}
@@ -484,61 +370,204 @@ export default function OnboardingSetupPage() {
         </div>
       )}
 
-      {/* Steps */}
-      {currentStep === 1 && (
-        <StepIndustry
-          selected={selectedIndustry}
-          onNext={handleIndustryNext}
-          onSkip={handleSkipToDashboard}
-          saving={saving}
-        />
+      {/* ================================================================ */}
+      {/* STEP 1: SELECT INDUSTRY                                          */}
+      {/* ================================================================ */}
+      {step === 'industry' && (
+        <div className="space-y-8">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Welcome to SmartCOI</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              What industry are you in? This helps us tailor the experience for you.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Select
+              value={selectedIndustry ?? undefined}
+              onValueChange={(v) => setSelectedIndustry(v as Industry)}
+            >
+              <SelectTrigger className="w-full text-sm">
+                <SelectValue placeholder="Select your industry..." />
+              </SelectTrigger>
+              <SelectContent>
+                {INDUSTRY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <Button
+              size="lg"
+              className="w-full font-semibold"
+              disabled={saving || !selectedIndustry}
+              onClick={handleIndustrySubmit}
+            >
+              {saving ? 'Saving...' : 'Continue'}
+            </Button>
+            <button
+              type="button"
+              onClick={handleSkipUpload}
+              className="text-center text-sm text-muted-foreground hover:text-foreground"
+              disabled={saving}
+            >
+              Skip to Dashboard
+            </button>
+          </div>
+        </div>
       )}
-      {currentStep === 2 && (
-        <StepOrgSetup
-          data={orgData}
-          industry={selectedIndustry}
-          onNext={handleOrgSetupNext}
-          onSkip={handleSkipToDashboard}
-          saving={saving}
-        />
-      )}
-      {currentStep === 3 && (
-        <StepProperty
-          orgData={orgData}
-          industry={selectedIndustry}
-          data={propertyData}
-          onNext={handlePropertyNext}
-          onSkip={handlePropertySkip}
-          saving={saving}
-        />
-      )}
-      {currentStep === 4 && (
-        <StepBulkUpload
-          propertyId={propertyId}
-          propertyName={propertyName}
-          industry={selectedIndustry}
-          onNext={handleBulkUploadNext}
-          onSkip={handleSkipToDashboard}
-          saving={saving}
-        />
-      )}
-      {currentStep === 5 && (
-        <StepTemplates
-          industry={selectedIndustry}
-          onNext={handleTemplatesNext}
-          onSkip={handleTemplatesSkip}
-          saving={saving}
-        />
-      )}
-      {currentStep === 6 && (
-        <StepAssignRequirements
-          propertyId={propertyId}
-          orgId={orgId}
-          coiType={coiType}
-          onNext={handleAssignNext}
-          onSkip={handleAssignSkip}
-          saving={saving}
-        />
+
+      {/* ================================================================ */}
+      {/* STEP 2: UPLOAD COIs                                              */}
+      {/* ================================================================ */}
+      {step === 'upload' && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Upload your COIs</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Drop your certificates below. Our AI will extract coverage data, verify compliance, and build your vendor roster automatically.
+            </p>
+          </div>
+
+          {/* Upload limit badge */}
+          <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <Upload className="h-5 w-5 text-emerald-600" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-emerald-800">
+                Upload up to {MAX_FREE_UPLOADS} COIs free
+              </p>
+              <p className="text-xs text-emerald-700">
+                {files.length > 0
+                  ? `${files.length} of ${MAX_FREE_UPLOADS} slots used`
+                  : 'Drag & drop PDF certificates to get started'}
+              </p>
+            </div>
+          </div>
+
+          {/* Drop zone (hidden during processing) */}
+          {!uploading && !batchId && (
+            <div
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
+                dragActive
+                  ? 'border-brand bg-emerald-50'
+                  : 'border-slate-300 bg-white hover:border-brand hover:bg-slate-50'
+              }`}
+              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragActive(false);
+                if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
+              }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) addFiles(e.target.files);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+              />
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+                <Upload className="h-6 w-6 text-emerald-600" />
+              </div>
+              <p className="text-sm font-medium text-foreground">Drag &amp; drop PDF certificates here</p>
+              <p className="mt-1 text-xs text-muted-foreground">or click to browse &middot; up to {MAX_FREE_UPLOADS} files</p>
+            </div>
+          )}
+
+          {/* Batch progress tracker */}
+          {batchId && (
+            <BatchProgressTracker
+              batchId={batchId}
+              totalCerts={batchTotalCerts}
+              onComplete={handleBatchComplete}
+            />
+          )}
+
+          {/* File list */}
+          {files.length > 0 && !batchId && (
+            <div className="max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+              {files.map((entry) => (
+                <div
+                  key={entry.id}
+                  className="flex items-center gap-3 border-b border-slate-100 px-4 py-2.5 last:border-0"
+                >
+                  {entry.status === 'done' ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                  ) : entry.status === 'failed' ? (
+                    <X className="h-4 w-4 shrink-0 text-red-500" />
+                  ) : entry.status === 'uploading' || entry.status === 'extracting' ? (
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-brand" />
+                  ) : (
+                    <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-foreground">{entry.file.name}</p>
+                    {entry.error && (
+                      <p className="truncate text-xs text-red-500">{entry.error}</p>
+                    )}
+                  </div>
+                  {!uploading && entry.status !== 'done' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeFile(entry.id); }}
+                      className="shrink-0 rounded p-1 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex flex-col gap-3">
+            {!uploading && !batchId && pendingCount > 0 && (
+              <Button
+                size="lg"
+                className="w-full font-semibold"
+                onClick={handleStartUpload}
+              >
+                Upload &amp; Extract {pendingCount} COI{pendingCount !== 1 ? 's' : ''}
+              </Button>
+            )}
+
+            {uploading && !batchId && (
+              <Button size="lg" className="w-full font-semibold" disabled>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Uploading files...
+              </Button>
+            )}
+
+            {/* Show completion summary */}
+            {!uploading && !batchId && doneCount > 0 && pendingCount === 0 && (
+              <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                {doneCount} COI{doneCount !== 1 ? 's' : ''} extracted successfully.
+                {failedCount > 0 && ` ${failedCount} failed.`}
+              </div>
+            )}
+
+            {!uploading && !batchId && (
+              <button
+                type="button"
+                onClick={handleSkipUpload}
+                className="text-center text-sm text-muted-foreground hover:text-foreground"
+                disabled={saving}
+              >
+                {files.length === 0 ? 'Skip — I\u2019ll upload later' : saving ? 'Finishing...' : 'Continue to Dashboard'}
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -403,9 +403,11 @@ const GENERIC: DefaultTemplate[] = [
 
 const TEMPLATES_BY_INDUSTRY: Record<Industry, DefaultTemplate[]> = {
   property_management: PROPERTY_MANAGEMENT,
+  general_contractor: CONSTRUCTION,
   construction: CONSTRUCTION,
   logistics: LOGISTICS,
   healthcare: HEALTHCARE,
+  professional_services: GENERIC,
   manufacturing: MANUFACTURING,
   hospitality: HOSPITALITY,
   retail: RETAIL,

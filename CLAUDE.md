@@ -161,6 +161,35 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Refactor: Simplified 2-Step Onboarding Flow (Apr 2026)
+
+Replaced the 6-step onboarding wizard with a streamlined 2-step flow: select industry → upload COIs → dashboard.
+
+**New flow:**
+1. **Select Industry** — single dropdown with 10 industry options (added `general_contractor` and `professional_services`)
+2. **Upload COIs** — drag & drop PDFs, uses the existing batch-extract API with `BatchProgressTracker` for background processing. After batch completes, auto-completes onboarding and redirects to dashboard.
+3. Users can skip the upload step to go straight to the dashboard.
+
+**Old steps removed from the flow** (code preserved for future use):
+- Organization setup (step 2) — org is auto-created from signup data
+- Property/location setup (step 3) — can be done from dashboard settings
+- Template configuration (step 5) — can be done from dashboard templates page
+- Assign requirements (step 6) — can be done from dashboard
+
+**Files changed:**
+- `src/app/(onboarding)/setup/page.tsx` — rewrote from scratch with 2-step flow; uses `BatchProgressTracker` for upload progress; calls `completeOnboarding()` on finish
+- `src/types/index.ts` — added `general_contractor` and `professional_services` to `Industry` union type
+- `src/lib/constants/industries.ts` — added `General Contractor` and `Professional Services` to `INDUSTRY_OPTIONS`
+- `supabase/migrations/20260410_add_new_industry_values.sql` — drops and re-creates `organizations_industry_check` with expanded industry values
+
+**Preserved:**
+- Old onboarding step components in `src/components/onboarding/` — not deleted, still importable
+- `completeOnboarding()` and `isOrgOnboarded()` server actions — unchanged
+- Dashboard/onboarding layout redirect logic — unchanged
+- Onboarding-completed flag in `organizations.settings` JSONB — unchanged
+
+⚠️ ACTION REQUIRED: Run `supabase/migrations/20260410_add_new_industry_values.sql` in Supabase SQL Editor.
+
 #### Fix: Batch Completion UI Stuck on "Waiting for extraction..." (Apr 2026)
 
 After batch processing completed (processing_batches showed status=complete), the bulk upload UI stayed stuck showing "Waiting for extraction..." instead of transitioning to the Review Roster step. Two root causes found and fixed:
