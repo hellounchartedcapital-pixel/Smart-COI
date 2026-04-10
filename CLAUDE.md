@@ -161,6 +161,31 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Feature: Compliance Report JSON API Endpoint (Apr 2026)
+
+Created `GET /api/reports/compliance` — on-demand compliance report endpoint that returns structured JSON for the authenticated user's organization. No report entity or pre-generation required; data is computed live from current org state.
+
+**Endpoint:** `GET /api/reports/compliance`
+- Auth: requires authenticated user with organization (middleware-gated, not in publicRoutes)
+- Returns: JSON with full compliance breakdown
+
+**Response shape:**
+- `generatedAt` — ISO timestamp
+- `organizationName` — org display name
+- `summary` — aggregate stats: `totalEntities`, `compliantCount`, `nonCompliantCount`, `complianceScore` (percentage), `totalGaps`, `totalExposure` (dollar value), `expiredCount`, `expiringIn30Days`, `needsSetupCount`, `underReviewCount`, `missingEndorsementCount`
+- `issues[]` — flat list of all compliance issues with `severity: 'critical' | 'warning'`, `type` (expired_policy, expired_coverage, missing_coverage, expiring_soon, insufficient_coverage, missing_endorsement), and `description`
+- `vendors[]` — per-entity breakdown: entity name/type, `inferredVendorType` + `inferredVendorTypeLabel`, `vendorTypeNeedsReview` flag, `complianceStatus`, `totalExposure`, `coveragesOnFile[]` (coverage type, carrier, limits, dates, isExpired), `requirements[]` (required coverage type, minimum limit, endorsement flags, compliance status, gap description, dollar gap), `gaps[]` (unmet requirements with gap type, dollar amount, description)
+- `coverageBreakdown[]` — per-coverage-type aggregation: entity count, total exposure, missing/insufficient/endorsement gap counts
+- `recommendedActions[]` — top 5 priority actions ranked by severity (expired → exposure amount), with action description and top gaps
+- `needsReview[]` — entities where AI vendor type classification was low-confidence (`vendorTypeNeedsReview: true`)
+
+**Data pipeline:** entities table → latest certificates (via entity_id/vendor_id/tenant_id) → parallel fetch of compliance_results + extracted_coverages + template_coverage_requirements → `quantifyRisk()` → structured JSON response
+
+**Files created:**
+- `src/app/api/reports/compliance/route.ts` — GET route handler with auth, data fetching, risk quantification, issues classification, and vendor breakdown
+
+**Activity logging:** Logs `compliance_report_generated` to activity_log with entity count and compliance rate.
+
 #### Feature: Auto-Entity Creation During Batch Extraction (Apr 2026)
 
 After batch extraction completes for each certificate, the server now automatically creates vendor entities from the extracted insured names — no manual roster review step needed during onboarding.
