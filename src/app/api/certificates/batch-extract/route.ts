@@ -257,6 +257,18 @@ export async function POST(req: NextRequest) {
           },
         });
 
+        // ---- Safety sweep: ensure all entities from this batch have templates ----
+        // The per-cert template creation can be skipped if:
+        // - autoAssignCertificateToEntity returned { error } (entity created but cert link failed)
+        // - result.inferredVendorType was null even though entity_category was set
+        // - autoApplyRecommendedTemplate threw and was caught
+        // This sweep catches all those edge cases.
+        try {
+          await backfillMissingTemplates(bgService, orgId, orgIndustry, batchEntityType);
+        } catch (backfillErr) {
+          console.error(`[batch-extract] Post-batch template backfill failed:`, backfillErr);
+        }
+
         // ---- Batch complete — update record ----
         const finalCounts = await getCurrentCounts(bgService, batchId);
         const finalStatus = finalCounts.failed === certificateIds.length ? 'failed' : 'complete';
@@ -676,5 +688,54 @@ async function gatherBatchStats(
   } catch (err) {
     console.error('[batch-extract] Failed to gather stats:', err);
     return { complianceGaps: 0, vendorCount: 0 };
+  }
+}
+
+/**
+ * Find all entities in the org that have entity_category set (AI-inferred
+ * vendor type) but no requirement template assigned, and create + assign
+ * an AI-recommended template for each.
+ *
+ * Called both as a post-batch safety sweep and for one-time backfill of
+ * entities from previous batches that hit the template-skipping edge case.
+ */
+async function backfillMissingTemplates(
+  client: ReturnType<typeof createServiceClient>,
+  orgId: string,
+  industry: Industry | null,
+  entityType: string,
+) {
+  const { data: entitiesNeedingTemplates } = await client
+    .from('entities')
+    .select('id, entity_category, entity_type')
+    .eq('organization_id', orgId)
+    .is('template_id', null)
+    .not('entity_category', 'is', null)
+    .is('deleted_at', null)
+    .is('archived_at', null);
+
+  if (!entitiesNeedingTemplates || entitiesNeedingTemplates.length === 0) {
+    return;
+  }
+
+  console.log(`[batch-extract] Backfilling templates for ${entitiesNeedingTemplates.length} entities without templates`);
+
+  for (const entity of entitiesNeedingTemplates) {
+    try {
+      await autoApplyRecommendedTemplate(
+        client,
+        entity.id,
+        orgId,
+        industry,
+        entity.entity_category!,
+        entity.entity_type ?? entityType,
+      );
+    } catch (err) {
+      console.error(`[batch-extract] Template backfill failed for entity=${entity.id}:`, err);
+      Sentry.captureException(err instanceof Error ? err : new Error(String(err)), {
+        tags: { flow: 'batch_extract_backfill', entityId: entity.id },
+        extra: { orgId, vendorType: entity.entity_category },
+      });
+    }
   }
 }
