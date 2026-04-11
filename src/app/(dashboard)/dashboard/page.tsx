@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { DashboardClient } from '@/components/dashboard/dashboard-client';
-import type { ComplianceStatus, ActivityAction } from '@/types';
+import { evaluateEntityCompliance } from '@/lib/compliance/evaluate-inline';
+import type { ComplianceStatus, ActivityAction, ExtractedCoverage, TemplateCoverageRequirement } from '@/types';
 
 // ============================================================================
 // Types for aggregated dashboard data
@@ -81,7 +82,7 @@ async function getDashboardData(orgId: string) {
       .order('name'),
     supabase
       .from('entities')
-      .select('id, name, entity_type, property_id, compliance_status, contact_email, properties(name)')
+      .select('id, name, entity_type, entity_category, property_id, compliance_status, template_id, contact_email, properties(name)')
       .eq('organization_id', orgId)
       .is('deleted_at', null)
       .is('archived_at', null),
@@ -104,11 +105,77 @@ async function getDashboardData(orgId: string) {
   ]);
 
   const properties = propertiesRes.data ?? [];
-  const rawEntities = entitiesRes.data ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawEntities = (entitiesRes.data ?? []) as any[];
   const templates = templatesRes.data ?? [];
   const activity = (activityRes.data ?? []) as ActivityEntry[];
 
-  // ---- Unified entity list (mapped to dashboard shape) ----
+  // ---- Fetch certificates, coverages, and template requirements for inline evaluation ----
+  const entityIds = rawEntities.map((e: { id: string }) => e.id);
+
+  // Find latest certificate per entity (include 'processing' for batch pipeline compat)
+  let entityCertMap = new Map<string, { id: string }>();
+  if (entityIds.length > 0) {
+    const [ec, vc, tc] = await Promise.all([
+      supabase.from('certificates')
+        .select('id, entity_id, vendor_id, tenant_id, uploaded_at')
+        .in('entity_id', entityIds)
+        .in('processing_status', ['processing', 'extracted', 'review_confirmed'])
+        .order('uploaded_at', { ascending: false }),
+      supabase.from('certificates')
+        .select('id, entity_id, vendor_id, tenant_id, uploaded_at')
+        .in('vendor_id', entityIds)
+        .in('processing_status', ['processing', 'extracted', 'review_confirmed'])
+        .order('uploaded_at', { ascending: false }),
+      supabase.from('certificates')
+        .select('id, entity_id, vendor_id, tenant_id, uploaded_at')
+        .in('tenant_id', entityIds)
+        .in('processing_status', ['processing', 'extracted', 'review_confirmed'])
+        .order('uploaded_at', { ascending: false }),
+    ]);
+
+    const allCerts = [...(ec.data ?? []), ...(vc.data ?? []), ...(tc.data ?? [])];
+    entityCertMap = new Map();
+    for (const cert of allCerts) {
+      const eid = cert.entity_id ?? cert.vendor_id ?? cert.tenant_id;
+      if (eid && !entityCertMap.has(eid)) {
+        entityCertMap.set(eid, { id: cert.id });
+      }
+    }
+  }
+
+  const certIds = [...new Set([...entityCertMap.values()].map((c) => c.id))];
+  const templateIds = [...new Set(rawEntities.map((e: { template_id: string | null }) => e.template_id).filter((id: string | null): id is string => id != null))];
+
+  // Fetch coverages and template requirements
+  const [coveragesRes, requirementsRes] = await Promise.all([
+    certIds.length > 0
+      ? supabase.from('extracted_coverages')
+          .select('id, certificate_id, coverage_type, carrier_name, policy_number, limit_amount, limit_type, effective_date, expiration_date, additional_insured_listed, additional_insured_entities, waiver_of_subrogation, confidence_flag, raw_extracted_text, created_at')
+          .in('certificate_id', certIds)
+      : Promise.resolve({ data: [] as ExtractedCoverage[] }),
+    templateIds.length > 0
+      ? supabase.from('template_coverage_requirements')
+          .select('*')
+          .in('template_id', templateIds)
+      : Promise.resolve({ data: [] as TemplateCoverageRequirement[] }),
+  ]);
+
+  const coveragesByCert = new Map<string, ExtractedCoverage[]>();
+  for (const ec of (coveragesRes.data ?? []) as ExtractedCoverage[]) {
+    const list = coveragesByCert.get(ec.certificate_id) ?? [];
+    list.push(ec);
+    coveragesByCert.set(ec.certificate_id, list);
+  }
+
+  const requirementsByTemplate = new Map<string, TemplateCoverageRequirement[]>();
+  for (const req of (requirementsRes.data ?? []) as TemplateCoverageRequirement[]) {
+    const list = requirementsByTemplate.get(req.template_id) ?? [];
+    list.push(req);
+    requirementsByTemplate.set(req.template_id, list);
+  }
+
+  // ---- Build unified entity list with INLINE compliance evaluation ----
   interface Entity {
     id: string;
     name: string;
@@ -117,19 +184,54 @@ async function getDashboardData(orgId: string) {
     status: ComplianceStatus;
     type: 'vendor' | 'tenant';
     contactEmail: string | null;
+    gapCount: number;
+    gapDetails: string[];
+    earliestExpiration: string | null;
+    hasCertificate: boolean;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const allEntities: Entity[] = rawEntities.map((e: any) => ({
-    id: e.id,
-    name: e.name,
-    propertyId: e.property_id,
-    propertyName: e.properties?.name ?? null,
-    status: e.compliance_status as ComplianceStatus,
-    // Map entity_type to legacy 'vendor' | 'tenant' for backward compat with dashboard UI
-    type: (e.entity_type === 'tenant' ? 'tenant' : 'vendor') as 'vendor' | 'tenant',
-    contactEmail: e.contact_email ?? null,
-  }));
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const allEntities: Entity[] = rawEntities.map((e: Record<string, unknown>) => {
+    const cert = entityCertMap.get(e.id as string);
+    const coverages = cert ? (coveragesByCert.get(cert.id) ?? []) : [];
+    const templateReqs = e.template_id
+      ? (requirementsByTemplate.get(e.template_id as string) ?? [])
+      : [];
+
+    // Inline evaluation
+    const evaluation = evaluateEntityCompliance(templateReqs, coverages);
+
+    // Earliest non-expired expiration date
+    let earliestExpiration: string | null = null;
+    for (const cov of coverages) {
+      if (cov.expiration_date) {
+        const exp = new Date(cov.expiration_date + 'T00:00:00');
+        if (exp >= now) {
+          if (!earliestExpiration || cov.expiration_date < earliestExpiration) {
+            earliestExpiration = cov.expiration_date;
+          }
+        }
+      }
+    }
+
+    const props = e.properties as { name?: string } | null;
+
+    return {
+      id: e.id as string,
+      name: e.name as string,
+      propertyId: (e.property_id as string | null) ?? null,
+      propertyName: props?.name ?? null,
+      status: evaluation.complianceStatus,
+      type: (e.entity_type === 'tenant' ? 'tenant' : 'vendor') as 'vendor' | 'tenant',
+      contactEmail: (e.contact_email as string | null) ?? null,
+      gapCount: evaluation.gapCount,
+      gapDetails: evaluation.gapDescriptions,
+      earliestExpiration,
+      hasCertificate: !!cert,
+    };
+  });
 
   // ---- Status counts ----
   const statusCounts: StatusDistribution = {
@@ -147,10 +249,10 @@ async function getDashboardData(orgId: string) {
     }
   }
 
-  const withCertificate = allEntities.filter((e) => e.status !== 'pending').length;
+  const evaluableCount = allEntities.length - statusCounts.needs_setup;
   const complianceRate =
-    withCertificate > 0
-      ? Math.round((statusCounts.compliant / withCertificate) * 100)
+    evaluableCount > 0
+      ? Math.round((statusCounts.compliant / evaluableCount) * 100)
       : null;
 
   // Compute trial days remaining
@@ -192,116 +294,14 @@ async function getDashboardData(orgId: string) {
 
   // ---- Action items: entities that aren't compliant and not waived ----
   const needsAttention = allEntities.filter(
-    (e) => e.status !== 'compliant' && !waivedEntityIds.has(e.id)
+    (e) => e.status !== 'compliant' && e.status !== 'expiring_soon' && !waivedEntityIds.has(e.id)
   );
 
-  const vendorIds = needsAttention.filter((e) => e.type === 'vendor').map((e) => e.id);
-  const tenantIds = needsAttention.filter((e) => e.type === 'tenant').map((e) => e.id);
-
-  // Fetch certificates for action-item entities — check ALL 3 ID columns (entity_id, vendor_id, tenant_id)
-  const allEntityIds = [...vendorIds, ...tenantIds];
-  const certQueries = [];
-  if (allEntityIds.length > 0) {
-    // Use OR filter to find certificates linked via any of the 3 ID columns
-    certQueries.push(
-      supabase
-        .from('certificates')
-        .select('id, entity_id, vendor_id, tenant_id, processing_status')
-        .or(allEntityIds.map(id => `entity_id.eq.${id},vendor_id.eq.${id},tenant_id.eq.${id}`).join(','))
-        .order('uploaded_at', { ascending: false })
-    );
-  }
-  const certResults = await Promise.all(certQueries);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const allCerts = certResults.flatMap((r) => r.data ?? []) as any[];
-
-  // Map entityId → cert info (extracted or review_confirmed both count as having compliance data)
-  // Deduplicate: a cert might match on entity_id AND vendor_id for the same entity
-  const entityCertMap = new Map<string, { hasCert: boolean; certId: string | null }>();
-  for (const cert of allCerts) {
-    const eid = cert.entity_id ?? cert.vendor_id ?? cert.tenant_id;
-    if (!eid) continue;
-    const existing = entityCertMap.get(eid);
-    const hasCompliance = cert.processing_status === 'extracted' || cert.processing_status === 'review_confirmed';
-    if (!existing) {
-      entityCertMap.set(eid, {
-        hasCert: true,
-        certId: hasCompliance ? cert.id : null,
-      });
-    } else {
-      if (hasCompliance && !existing.certId) existing.certId = cert.id;
-    }
-  }
-
-  // Gap counts + expirations from certs with compliance data
-  const certsWithCompliance = [...entityCertMap.values()]
-    .filter((v) => v.certId)
-    .map((v) => v.certId!);
-
-  const gapMap = new Map<string, number>();
-  const gapDetailsMap = new Map<string, string[]>();
-  const expirationMap = new Map<string, string | null>();
-
-  if (certsWithCompliance.length > 0) {
-    const [compResultsRes, entityGapsRes, covRes] = await Promise.all([
-      supabase
-        .from('compliance_results')
-        .select('certificate_id, status, gap_description')
-        .in('certificate_id', certsWithCompliance)
-        .in('status', ['not_met', 'missing']),
-      supabase
-        .from('entity_compliance_results')
-        .select('certificate_id, status')
-        .in('certificate_id', certsWithCompliance)
-        .in('status', ['missing', 'partial_match']),
-      supabase
-        .from('extracted_coverages')
-        .select('certificate_id, expiration_date')
-        .in('certificate_id', certsWithCompliance)
-        .not('expiration_date', 'is', null)
-        .order('expiration_date', { ascending: true }),
-    ]);
-
-    const gapsByCert = new Map<string, number>();
-    const gapDescsByCert = new Map<string, string[]>();
-    for (const r of compResultsRes.data ?? []) {
-      gapsByCert.set(r.certificate_id, (gapsByCert.get(r.certificate_id) ?? 0) + 1);
-      if (r.gap_description) {
-        const descs = gapDescsByCert.get(r.certificate_id) ?? [];
-        descs.push(r.gap_description);
-        gapDescsByCert.set(r.certificate_id, descs);
-      }
-    }
-    for (const r of entityGapsRes.data ?? []) {
-      gapsByCert.set(r.certificate_id, (gapsByCert.get(r.certificate_id) ?? 0) + 1);
-    }
-
-    const expByCert = new Map<string, string>();
-    for (const c of covRes.data ?? []) {
-      if (c.expiration_date && !expByCert.has(c.certificate_id)) {
-        expByCert.set(c.certificate_id, c.expiration_date);
-      }
-    }
-
-    for (const [eid, info] of entityCertMap.entries()) {
-      if (info.certId) {
-        gapMap.set(eid, gapsByCert.get(info.certId) ?? 0);
-        gapDetailsMap.set(eid, gapDescsByCert.get(info.certId) ?? []);
-        expirationMap.set(eid, expByCert.get(info.certId) ?? null);
-      }
-    }
-  }
-
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
   const actionItems: ActionItem[] = needsAttention.map((e) => {
-    const certInfo = entityCertMap.get(e.id);
-    const earliestExp = expirationMap.get(e.id) ?? null;
     let daysUntilExpiration: number | null = null;
     let daysSinceExpired: number | null = null;
-    if (earliestExp) {
-      const expDate = new Date(earliestExp + 'T00:00:00');
+    if (e.earliestExpiration) {
+      const expDate = new Date(e.earliestExpiration + 'T00:00:00');
       const diff = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
       if (diff >= 0) daysUntilExpiration = diff;
       else daysSinceExpired = Math.abs(diff);
@@ -312,12 +312,12 @@ async function getDashboardData(orgId: string) {
       propertyName: e.propertyName,
       entityType: e.type,
       status: e.status,
-      gapCount: gapMap.get(e.id) ?? 0,
-      gapDetails: gapDetailsMap.get(e.id) ?? [],
-      earliestExpiration: earliestExp,
+      gapCount: e.gapCount,
+      gapDetails: e.gapDetails,
+      earliestExpiration: e.earliestExpiration,
       daysUntilExpiration,
       daysSinceExpired,
-      hasCertificate: certInfo?.hasCert ?? false,
+      hasCertificate: e.hasCertificate,
       contactEmail: e.contactEmail,
     };
   });

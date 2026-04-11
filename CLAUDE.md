@@ -162,6 +162,36 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Dashboard Shows Real Compliance Data + Report Access (Apr 2026)
+
+Dashboard and entities list now derive compliance status using the same inline evaluation logic as the report API instead of reading the stale `entities.compliance_status` DB field.
+
+**Shared compliance utility created:**
+- `src/lib/compliance/evaluate-inline.ts` — extracted `evaluateRequirement()` and `evaluateEntityCompliance()` from the report API into a shared module. Used by dashboard page, entities page, and report API.
+
+**Dashboard fixes (Bug #1, #2):**
+- `src/app/(dashboard)/dashboard/page.tsx` — rewrote `getDashboardData()` to fetch certificates, extracted_coverages, and template_coverage_requirements, then run `evaluateEntityCompliance()` for each entity. Status counts, compliance rate, action items, and property overviews all use the inline-derived status.
+- Compliance rate calculation now excludes `needs_setup` entities from denominator (matching report API logic).
+- Action queue excludes `expiring_soon` entities (they're compliant, just a warning).
+
+**Entities page fixes (Bug #1, #5):**
+- `src/app/(dashboard)/dashboard/entities/page.tsx` — same inline evaluation, shows correct compliant/non-compliant/expired status per entity.
+- New `VendorTypeBadge` component shows inferred vendor type (e.g., "Electrician", "Security") from `entity_category` instead of raw `entity_type`.
+- Added `template_id` to entity query for requirement lookup.
+
+**New features (Bug #3, #4):**
+- "View Report" button (emerald outline) in dashboard header links to `/report/latest`.
+- Report API refactored to import shared `evaluateRequirement` and `EvaluatedRequirement` type from `evaluate-inline.ts`.
+
+**Files created:**
+- `src/lib/compliance/evaluate-inline.ts`
+
+**Files changed:**
+- `src/app/(dashboard)/dashboard/page.tsx` — inline compliance evaluation
+- `src/app/(dashboard)/dashboard/entities/page.tsx` — inline evaluation + vendor type badges
+- `src/components/dashboard/dashboard-client.tsx` — View Report button + FileBarChart icon
+- `src/app/api/reports/compliance/route.ts` — import from shared utility
+
 #### Fix: Compliance Report — All 7 Bugs Fixed (Apr 2026)
 
 Comprehensive fix for `/api/reports/compliance` and the report page at `/report/[reportId]`. The API was completely rewritten to evaluate compliance INLINE instead of relying on stale `compliance_results` or entity DB fields.
