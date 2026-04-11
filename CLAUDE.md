@@ -162,6 +162,26 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Compliance Report Showing 100% Despite Real Gaps (Apr 2026)
+
+The compliance report at `/api/reports/compliance` was returning 100% compliance score with no issues even though the `compliance_results` table had real `not_met` gaps.
+
+**Root cause (two cascading bugs):**
+
+1. **Certificate query filter too strict:** The report queried certificates with `processing_status IN ('extracted', 'review_confirmed')`. Due to the batch extraction pipeline bug (previous fix), certificates were stuck at `processing_status = 'processing'` even though extraction completed and compliance_results existed. The report found NO certificates → no compliance data → empty gaps.
+
+2. **Compliance score used stale DB field:** `quantifyRisk()` calculated the compliance rate from `entity.compliance_status` (the `entities` table field), not from actual `compliance_results` data. If entities had status `'under_review'` (set by `autoAssignCertificateToEntity` before compliance runs), they were excluded from the evaluable count → `evaluableCount = 0` → `complianceRate = 100%` (the default).
+
+**Fixes applied to `src/app/api/reports/compliance/route.ts`:**
+
+1. **Include 'processing' in cert filter:** Certificate queries now include `processing_status = 'processing'` to pick up certs stuck due to the pipeline bug. A 'processing' cert with no extracted data contributes empty arrays (harmless); one with real data is correctly included.
+
+2. **Derive compliance status from actual data:** After building `EntityComplianceData[]`, the API now computes `complianceStatus` from the entity's `compliance_results` instead of trusting the DB field:
+   - Any `not_met` or `missing` result → `'non_compliant'` (or `'expired'` if coverages are expired)
+   - All results `'met'`/`'not_required'` → `'compliant'` (or `'expiring_soon'` if within 30 days)
+   - No results and no template → `'needs_setup'`
+   - This derived status is used for both the summary score and the per-vendor breakdown.
+
 #### Fix: Batch Extraction Pipeline — Certificates Stuck at processing_status='processing' (Apr 2026)
 
 Certificates were never updated with extraction results (`processing_status`, `inferred_vendor_type`, extracted coverages metadata) even though the batch reported completion and entities were created correctly.

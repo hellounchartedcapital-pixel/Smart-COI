@@ -114,6 +114,10 @@ export async function GET() {
     }
 
     // ---- 3. Find latest certificate per entity ----
+    // Include 'processing' status because the batch extraction pipeline bug
+    // left certs stuck at 'processing' even though extraction completed and
+    // compliance_results were created. These certs have real data that must
+    // be included in the report.
     const entityIds = entities.map((e: { id: string }) => e.id);
 
     const [entityCertsRes, vendorCertsRes, tenantCertsRes] = await Promise.all([
@@ -121,19 +125,19 @@ export async function GET() {
         .from('certificates')
         .select('id, entity_id, vendor_id, tenant_id, uploaded_at, insured_name, inferred_vendor_type, vendor_type_needs_review')
         .in('entity_id', entityIds)
-        .in('processing_status', ['extracted', 'review_confirmed'])
+        .in('processing_status', ['processing', 'extracted', 'review_confirmed'])
         .order('uploaded_at', { ascending: false }),
       supabase
         .from('certificates')
         .select('id, entity_id, vendor_id, tenant_id, uploaded_at, insured_name, inferred_vendor_type, vendor_type_needs_review')
         .in('vendor_id', entityIds)
-        .in('processing_status', ['extracted', 'review_confirmed'])
+        .in('processing_status', ['processing', 'extracted', 'review_confirmed'])
         .order('uploaded_at', { ascending: false }),
       supabase
         .from('certificates')
         .select('id, entity_id, vendor_id, tenant_id, uploaded_at, insured_name, inferred_vendor_type, vendor_type_needs_review')
         .in('tenant_id', entityIds)
-        .in('processing_status', ['extracted', 'review_confirmed'])
+        .in('processing_status', ['processing', 'extracted', 'review_confirmed'])
         .order('uploaded_at', { ascending: false }),
     ]);
 
@@ -214,6 +218,12 @@ export async function GET() {
     }
 
     // ---- 5. Transform into EntityComplianceData[] for risk quantification ----
+    // IMPORTANT: Derive complianceStatus from actual compliance_results data
+    // rather than trusting the entities.compliance_status DB field. The DB
+    // field can be stale (e.g., 'under_review' when compliance HAS been
+    // calculated, or 'compliant' when new gaps exist). The risk quantification
+    // engine uses complianceStatus for the aggregate score, so stale values
+    // produce wrong results (e.g., 100% when gaps exist).
     const entityComplianceData: EntityComplianceData[] = (entities as EntityRow[]).map((entity) => {
       const cert = entityCertMap.get(entity.id);
       const certId = cert?.id;
@@ -222,18 +232,73 @@ export async function GET() {
         ? (props[0]?.name ?? null)
         : (props?.name ?? null);
 
+      const compResults = certId ? (complianceByCert.get(certId) ?? []) : [];
+      const extractedCovs = certId ? (coveragesByCert.get(certId) ?? []) : [];
+      const reqs = entity.template_id
+        ? (requirementsByTemplate.get(entity.template_id) ?? [])
+        : [];
+
+      // Derive compliance status from actual data instead of DB field
+      let complianceStatus: ComplianceStatus = entity.compliance_status as ComplianceStatus;
+
+      if (compResults.length > 0) {
+        // Has compliance results — determine status from them
+        const hasNotMet = compResults.some((r) => r.status === 'not_met');
+        const hasMissing = compResults.some((r) => r.status === 'missing');
+
+        if (hasNotMet || hasMissing) {
+          // Check if any extracted coverages are expired
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          const hasExpired = extractedCovs.some((c) => {
+            if (!c.expiration_date) return false;
+            return new Date(c.expiration_date + 'T00:00:00') < now;
+          });
+          const allExpired = extractedCovs.length > 0 && extractedCovs.every((c) => {
+            if (!c.expiration_date) return false;
+            return new Date(c.expiration_date + 'T00:00:00') < now;
+          });
+
+          if (allExpired) {
+            complianceStatus = 'expired';
+          } else if (hasExpired) {
+            complianceStatus = 'non_compliant';
+          } else {
+            complianceStatus = 'non_compliant';
+          }
+        } else {
+          // All results are 'met' or 'not_required'
+          // Still check for expiring soon
+          const now = new Date();
+          now.setHours(0, 0, 0, 0);
+          const threshold = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+          const hasExpiringSoon = extractedCovs.some((c) => {
+            if (!c.expiration_date) return false;
+            const exp = new Date(c.expiration_date + 'T00:00:00');
+            return exp >= now && exp <= threshold;
+          });
+          complianceStatus = hasExpiringSoon ? 'expiring_soon' : 'compliant';
+        }
+      } else if (reqs.length === 0 && !cert) {
+        // No cert and no requirements — needs setup
+        complianceStatus = 'needs_setup';
+      } else if (reqs.length === 0) {
+        // Has cert but no requirements template
+        complianceStatus = 'needs_setup';
+      }
+      // else: has requirements but no compliance results → keep DB status
+      // (could be 'under_review' if compliance hasn't run yet)
+
       return {
         entityId: entity.id,
         entityName: entity.name,
         entityType: entity.entity_type,
-        complianceStatus: entity.compliance_status as ComplianceStatus,
+        complianceStatus,
         propertyId: entity.property_id,
         propertyName,
-        complianceResults: certId ? (complianceByCert.get(certId) ?? []) : [],
-        extractedCoverages: certId ? (coveragesByCert.get(certId) ?? []) : [],
-        requirements: entity.template_id
-          ? (requirementsByTemplate.get(entity.template_id) ?? [])
-          : [],
+        complianceResults: compResults,
+        extractedCoverages: extractedCovs,
+        requirements: reqs,
       };
     });
 
@@ -476,6 +541,10 @@ export async function GET() {
         description: g.gapDescription,
       }));
 
+      // Use the derived compliance status from entityComplianceData (not the DB field)
+      const derivedStatus = entityComplianceData.find((e) => e.entityId === entity.id)?.complianceStatus
+        ?? (entity.compliance_status as ComplianceStatus);
+
       return {
         entityId: entity.id,
         entityName: entity.name,
@@ -485,7 +554,7 @@ export async function GET() {
           ? (VENDOR_TYPE_LABELS[inferredType] ?? inferredType)
           : null,
         vendorTypeNeedsReview: needsReview,
-        complianceStatus: entity.compliance_status as ComplianceStatus,
+        complianceStatus: derivedStatus,
         totalExposure: riskBreakdown?.totalExposure ?? 0,
         coveragesOnFile,
         requirements,
