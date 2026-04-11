@@ -162,6 +162,22 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Batch Pipeline Template Edge Case + Backfill (Apr 2026)
+
+Fixed edge case where `autoApplyRecommendedTemplate()` was skipped for entities created during batch extraction, leaving them without requirement templates. Added a safety sweep and a backfill endpoint for existing data.
+
+**Root cause:** The per-cert `autoApplyRecommendedTemplate()` call at line 205 was conditional on `result.inferredVendorType` being truthy AND `autoAssignCertificateToEntity` returning `{ entityId }`. If either condition failed (cert linking error returned `{ error }`, or vendor type was null despite `entity_category` being set), the template was never created. This left entities like Kastle Systems LLC (`entity_category='security'`) with no requirements template.
+
+**Fix 1 — Post-batch safety sweep:** After `processConcurrentQueue()` completes and before the batch is marked 'complete', a new `backfillMissingTemplates()` function queries all entities in the org that have `entity_category` set but no `template_id`, and creates + assigns an AI-recommended template for each. This catches any entity that slipped through the per-cert flow.
+
+**Fix 2 — Admin backfill endpoint:** Created `POST /api/admin/backfill-templates` (auth via CRON_SECRET) that finds ALL entities across ALL orgs with `entity_category` set but no `template_id`, and creates templates. Handles the Kastle Systems case and any similar edge cases from previous batch uploads.
+
+**Files changed:**
+- `src/app/api/certificates/batch-extract/route.ts` — added `backfillMissingTemplates()` function, called after batch loop completes
+
+**Files created:**
+- `src/app/api/admin/backfill-templates/route.ts` — one-time admin endpoint for org-wide template backfill
+
 #### Fix: Dashboard Shows Real Compliance Data + Report Access (Apr 2026)
 
 Dashboard and entities list now derive compliance status using the same inline evaluation logic as the report API instead of reading the stale `entities.compliance_status` DB field.
