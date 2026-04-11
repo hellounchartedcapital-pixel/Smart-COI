@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
-import { quantifyRisk } from '@/lib/compliance/risk-quantification';
-import type { EntityComplianceData } from '@/lib/compliance/risk-quantification';
-import { formatCoverageType } from '@/lib/coverage-utils';
+import { formatCoverageType, findBestCoverageMatch } from '@/lib/coverage-utils';
 import { VENDOR_TYPE_LABELS, type VendorType } from '@/lib/constants/vendor-requirements';
 import type {
-  ComplianceResult,
   ExtractedCoverage,
   TemplateCoverageRequirement,
   ComplianceStatus,
@@ -16,7 +13,12 @@ import type {
 // GET /api/reports/compliance
 //
 // Generates an on-demand compliance report for the authenticated user's
-// organization. Returns structured JSON consumed by the dashboard report UI.
+// organization. Returns structured JSON consumed by the report page UI.
+//
+// IMPORTANT: This endpoint evaluates compliance INLINE by comparing each
+// template requirement against the actual extracted coverages on file.
+// It does NOT rely on the stale entities.compliance_status DB field or
+// on compliance_results that may reference old template requirement IDs.
 // ============================================================================
 
 // ============================================================================
@@ -40,6 +42,100 @@ async function getAuth() {
   if (!profile?.organization_id) return null;
 
   return { userId: user.id, orgId: profile.organization_id, supabase };
+}
+
+// ============================================================================
+// Inline requirement evaluation
+// ============================================================================
+
+interface EvaluatedRequirement {
+  coverageType: string;
+  coverageTypeLabel: string;
+  minimumLimit: number | null;
+  limitType: string | null;
+  requiresAdditionalInsured: boolean;
+  requiresWaiverOfSubrogation: boolean;
+  status: 'met' | 'not_met' | 'missing' | 'not_required';
+  gapDescription: string | null;
+  dollarGap: number | null;
+}
+
+/**
+ * Evaluate a single requirement against the extracted coverages on file.
+ * Returns the status, gap description, and dollar gap.
+ */
+function evaluateRequirement(
+  req: TemplateCoverageRequirement,
+  coverages: ExtractedCoverage[],
+): EvaluatedRequirement {
+  const label = formatCoverageType(req.coverage_type);
+  const base = {
+    coverageType: req.coverage_type,
+    coverageTypeLabel: label,
+    minimumLimit: req.minimum_limit,
+    limitType: req.limit_type,
+    requiresAdditionalInsured: req.requires_additional_insured ?? false,
+    requiresWaiverOfSubrogation: req.requires_waiver_of_subrogation ?? false,
+  };
+
+  if (!req.is_required) {
+    return { ...base, status: 'not_required', gapDescription: null, dollarGap: null };
+  }
+
+  // Find matching coverage using fuzzy matching
+  const coverageTypes = coverages.map((c) => c.coverage_type);
+  const match = findBestCoverageMatch(req.coverage_type, coverageTypes);
+
+  if (!match) {
+    // No matching coverage on file at all
+    const gap = req.minimum_limit;
+    return {
+      ...base,
+      status: 'missing',
+      gapDescription: gap != null
+        ? `${label} — Missing (full $${gap.toLocaleString()} gap)`
+        : `${label} — Missing`,
+      dollarGap: gap,
+    };
+  }
+
+  const cov = coverages[match.index];
+
+  // Check limit
+  if (req.minimum_limit != null && req.limit_type !== 'statutory') {
+    const foundLimit = cov.limit_amount;
+    if (foundLimit == null || foundLimit < req.minimum_limit) {
+      const gap = req.minimum_limit - (foundLimit ?? 0);
+      return {
+        ...base,
+        status: 'not_met',
+        gapDescription: foundLimit != null
+          ? `${label} — $${foundLimit.toLocaleString()} found, $${req.minimum_limit.toLocaleString()} required (gap: $${gap.toLocaleString()})`
+          : `${label} — Limit not found, $${req.minimum_limit.toLocaleString()} required`,
+        dollarGap: gap > 0 ? gap : 0,
+      };
+    }
+  }
+
+  // Check endorsements
+  const endorsementIssues: string[] = [];
+  if (req.requires_additional_insured && !cov.additional_insured_listed) {
+    endorsementIssues.push('Additional Insured not listed');
+  }
+  if (req.requires_waiver_of_subrogation && !cov.waiver_of_subrogation) {
+    endorsementIssues.push('Waiver of Subrogation not listed');
+  }
+
+  if (endorsementIssues.length > 0) {
+    return {
+      ...base,
+      status: 'not_met',
+      gapDescription: `${label} — ${endorsementIssues.join(', ')}`,
+      dollarGap: null, // endorsement gaps are not dollar-quantifiable
+    };
+  }
+
+  return { ...base, status: 'met', gapDescription: null, dollarGap: null };
 }
 
 // ============================================================================
@@ -114,11 +210,10 @@ export async function GET() {
     }
 
     // ---- 3. Find latest certificate per entity ----
-    // Include 'processing' status because the batch extraction pipeline bug
-    // left certs stuck at 'processing' even though extraction completed and
-    // compliance_results were created. These certs have real data that must
-    // be included in the report.
-    const entityIds = entities.map((e: { id: string }) => e.id);
+    // Include 'processing' status: the batch pipeline bug left certs stuck
+    // at 'processing' even though extraction completed. A 'processing' cert
+    // with no data contributes empty arrays (harmless).
+    const entityIds = (entities as EntityRow[]).map((e) => e.id);
 
     const [entityCertsRes, vendorCertsRes, tenantCertsRes] = await Promise.all([
       supabase
@@ -148,7 +243,6 @@ export async function GET() {
       ...(tenantCertsRes.data ?? []),
     ];
 
-    // Map entity ID → latest certificate row
     const entityCertMap = new Map<string, (typeof allCerts)[number]>();
     for (const cert of allCerts) {
       const eid = cert.entity_id ?? cert.vendor_id ?? cert.tenant_id;
@@ -159,24 +253,16 @@ export async function GET() {
 
     const certIds = [...new Set([...entityCertMap.values()].map((c) => c.id))];
 
-    // ---- 4. Fetch compliance results, extracted coverages, and template requirements ----
+    // ---- 4. Fetch extracted coverages and template requirements ----
     const templateIds = [
       ...new Set(
-        entities
-          .map((e: { template_id: string | null }) => e.template_id)
-          .filter((id: string | null): id is string => id != null)
+        (entities as EntityRow[])
+          .map((e) => e.template_id)
+          .filter((id): id is string => id != null)
       ),
     ];
 
-    const [complianceRes, coveragesRes, requirementsRes] = await Promise.all([
-      certIds.length > 0
-        ? supabase
-            .from('compliance_results')
-            .select(
-              'id, certificate_id, coverage_requirement_id, extracted_coverage_id, status, gap_description, created_at'
-            )
-            .in('certificate_id', certIds)
-        : Promise.resolve({ data: [] as ComplianceResult[] }),
+    const [coveragesRes, requirementsRes] = await Promise.all([
       certIds.length > 0
         ? supabase
             .from('extracted_coverages')
@@ -192,14 +278,6 @@ export async function GET() {
             .in('template_id', templateIds)
         : Promise.resolve({ data: [] as TemplateCoverageRequirement[] }),
     ]);
-
-    // Group compliance results by certificate_id
-    const complianceByCert = new Map<string, ComplianceResult[]>();
-    for (const cr of (complianceRes.data ?? []) as ComplianceResult[]) {
-      const list = complianceByCert.get(cr.certificate_id) ?? [];
-      list.push(cr);
-      complianceByCert.set(cr.certificate_id, list);
-    }
 
     // Group extracted coverages by certificate_id
     const coveragesByCert = new Map<string, ExtractedCoverage[]>();
@@ -217,198 +295,11 @@ export async function GET() {
       requirementsByTemplate.set(req.template_id, list);
     }
 
-    // ---- 5. Transform into EntityComplianceData[] for risk quantification ----
-    // IMPORTANT: Derive complianceStatus from actual compliance_results data
-    // rather than trusting the entities.compliance_status DB field. The DB
-    // field can be stale (e.g., 'under_review' when compliance HAS been
-    // calculated, or 'compliant' when new gaps exist). The risk quantification
-    // engine uses complianceStatus for the aggregate score, so stale values
-    // produce wrong results (e.g., 100% when gaps exist).
-    const entityComplianceData: EntityComplianceData[] = (entities as EntityRow[]).map((entity) => {
-      const cert = entityCertMap.get(entity.id);
-      const certId = cert?.id;
-      const props = entity.properties;
-      const propertyName = Array.isArray(props)
-        ? (props[0]?.name ?? null)
-        : (props?.name ?? null);
+    // ---- 5. Build vendor-by-vendor breakdown with INLINE evaluation ----
+    // Instead of relying on compliance_results (which may reference old
+    // template requirement IDs), we evaluate each requirement directly
+    // against the extracted coverages using fuzzy coverage type matching.
 
-      const compResults = certId ? (complianceByCert.get(certId) ?? []) : [];
-      const extractedCovs = certId ? (coveragesByCert.get(certId) ?? []) : [];
-      const reqs = entity.template_id
-        ? (requirementsByTemplate.get(entity.template_id) ?? [])
-        : [];
-
-      // Derive compliance status from actual data instead of DB field
-      let complianceStatus: ComplianceStatus = entity.compliance_status as ComplianceStatus;
-
-      if (compResults.length > 0) {
-        // Has compliance results — determine status from them
-        const hasNotMet = compResults.some((r) => r.status === 'not_met');
-        const hasMissing = compResults.some((r) => r.status === 'missing');
-
-        if (hasNotMet || hasMissing) {
-          // Check if any extracted coverages are expired
-          const now = new Date();
-          now.setHours(0, 0, 0, 0);
-          const hasExpired = extractedCovs.some((c) => {
-            if (!c.expiration_date) return false;
-            return new Date(c.expiration_date + 'T00:00:00') < now;
-          });
-          const allExpired = extractedCovs.length > 0 && extractedCovs.every((c) => {
-            if (!c.expiration_date) return false;
-            return new Date(c.expiration_date + 'T00:00:00') < now;
-          });
-
-          if (allExpired) {
-            complianceStatus = 'expired';
-          } else if (hasExpired) {
-            complianceStatus = 'non_compliant';
-          } else {
-            complianceStatus = 'non_compliant';
-          }
-        } else {
-          // All results are 'met' or 'not_required'
-          // Still check for expiring soon
-          const now = new Date();
-          now.setHours(0, 0, 0, 0);
-          const threshold = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-          const hasExpiringSoon = extractedCovs.some((c) => {
-            if (!c.expiration_date) return false;
-            const exp = new Date(c.expiration_date + 'T00:00:00');
-            return exp >= now && exp <= threshold;
-          });
-          complianceStatus = hasExpiringSoon ? 'expiring_soon' : 'compliant';
-        }
-      } else if (reqs.length === 0 && !cert) {
-        // No cert and no requirements — needs setup
-        complianceStatus = 'needs_setup';
-      } else if (reqs.length === 0) {
-        // Has cert but no requirements template
-        complianceStatus = 'needs_setup';
-      }
-      // else: has requirements but no compliance results → keep DB status
-      // (could be 'under_review' if compliance hasn't run yet)
-
-      return {
-        entityId: entity.id,
-        entityName: entity.name,
-        entityType: entity.entity_type,
-        complianceStatus,
-        propertyId: entity.property_id,
-        propertyName,
-        complianceResults: compResults,
-        extractedCoverages: extractedCovs,
-        requirements: reqs,
-      };
-    });
-
-    // ---- 6. Run risk quantification ----
-    const risk = quantifyRisk(entityComplianceData);
-
-    // ---- 7. Build issues list (critical + warning) ----
-    interface Issue {
-      entityId: string;
-      entityName: string;
-      type: string;
-      severity: 'critical' | 'warning';
-      description: string;
-    }
-
-    const issues: Issue[] = [];
-
-    for (const breakdown of risk.perEntityBreakdown) {
-      // Critical: expired policies
-      if (breakdown.isExpired) {
-        issues.push({
-          entityId: breakdown.entityId,
-          entityName: breakdown.entityName,
-          type: 'expired_policy',
-          severity: 'critical',
-          description: 'All coverages on file are expired — request updated COI immediately',
-        });
-      } else if (breakdown.isPartiallyExpired) {
-        issues.push({
-          entityId: breakdown.entityId,
-          entityName: breakdown.entityName,
-          type: 'expired_coverage',
-          severity: 'critical',
-          description: `Expired coverages: ${breakdown.expiredCoverageTypes.join(', ')}`,
-        });
-      }
-
-      // Critical: missing required coverage types
-      const missingGaps = breakdown.coverageGaps.filter(
-        (g) => g.gapType === 'missing' || g.gapType === 'missing_unquantifiable'
-      );
-      for (const gap of missingGaps) {
-        issues.push({
-          entityId: breakdown.entityId,
-          entityName: breakdown.entityName,
-          type: 'missing_coverage',
-          severity: 'critical',
-          description: gap.gapDescription,
-        });
-      }
-
-      // Warning: expiring within 30 days (not already expired)
-      if (
-        !breakdown.isExpired &&
-        !breakdown.isPartiallyExpired &&
-        breakdown.earliestExpiration
-      ) {
-        const expDate = new Date(breakdown.earliestExpiration + 'T00:00:00');
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const daysUntil = Math.ceil(
-          (expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        if (daysUntil >= 0 && daysUntil <= 30) {
-          issues.push({
-            entityId: breakdown.entityId,
-            entityName: breakdown.entityName,
-            type: 'expiring_soon',
-            severity: 'warning',
-            description: `Certificate expires in ${daysUntil} day${daysUntil === 1 ? '' : 's'} (${breakdown.earliestExpiration})`,
-          });
-        }
-      }
-
-      // Warning: insufficient limits
-      const insufficientGaps = breakdown.coverageGaps.filter(
-        (g) => g.gapType === 'insufficient'
-      );
-      for (const gap of insufficientGaps) {
-        issues.push({
-          entityId: breakdown.entityId,
-          entityName: breakdown.entityName,
-          type: 'insufficient_coverage',
-          severity: 'warning',
-          description: gap.gapDescription,
-        });
-      }
-
-      // Warning: missing endorsements
-      const endorsementGaps = breakdown.coverageGaps.filter(
-        (g) => g.gapType === 'endorsement'
-      );
-      for (const gap of endorsementGaps) {
-        issues.push({
-          entityId: breakdown.entityId,
-          entityName: breakdown.entityName,
-          type: 'missing_endorsement',
-          severity: 'warning',
-          description: gap.gapDescription,
-        });
-      }
-    }
-
-    // Sort: critical first, then warning; within same severity, by entity name
-    issues.sort((a, b) => {
-      if (a.severity !== b.severity) return a.severity === 'critical' ? -1 : 1;
-      return a.entityName.localeCompare(b.entityName);
-    });
-
-    // ---- 8. Build vendor-by-vendor breakdown ----
     interface VendorCoverage {
       coverageType: string;
       coverageTypeLabel: string;
@@ -421,16 +312,14 @@ export async function GET() {
       isExpired: boolean;
     }
 
-    interface VendorRequirement {
+    interface VendorGap {
       coverageType: string;
       coverageTypeLabel: string;
-      minimumLimit: number | null;
-      limitType: string | null;
-      requiresAdditionalInsured: boolean;
-      requiresWaiverOfSubrogation: boolean;
-      status: 'met' | 'not_met' | 'missing' | 'not_required';
-      gapDescription: string | null;
+      gapType: string;
+      requiredLimit: number | null;
+      foundLimit: number | null;
       dollarGap: number | null;
+      description: string;
     }
 
     interface VendorBreakdown {
@@ -443,31 +332,52 @@ export async function GET() {
       complianceStatus: ComplianceStatus;
       totalExposure: number;
       coveragesOnFile: VendorCoverage[];
-      requirements: VendorRequirement[];
-      gaps: Array<{
-        coverageType: string;
-        coverageTypeLabel: string;
-        gapType: string;
-        requiredLimit: number | null;
-        foundLimit: number | null;
-        dollarGap: number | null;
-        description: string;
-      }>;
+      requirements: EvaluatedRequirement[];
+      gaps: VendorGap[];
     }
 
     const now = new Date();
     now.setHours(0, 0, 0, 0);
 
+    interface Issue {
+      entityId: string;
+      entityName: string;
+      type: string;
+      severity: 'critical' | 'warning';
+      description: string;
+    }
+
+    const issues: Issue[] = [];
+
+    // Coverage type aggregation
+    const coverageTypeAgg = new Map<string, {
+      coverageType: string;
+      coverageTypeLabel: string;
+      entityCount: number;
+      totalExposure: number;
+      missingCount: number;
+      insufficientCount: number;
+      endorsementGapCount: number;
+    }>();
+
+    let totalExposure = 0;
+    let totalGaps = 0;
+    let compliantCount = 0;
+    let nonCompliantCount = 0;
+    let expiredCount = 0;
+    let needsSetupCount = 0;
+    let expiringIn30Days = 0;
+    let missingEndorsementCount = 0;
+
     const vendors: VendorBreakdown[] = (entities as EntityRow[]).map((entity) => {
       const cert = entityCertMap.get(entity.id);
       const certId = cert?.id;
       const coverages = certId ? (coveragesByCert.get(certId) ?? []) : [];
-      const compResults = certId ? (complianceByCert.get(certId) ?? []) : [];
       const templateReqs = entity.template_id
         ? (requirementsByTemplate.get(entity.template_id) ?? [])
         : [];
 
-      // Inferred vendor type: prefer entity-level, fall back to certificate-level
+      // Inferred vendor type
       const inferredType =
         (entity.entity_category as VendorType | null) ??
         (cert?.inferred_vendor_type as VendorType | null) ??
@@ -495,55 +405,196 @@ export async function GET() {
         };
       });
 
-      // Build requirement → compliance result mapping
-      const resultByReqId = new Map<string, ComplianceResult>();
-      for (const cr of compResults) {
-        if (cr.coverage_requirement_id) {
-          resultByReqId.set(cr.coverage_requirement_id, cr);
+      // Check expiration status
+      const expiredCoverageTypes: string[] = [];
+      let activeCoverageCount = 0;
+      for (const cov of coverages) {
+        if (cov.expiration_date) {
+          const expDate = new Date(cov.expiration_date + 'T00:00:00');
+          if (expDate < now) {
+            const label = formatCoverageType(cov.coverage_type);
+            if (!expiredCoverageTypes.includes(label)) {
+              expiredCoverageTypes.push(label);
+            }
+          } else {
+            activeCoverageCount++;
+          }
         }
       }
 
-      // Get the risk breakdown for gap data
-      const riskBreakdown = risk.perEntityBreakdown.find(
-        (b) => b.entityId === entity.id
-      );
+      const hasExpired = expiredCoverageTypes.length > 0;
+      const isFullyExpired = hasExpired && activeCoverageCount === 0 && coverages.length > 0;
+      const isPartiallyExpired = hasExpired && activeCoverageCount > 0;
 
-      // Build requirements with status
-      const requirements: VendorRequirement[] = templateReqs.map((req) => {
-        const result = resultByReqId.get(req.id);
-        const matchingGap = riskBreakdown?.coverageGaps.find(
-          (g) =>
-            g.coverageType === req.coverage_type &&
-            (g.limitType === req.limit_type || g.limitType === null)
-        );
-
-        return {
-          coverageType: req.coverage_type,
-          coverageTypeLabel: formatCoverageType(req.coverage_type),
-          minimumLimit: req.minimum_limit,
-          limitType: req.limit_type,
-          requiresAdditionalInsured: req.requires_additional_insured ?? false,
-          requiresWaiverOfSubrogation: req.requires_waiver_of_subrogation ?? false,
-          status: (result?.status as VendorRequirement['status']) ?? 'missing',
-          gapDescription: result?.gap_description ?? null,
-          dollarGap: matchingGap?.dollarGap ?? null,
-        };
+      // Check if expiring within 30 days
+      const threshold30d = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const isExpiringSoon = coverages.some((c) => {
+        if (!c.expiration_date) return false;
+        const exp = new Date(c.expiration_date + 'T00:00:00');
+        return exp >= now && exp <= threshold30d;
       });
 
-      // Build gaps list from risk breakdown
-      const gaps = (riskBreakdown?.coverageGaps ?? []).map((g) => ({
-        coverageType: g.coverageType,
-        coverageTypeLabel: g.coverageTypeLabel,
-        gapType: g.gapType,
-        requiredLimit: g.requiredLimit,
-        foundLimit: g.foundLimit,
-        dollarGap: g.dollarGap,
-        description: g.gapDescription,
-      }));
+      // ---- Inline evaluate each requirement ----
+      const evaluatedReqs = templateReqs.map((req) =>
+        evaluateRequirement(req, coverages)
+      );
 
-      // Use the derived compliance status from entityComplianceData (not the DB field)
-      const derivedStatus = entityComplianceData.find((e) => e.entityId === entity.id)?.complianceStatus
-        ?? (entity.compliance_status as ComplianceStatus);
+      // Build gaps from evaluated requirements
+      const gaps: VendorGap[] = [];
+      let vendorExposure = 0;
+      let vendorHasEndorsementGap = false;
+
+      for (const req of evaluatedReqs) {
+        if (req.status === 'met' || req.status === 'not_required') continue;
+
+        const gapType = req.status === 'missing' ? 'missing'
+          : (req.gapDescription?.includes('Additional Insured') ||
+             req.gapDescription?.includes('Waiver of Subrogation'))
+            ? 'endorsement'
+            : 'insufficient';
+
+        // Find matching coverage for gap detail
+        const covTypes = coverages.map((c) => c.coverage_type);
+        const match = findBestCoverageMatch(req.coverageType, covTypes);
+        const foundLimit = match ? coverages[match.index].limit_amount : null;
+
+        gaps.push({
+          coverageType: req.coverageType,
+          coverageTypeLabel: req.coverageTypeLabel,
+          gapType,
+          requiredLimit: req.minimumLimit,
+          foundLimit,
+          dollarGap: req.dollarGap,
+          description: req.gapDescription ?? `${req.coverageTypeLabel} — Requirement not met`,
+        });
+
+        if (req.dollarGap != null && req.dollarGap > 0) {
+          vendorExposure += req.dollarGap;
+        }
+
+        if (gapType === 'endorsement') {
+          vendorHasEndorsementGap = true;
+        }
+
+        // Aggregate by coverage type
+        const key = req.coverageType;
+        if (!coverageTypeAgg.has(key)) {
+          coverageTypeAgg.set(key, {
+            coverageType: key,
+            coverageTypeLabel: req.coverageTypeLabel,
+            entityCount: 0,
+            totalExposure: 0,
+            missingCount: 0,
+            insufficientCount: 0,
+            endorsementGapCount: 0,
+          });
+        }
+        const agg = coverageTypeAgg.get(key)!;
+        agg.entityCount++;
+        if (req.dollarGap != null) agg.totalExposure += req.dollarGap;
+        if (gapType === 'missing') agg.missingCount++;
+        if (gapType === 'insufficient') agg.insufficientCount++;
+        if (gapType === 'endorsement') agg.endorsementGapCount++;
+      }
+
+      totalExposure += vendorExposure;
+      totalGaps += gaps.length;
+
+      // ---- Derive compliance status ----
+      let complianceStatus: ComplianceStatus;
+
+      if (templateReqs.length === 0) {
+        // No template → needs setup
+        complianceStatus = 'needs_setup';
+        needsSetupCount++;
+      } else if (isFullyExpired) {
+        complianceStatus = 'expired';
+        expiredCount++;
+      } else if (gaps.length > 0 || isPartiallyExpired) {
+        complianceStatus = 'non_compliant';
+        nonCompliantCount++;
+        if (isPartiallyExpired) expiredCount++;
+      } else if (isExpiringSoon) {
+        complianceStatus = 'expiring_soon';
+        compliantCount++; // still compliant, just warning
+        expiringIn30Days++;
+      } else {
+        complianceStatus = 'compliant';
+        compliantCount++;
+      }
+
+      if (vendorHasEndorsementGap) missingEndorsementCount++;
+
+      // ---- Build issues for this vendor ----
+      if (isFullyExpired) {
+        issues.push({
+          entityId: entity.id,
+          entityName: entity.name,
+          type: 'expired_policy',
+          severity: 'critical',
+          description: 'All coverages on file are expired — request updated COI immediately',
+        });
+      } else if (isPartiallyExpired) {
+        issues.push({
+          entityId: entity.id,
+          entityName: entity.name,
+          type: 'expired_coverage',
+          severity: 'critical',
+          description: `Expired coverages: ${expiredCoverageTypes.join(', ')}`,
+        });
+      }
+
+      for (const gap of gaps) {
+        if (gap.gapType === 'missing') {
+          issues.push({
+            entityId: entity.id,
+            entityName: entity.name,
+            type: 'missing_coverage',
+            severity: 'critical',
+            description: gap.description,
+          });
+        } else if (gap.gapType === 'insufficient') {
+          issues.push({
+            entityId: entity.id,
+            entityName: entity.name,
+            type: 'insufficient_coverage',
+            severity: 'warning',
+            description: gap.description,
+          });
+        } else if (gap.gapType === 'endorsement') {
+          issues.push({
+            entityId: entity.id,
+            entityName: entity.name,
+            type: 'missing_endorsement',
+            severity: 'warning',
+            description: gap.description,
+          });
+        }
+      }
+
+      if (isExpiringSoon && !isFullyExpired && !isPartiallyExpired) {
+        const earliest = coverages.reduce<string | null>((min, c) => {
+          if (!c.expiration_date) return min;
+          const exp = new Date(c.expiration_date + 'T00:00:00');
+          if (exp < now) return min; // already expired
+          if (!min) return c.expiration_date;
+          return c.expiration_date < min ? c.expiration_date : min;
+        }, null);
+
+        if (earliest) {
+          const expDate = new Date(earliest + 'T00:00:00');
+          const daysUntil = Math.ceil(
+            (expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+          );
+          issues.push({
+            entityId: entity.id,
+            entityName: entity.name,
+            type: 'expiring_soon',
+            severity: 'warning',
+            description: `Certificate expires in ${daysUntil} day${daysUntil === 1 ? '' : 's'} (${earliest})`,
+          });
+        }
+      }
 
       return {
         entityId: entity.id,
@@ -554,15 +605,68 @@ export async function GET() {
           ? (VENDOR_TYPE_LABELS[inferredType] ?? inferredType)
           : null,
         vendorTypeNeedsReview: needsReview,
-        complianceStatus: derivedStatus,
-        totalExposure: riskBreakdown?.totalExposure ?? 0,
+        complianceStatus,
+        totalExposure: vendorExposure,
         coveragesOnFile,
-        requirements,
+        requirements: evaluatedReqs,
         gaps,
       };
     });
 
-    // ---- 9. Build needs-review list ----
+    // Sort issues: critical first, then warning; within same severity, by entity name
+    issues.sort((a, b) => {
+      if (a.severity !== b.severity) return a.severity === 'critical' ? -1 : 1;
+      return a.entityName.localeCompare(b.entityName);
+    });
+
+    // ---- 6. Build recommended actions for ALL non-compliant/needs-setup vendors ----
+    const recommendedActions = vendors
+      .filter((v) => v.complianceStatus !== 'compliant' && v.complianceStatus !== 'expiring_soon')
+      .sort((a, b) => {
+        // Expired first
+        const aExp = a.complianceStatus === 'expired' ? 2 : 0;
+        const bExp = b.complianceStatus === 'expired' ? 2 : 0;
+        if (aExp !== bExp) return bExp - aExp;
+        // Then by exposure
+        return b.totalExposure - a.totalExposure;
+      })
+      .map((v) => {
+        let action: string;
+        if (v.complianceStatus === 'expired') {
+          action = 'Request updated certificate — current COI is expired';
+        } else if (v.complianceStatus === 'needs_setup') {
+          action = 'Assign a requirements template to evaluate compliance';
+        } else {
+          const missing = v.gaps.filter((g) => g.gapType === 'missing').map((g) => g.coverageTypeLabel);
+          const insufficient = v.gaps.filter((g) => g.gapType === 'insufficient').map((g) => g.coverageTypeLabel);
+          const endorsement = v.gaps.filter((g) => g.gapType === 'endorsement').map((g) => g.coverageTypeLabel);
+          const parts: string[] = [];
+          if (missing.length > 0) parts.push(`Obtain missing coverage: ${missing.join(', ')}`);
+          if (insufficient.length > 0) parts.push(`Increase limits: ${insufficient.join(', ')}`);
+          if (endorsement.length > 0) parts.push(`Add endorsements: ${endorsement.join(', ')}`);
+          action = parts.join('. ') || 'Review compliance gaps';
+        }
+
+        return {
+          entityId: v.entityId,
+          entityName: v.entityName,
+          entityType: v.entityType,
+          propertyName: null as string | null,
+          severity: v.complianceStatus === 'expired'
+            ? ('critical' as const)
+            : v.totalExposure > 0
+              ? ('warning' as const)
+              : ('info' as const),
+          totalExposure: v.totalExposure,
+          action,
+          topGaps: v.gaps
+            .sort((a, b) => (b.dollarGap ?? 0) - (a.dollarGap ?? 0))
+            .slice(0, 3)
+            .map((g) => g.description),
+        };
+      });
+
+    // ---- 7. Build needs-review list ----
     const needsReview = vendors
       .filter((v) => v.vendorTypeNeedsReview)
       .map((v) => ({
@@ -572,56 +676,46 @@ export async function GET() {
         inferredVendorTypeLabel: v.inferredVendorTypeLabel,
       }));
 
-    // ---- 10. Build recommended actions from risk quantification ----
-    const recommendedActions = risk.topPriorityActions.map((action) => ({
-      entityId: action.entityId,
-      entityName: action.entityName,
-      entityType: action.entityType,
-      propertyName: action.propertyName,
-      severity: action.isExpired
-        ? ('critical' as const)
-        : action.totalExposure > 0
-          ? ('warning' as const)
-          : ('info' as const),
-      totalExposure: action.totalExposure,
-      action: action.action,
-      topGaps: action.topGaps,
-    }));
-
-    // ---- 11. Total gaps count ----
-    const totalGaps = risk.perEntityBreakdown.reduce(
-      (sum, e) => sum + e.coverageGaps.length,
-      0
+    // ---- 8. Coverage breakdown sorted by exposure ----
+    const coverageBreakdown = [...coverageTypeAgg.values()].sort(
+      (a, b) => b.totalExposure - a.totalExposure
     );
 
-    // ---- 12. Log activity ----
+    // ---- 9. Compute summary ----
+    const totalEntities = vendors.length;
+    const evaluableCount = totalEntities - needsSetupCount;
+    const complianceScore = evaluableCount > 0
+      ? Math.round((compliantCount / evaluableCount) * 10000) / 100
+      : 100;
+
+    // ---- 10. Log activity ----
     await supabase.from('activity_log').insert({
       organization_id: orgId,
       action: 'compliance_report_generated',
-      description: `Compliance report generated — ${risk.entityCount} entities, ${risk.complianceRate}% compliance rate`,
+      description: `Compliance report generated — ${totalEntities} entities, ${complianceScore}% compliance rate`,
       performed_by: userId,
     });
 
-    // ---- 13. Return JSON response ----
+    // ---- 11. Return JSON response ----
     return NextResponse.json({
       generatedAt: new Date().toISOString(),
       organizationName: orgName,
       summary: {
-        totalEntities: risk.entityCount,
-        compliantCount: risk.entityCount - risk.nonCompliantCount - risk.needsSetupCount - risk.underReviewCount,
-        nonCompliantCount: risk.nonCompliantCount,
-        complianceScore: risk.complianceRate,
+        totalEntities,
+        compliantCount,
+        nonCompliantCount,
+        complianceScore,
         totalGaps,
-        totalExposure: risk.totalExposureGap,
-        expiredCount: risk.expiredCount,
-        expiringIn30Days: risk.expiringIn30Days,
-        needsSetupCount: risk.needsSetupCount,
-        underReviewCount: risk.underReviewCount,
-        missingEndorsementCount: risk.missingEndorsementCount,
+        totalExposure,
+        expiredCount,
+        expiringIn30Days,
+        needsSetupCount,
+        underReviewCount: 0,
+        missingEndorsementCount,
       },
       issues,
       vendors,
-      coverageBreakdown: risk.perCoverageTypeBreakdown,
+      coverageBreakdown,
       recommendedActions,
       needsReview,
     });

@@ -162,6 +162,36 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Compliance Report — All 7 Bugs Fixed (Apr 2026)
+
+Comprehensive fix for `/api/reports/compliance` and the report page at `/report/[reportId]`. The API was completely rewritten to evaluate compliance INLINE instead of relying on stale `compliance_results` or entity DB fields.
+
+**Root cause:** The batch extraction pipeline creates templates AFTER compliance runs (`autoApplyRecommendedTemplate` runs after `autoAssignCertificateToEntity → runAutoCompliance`). The compliance_results reference the old (or no) template's requirement IDs. When the report API looked up requirements by ID, all lookups returned `undefined` → everything appeared as "missing" or "needs setup" → 100% score (all entities excluded from evaluation).
+
+**Bugs fixed:**
+
+1. **100% compliance score** — Score now computed from inline evaluation of each requirement against extracted coverages, not from stale `entities.compliance_status` DB field or mismatched `compliance_results`.
+
+2. **Every vendor showed "Needs Setup"** — Status now derived from inline evaluation: any `not_met`/`missing` → non-compliant; all `met` → compliant; no template → needs_setup.
+
+3. **Requirements all showed "MISSING"** — Was using `resultByReqId.get(req.id)` which failed because compliance_results referenced old requirement IDs. Now uses `evaluateRequirement()` which does fuzzy coverage-type matching via `findBestCoverageMatch()` to compare each requirement against actual extracted coverages. GL $1M on file vs GL $2M required → correctly shows "insufficient" (not "missing").
+
+4. **Kastle Systems had no requirements** — Entity with `entity_category='security'` had no template. Template assignment failed silently during batch processing. Vendors with no template now correctly show `needs_setup` with an action item: "Assign a requirements template to evaluate compliance."
+
+5. **$0 dollar exposure** — Exposure now calculated inline: for insufficient coverage, gap = required − actual; for missing coverage, gap = full required amount. Summed across all vendors.
+
+6. **Hero stats contradicted summary stats** — Both now use the same inline-computed counts. `compliantCount`, `nonCompliantCount`, `complianceScore` all derived from the same vendor evaluation loop.
+
+7. **Recommended actions incomplete** — Was limited to `risk.topPriorityActions` (capped at 5 by `quantifyRisk()`). Now builds actions directly from ALL non-compliant and needs-setup vendors, sorted by expired → exposure.
+
+**Architecture change:** The API no longer depends on `quantifyRisk()` or `compliance_results`. Instead:
+- `evaluateRequirement()` — evaluates a single template requirement against extracted coverages using `findBestCoverageMatch()` fuzzy matching
+- Each vendor is processed in a single pass: evaluate requirements → derive status → compute gaps/exposure → build issues
+- The same data feeds hero stats, summary stats, vendor breakdown, issues, and recommended actions
+
+**Files changed:**
+- `src/app/api/reports/compliance/route.ts` — full rewrite with inline evaluation
+
 #### Fix: Compliance Report Showing 100% Despite Real Gaps (Apr 2026)
 
 The compliance report at `/api/reports/compliance` was returning 100% compliance score with no issues even though the `compliance_results` table had real `not_met` gaps.
