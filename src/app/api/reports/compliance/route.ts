@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { formatCoverageType, findBestCoverageMatch } from '@/lib/coverage-utils';
+import { evaluateRequirement } from '@/lib/compliance/evaluate-inline';
+import type { EvaluatedRequirement } from '@/lib/compliance/evaluate-inline';
 import { VENDOR_TYPE_LABELS, type VendorType } from '@/lib/constants/vendor-requirements';
 import type {
   ExtractedCoverage,
@@ -42,100 +44,6 @@ async function getAuth() {
   if (!profile?.organization_id) return null;
 
   return { userId: user.id, orgId: profile.organization_id, supabase };
-}
-
-// ============================================================================
-// Inline requirement evaluation
-// ============================================================================
-
-interface EvaluatedRequirement {
-  coverageType: string;
-  coverageTypeLabel: string;
-  minimumLimit: number | null;
-  limitType: string | null;
-  requiresAdditionalInsured: boolean;
-  requiresWaiverOfSubrogation: boolean;
-  status: 'met' | 'not_met' | 'missing' | 'not_required';
-  gapDescription: string | null;
-  dollarGap: number | null;
-}
-
-/**
- * Evaluate a single requirement against the extracted coverages on file.
- * Returns the status, gap description, and dollar gap.
- */
-function evaluateRequirement(
-  req: TemplateCoverageRequirement,
-  coverages: ExtractedCoverage[],
-): EvaluatedRequirement {
-  const label = formatCoverageType(req.coverage_type);
-  const base = {
-    coverageType: req.coverage_type,
-    coverageTypeLabel: label,
-    minimumLimit: req.minimum_limit,
-    limitType: req.limit_type,
-    requiresAdditionalInsured: req.requires_additional_insured ?? false,
-    requiresWaiverOfSubrogation: req.requires_waiver_of_subrogation ?? false,
-  };
-
-  if (!req.is_required) {
-    return { ...base, status: 'not_required', gapDescription: null, dollarGap: null };
-  }
-
-  // Find matching coverage using fuzzy matching
-  const coverageTypes = coverages.map((c) => c.coverage_type);
-  const match = findBestCoverageMatch(req.coverage_type, coverageTypes);
-
-  if (!match) {
-    // No matching coverage on file at all
-    const gap = req.minimum_limit;
-    return {
-      ...base,
-      status: 'missing',
-      gapDescription: gap != null
-        ? `${label} — Missing (full $${gap.toLocaleString()} gap)`
-        : `${label} — Missing`,
-      dollarGap: gap,
-    };
-  }
-
-  const cov = coverages[match.index];
-
-  // Check limit
-  if (req.minimum_limit != null && req.limit_type !== 'statutory') {
-    const foundLimit = cov.limit_amount;
-    if (foundLimit == null || foundLimit < req.minimum_limit) {
-      const gap = req.minimum_limit - (foundLimit ?? 0);
-      return {
-        ...base,
-        status: 'not_met',
-        gapDescription: foundLimit != null
-          ? `${label} — $${foundLimit.toLocaleString()} found, $${req.minimum_limit.toLocaleString()} required (gap: $${gap.toLocaleString()})`
-          : `${label} — Limit not found, $${req.minimum_limit.toLocaleString()} required`,
-        dollarGap: gap > 0 ? gap : 0,
-      };
-    }
-  }
-
-  // Check endorsements
-  const endorsementIssues: string[] = [];
-  if (req.requires_additional_insured && !cov.additional_insured_listed) {
-    endorsementIssues.push('Additional Insured not listed');
-  }
-  if (req.requires_waiver_of_subrogation && !cov.waiver_of_subrogation) {
-    endorsementIssues.push('Waiver of Subrogation not listed');
-  }
-
-  if (endorsementIssues.length > 0) {
-    return {
-      ...base,
-      status: 'not_met',
-      gapDescription: `${label} — ${endorsementIssues.join(', ')}`,
-      dollarGap: null, // endorsement gaps are not dollar-quantifiable
-    };
-  }
-
-  return { ...base, status: 'met', gapDescription: null, dollarGap: null };
 }
 
 // ============================================================================

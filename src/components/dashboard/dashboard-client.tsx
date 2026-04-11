@@ -24,6 +24,7 @@ import {
   Mail,
   CheckCircle2,
   FileCheck,
+  FileBarChart,
   Bell,
   ArrowRight,
   User,
@@ -264,6 +265,12 @@ export function DashboardClient({
             Take a Tour
           </Button>
           <ExportReportButton />
+          <Button variant="outline" size="sm" asChild className="text-emerald-700 border-emerald-200 hover:bg-emerald-50">
+            <Link href="/report/latest">
+              <FileBarChart className="mr-2 h-4 w-4" />
+              View Report
+            </Link>
+          </Button>
           <Button onClick={() => setUploadOpen(true)} data-tour="upload-coi" className="rounded-lg bg-brand text-white font-semibold hover:bg-brand-dark">
             <Upload className="mr-2 h-4 w-4" />
             Upload COI

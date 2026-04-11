@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getTerminology } from '@/lib/constants/terminology';
-import type { Industry, CoveredEntityType, ComplianceStatus } from '@/types';
+import { evaluateEntityCompliance } from '@/lib/compliance/evaluate-inline';
+import { VENDOR_TYPE_LABELS, type VendorType } from '@/lib/constants/vendor-requirements';
+import type { Industry, ComplianceStatus, ExtractedCoverage, TemplateCoverageRequirement } from '@/types';
 
 // ============================================================================
 // Server component — entities list page
@@ -29,7 +31,7 @@ export default async function EntitiesPage() {
     supabase.from('organizations').select('industry').eq('id', orgId).single(),
     supabase
       .from('entities')
-      .select('id, name, entity_type, entity_category, compliance_status, contact_email, property_id, properties(name)')
+      .select('id, name, entity_type, entity_category, compliance_status, template_id, contact_email, property_id, properties(name)')
       .eq('organization_id', orgId)
       .is('deleted_at', null)
       .is('archived_at', null)
@@ -38,16 +40,111 @@ export default async function EntitiesPage() {
 
   const industry = (org?.industry as Industry) ?? null;
   const terms = getTerminology(industry);
-  const allEntities = entities ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allEntities = (entities ?? []) as any[];
 
-  // Status counts
-  const statusCounts: Record<string, number> = {};
-  for (const e of allEntities) {
-    statusCounts[e.compliance_status] = (statusCounts[e.compliance_status] || 0) + 1;
+  // ---- Inline compliance evaluation (same as dashboard + report API) ----
+  const entityIds = allEntities.map((e: { id: string }) => e.id);
+
+  // Find latest certificate per entity
+  let entityCertMap = new Map<string, string>();
+  if (entityIds.length > 0) {
+    const [ec, vc, tc] = await Promise.all([
+      supabase.from('certificates')
+        .select('id, entity_id, vendor_id, tenant_id, uploaded_at')
+        .in('entity_id', entityIds)
+        .in('processing_status', ['processing', 'extracted', 'review_confirmed'])
+        .order('uploaded_at', { ascending: false }),
+      supabase.from('certificates')
+        .select('id, entity_id, vendor_id, tenant_id, uploaded_at')
+        .in('vendor_id', entityIds)
+        .in('processing_status', ['processing', 'extracted', 'review_confirmed'])
+        .order('uploaded_at', { ascending: false }),
+      supabase.from('certificates')
+        .select('id, entity_id, vendor_id, tenant_id, uploaded_at')
+        .in('tenant_id', entityIds)
+        .in('processing_status', ['processing', 'extracted', 'review_confirmed'])
+        .order('uploaded_at', { ascending: false }),
+    ]);
+
+    const allCerts = [...(ec.data ?? []), ...(vc.data ?? []), ...(tc.data ?? [])];
+    entityCertMap = new Map();
+    for (const cert of allCerts) {
+      const eid = cert.entity_id ?? cert.vendor_id ?? cert.tenant_id;
+      if (eid && !entityCertMap.has(eid)) {
+        entityCertMap.set(eid, cert.id);
+      }
+    }
   }
 
-  // Entity type groups
-  const entityTypes = [...new Set(allEntities.map((e) => e.entity_type))];
+  const certIds = [...new Set(entityCertMap.values())];
+  const templateIds = [...new Set(allEntities.map((e: { template_id: string | null }) => e.template_id).filter((id: string | null): id is string => id != null))];
+
+  const [coveragesRes, requirementsRes] = await Promise.all([
+    certIds.length > 0
+      ? supabase.from('extracted_coverages')
+          .select('id, certificate_id, coverage_type, carrier_name, policy_number, limit_amount, limit_type, effective_date, expiration_date, additional_insured_listed, additional_insured_entities, waiver_of_subrogation, confidence_flag, raw_extracted_text, created_at')
+          .in('certificate_id', certIds)
+      : Promise.resolve({ data: [] as ExtractedCoverage[] }),
+    templateIds.length > 0
+      ? supabase.from('template_coverage_requirements')
+          .select('*')
+          .in('template_id', templateIds)
+      : Promise.resolve({ data: [] as TemplateCoverageRequirement[] }),
+  ]);
+
+  const coveragesByCert = new Map<string, ExtractedCoverage[]>();
+  for (const ec of (coveragesRes.data ?? []) as ExtractedCoverage[]) {
+    const list = coveragesByCert.get(ec.certificate_id) ?? [];
+    list.push(ec);
+    coveragesByCert.set(ec.certificate_id, list);
+  }
+
+  const requirementsByTemplate = new Map<string, TemplateCoverageRequirement[]>();
+  for (const req of (requirementsRes.data ?? []) as TemplateCoverageRequirement[]) {
+    const list = requirementsByTemplate.get(req.template_id) ?? [];
+    list.push(req);
+    requirementsByTemplate.set(req.template_id, list);
+  }
+
+  // Build derived status for each entity
+  interface DerivedEntity {
+    id: string;
+    name: string;
+    entityType: string;
+    entityCategory: string | null;
+    propertyName: string | null;
+    contactEmail: string | null;
+    derivedStatus: ComplianceStatus;
+  }
+
+  const derivedEntities: DerivedEntity[] = allEntities.map((e: Record<string, unknown>) => {
+    const certId = entityCertMap.get(e.id as string);
+    const coverages = certId ? (coveragesByCert.get(certId) ?? []) : [];
+    const templateReqs = e.template_id
+      ? (requirementsByTemplate.get(e.template_id as string) ?? [])
+      : [];
+
+    const evaluation = evaluateEntityCompliance(templateReqs, coverages);
+
+    const props = e.properties as { name?: string } | null;
+
+    return {
+      id: e.id as string,
+      name: e.name as string,
+      entityType: e.entity_type as string,
+      entityCategory: (e.entity_category as string | null) ?? null,
+      propertyName: props?.name ?? null,
+      contactEmail: (e.contact_email as string | null) ?? null,
+      derivedStatus: evaluation.complianceStatus,
+    };
+  });
+
+  // Status counts from derived data
+  const statusCounts: Record<string, number> = {};
+  for (const e of derivedEntities) {
+    statusCounts[e.derivedStatus] = (statusCounts[e.derivedStatus] || 0) + 1;
+  }
 
   const entityLabel = terms.hasTenants
     ? `${terms.entityPlural} & ${terms.tenantPlural}`
@@ -59,12 +156,12 @@ export default async function EntitiesPage() {
         <div>
           <h1 className="text-[30px] font-bold text-[#111827]">{entityLabel}</h1>
           <p className="mt-1 text-[13px] text-[#6B7280]">
-            {allEntities.length} {allEntities.length === 1 ? 'entity' : 'entities'} total
+            {derivedEntities.length} {derivedEntities.length === 1 ? 'entity' : 'entities'} total
           </p>
         </div>
       </div>
 
-      {allEntities.length === 0 ? (
+      {derivedEntities.length === 0 ? (
         <div className="rounded-xl border border-[#E5E7EB] bg-white py-20 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#F3F4F6]">
             <svg className="h-6 w-6 text-[#9CA3AF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -88,35 +185,51 @@ export default async function EntitiesPage() {
                 </tr>
               </thead>
               <tbody>
-                {allEntities.map((entity) => {
-                  const propertyName = (entity as Record<string, unknown>).properties
-                    ? ((entity as Record<string, unknown>).properties as Record<string, unknown>)?.name as string
-                    : null;
-                  return (
-                    <tr key={entity.id} className="border-b border-[#F3F4F6] last:border-0 hover:bg-[#F9FAFB] transition-colors">
-                      <td className="px-5 py-3.5">
-                        <a
-                          href={`/dashboard/entities/${entity.id}`}
-                          className="font-medium text-[#111827] hover:text-brand-dark"
-                        >
-                          {entity.name}
-                        </a>
-                      </td>
-                      <td className="px-5 py-3.5 capitalize text-[#374151]">{entity.entity_type}</td>
-                      <td className="px-5 py-3.5 text-[#6B7280]">{propertyName ?? '—'}</td>
-                      <td className="px-5 py-3.5">
-                        <StatusBadge status={entity.compliance_status as ComplianceStatus} />
-                      </td>
-                      <td className="px-5 py-3.5 text-[#6B7280]">{entity.contact_email ?? '—'}</td>
-                    </tr>
-                  );
-                })}
+                {derivedEntities.map((entity) => (
+                  <tr key={entity.id} className="border-b border-[#F3F4F6] last:border-0 hover:bg-[#F9FAFB] transition-colors">
+                    <td className="px-5 py-3.5">
+                      <a
+                        href={`/dashboard/entities/${entity.id}`}
+                        className="font-medium text-[#111827] hover:text-brand-dark"
+                      >
+                        {entity.name}
+                      </a>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <VendorTypeBadge
+                        entityType={entity.entityType}
+                        entityCategory={entity.entityCategory}
+                      />
+                    </td>
+                    <td className="px-5 py-3.5 text-[#6B7280]">{entity.propertyName ?? '—'}</td>
+                    <td className="px-5 py-3.5">
+                      <StatusBadge status={entity.derivedStatus} />
+                    </td>
+                    <td className="px-5 py-3.5 text-[#6B7280]">{entity.contactEmail ?? '—'}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function VendorTypeBadge({ entityType, entityCategory }: { entityType: string; entityCategory: string | null }) {
+  if (entityCategory && entityCategory in VENDOR_TYPE_LABELS) {
+    const label = VENDOR_TYPE_LABELS[entityCategory as VendorType];
+    return (
+      <span className="inline-flex items-center rounded-full bg-[#F3F4F6] px-2.5 py-0.5 text-xs font-medium text-[#374151]">
+        {label}
+      </span>
+    );
+  }
+
+  // Fallback to entity_type
+  return (
+    <span className="capitalize text-[#374151]">{entityType}</span>
   );
 }
 
