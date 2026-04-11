@@ -8,7 +8,7 @@ import { MAX_FILE_SIZE } from '@/lib/utils/file-validation';
 import { checkExtractionLimit } from '@/lib/plan-limits';
 import { getActivePlanStatus, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
 import { createServiceClient } from '@/lib/supabase/service';
-import { autoAssignCertificateToEntity, runAutoCompliance } from '@/lib/actions/certificates';
+import { autoAssignCertificateToEntity } from '@/lib/actions/certificates';
 import { processConcurrentQueue } from '@/lib/utils/concurrent-queue';
 import { sendBatchCompleteEmail } from '@/lib/emails/batch-complete';
 import { withExtractionRetry } from '@/lib/utils/extraction-retry';
@@ -156,12 +156,19 @@ export async function POST(req: NextRequest) {
           onStatusChange: async (index, status, _error, result) => {
             const certId = (certificateIds as string[])[index];
             if (status === 'complete') {
-              await bgService
-                .from('processing_batches')
-                .update({
-                  completed_count: (await getCurrentCounts(bgService, batchId)).completed + 1,
-                })
-                .eq('id', batchId);
+              // Increment completed_count using SQL to avoid read-then-write race
+              await bgService.rpc('increment_batch_completed', { batch_id: batchId }).then(
+                () => {},
+                // Fallback to read-then-write if RPC doesn't exist
+                async () => {
+                  await bgService
+                    .from('processing_batches')
+                    .update({
+                      completed_count: (await getCurrentCounts(bgService, batchId)).completed + 1,
+                    })
+                    .eq('id', batchId);
+                }
+              );
 
               // Auto-assign entity from extraction results
               if (result?.insuredName) {
@@ -176,28 +183,76 @@ export async function POST(req: NextRequest) {
                     vendorTypeNeedsReview: result.vendorTypeNeedsReview ?? undefined,
                   });
 
+                  // Now that entity FKs are set on the certificate, we can
+                  // safely update processing_status to 'extracted'. This was
+                  // deferred from extractSingleCertificate because the
+                  // certificates_has_entity_check constraint requires entity
+                  // FKs when status != 'processing'.
+                  const { error: statusErr } = await bgService
+                    .from('certificates')
+                    .update({ processing_status: 'extracted' })
+                    .eq('id', certId);
+
+                  if (statusErr) {
+                    console.error(`[batch-extract] Failed to set processing_status='extracted' for cert=${certId}:`, statusErr);
+                    Sentry.captureException(new Error(`Certificate status update failed: ${statusErr.message}`), {
+                      tags: { flow: 'batch_extract', certificateId: certId },
+                      extra: { orgId, error: statusErr },
+                    });
+                  }
+
                   // Auto-apply recommended requirements template if entity was newly created
                   if (assignResult && 'entityId' in assignResult && assignResult.entityId && result.inferredVendorType) {
-                    await autoApplyRecommendedTemplate(
-                      bgService,
-                      assignResult.entityId,
-                      orgId,
-                      orgIndustry,
-                      result.inferredVendorType,
-                      batchEntityType,
-                    );
+                    try {
+                      await autoApplyRecommendedTemplate(
+                        bgService,
+                        assignResult.entityId,
+                        orgId,
+                        orgIndustry,
+                        result.inferredVendorType,
+                        batchEntityType,
+                      );
+                    } catch (templateErr) {
+                      console.error(`[batch-extract] autoApplyRecommendedTemplate failed for entity=${assignResult.entityId}:`, templateErr);
+                      Sentry.captureException(templateErr instanceof Error ? templateErr : new Error(String(templateErr)), {
+                        tags: { flow: 'batch_extract', certificateId: certId, entityId: assignResult.entityId },
+                        extra: { orgId, vendorType: result.inferredVendorType },
+                      });
+                    }
                   }
                 } catch (assignErr) {
                   console.error(`[batch-extract] Auto-assign failed for cert=${certId}:`, assignErr);
+                  Sentry.captureException(assignErr instanceof Error ? assignErr : new Error(String(assignErr)), {
+                    tags: { flow: 'batch_extract', certificateId: certId },
+                    extra: { orgId, insuredName: result.insuredName },
+                  });
+                }
+              } else {
+                // No insured name — can't assign entity, but still mark as extracted.
+                // This is a fallback: set processing_status directly. If entity FKs
+                // are still null the CHECK constraint will reject it; log if so.
+                const { error: statusErr } = await bgService
+                  .from('certificates')
+                  .update({ processing_status: 'extracted' })
+                  .eq('id', certId);
+
+                if (statusErr) {
+                  console.error(`[batch-extract] Cannot set extracted status without entity for cert=${certId}:`, statusErr);
                 }
               }
             } else if (status === 'failed') {
-              await bgService
-                .from('processing_batches')
-                .update({
-                  failed_count: (await getCurrentCounts(bgService, batchId)).failed + 1,
-                })
-                .eq('id', batchId);
+              // Increment failed_count using SQL to avoid read-then-write race
+              await bgService.rpc('increment_batch_failed', { batch_id: batchId }).then(
+                () => {},
+                async () => {
+                  await bgService
+                    .from('processing_batches')
+                    .update({
+                      failed_count: (await getCurrentCounts(bgService, batchId)).failed + 1,
+                    })
+                    .eq('id', batchId);
+                }
+              );
             }
           },
         });
@@ -455,11 +510,15 @@ async function extractSingleCertificate(
     }
   }
 
-  // Update certificate status
-  await serviceClient
+  // Update certificate with extraction metadata.
+  // IMPORTANT: Do NOT set processing_status='extracted' here. The
+  // certificates_has_entity_check constraint requires entity FKs when
+  // status != 'processing'. Entity assignment happens later in
+  // onStatusChange → autoAssignCertificateToEntity. The status update
+  // to 'extracted' is applied there after entity FKs are set.
+  const { error: certUpdateErr } = await serviceClient
     .from('certificates')
     .update({
-      processing_status: 'extracted',
       retry_count: retryResult.attempts,
       last_error: null,
       ...(result.insuredName ? { insured_name: result.insuredName } : {}),
@@ -468,6 +527,14 @@ async function extractSingleCertificate(
       vendor_type_needs_review: result.vendorTypeNeedsReview ?? false,
     })
     .eq('id', certificateId);
+
+  if (certUpdateErr) {
+    console.error(`[batch-extract] Failed to update cert metadata for cert=${certificateId}:`, certUpdateErr);
+    Sentry.captureException(new Error(`Certificate metadata update failed: ${certUpdateErr.message}`), {
+      tags: { flow: 'batch_extract', certificateId },
+      extra: { orgId, error: certUpdateErr },
+    });
+  }
 
   // Log activity
   await serviceClient.from('activity_log').insert({
@@ -481,12 +548,9 @@ async function extractSingleCertificate(
     performed_by: userId,
   });
 
-  // Run compliance
-  try {
-    await runAutoCompliance(certificateId, orgId);
-  } catch (compErr) {
-    console.error(`[batch-extract] Auto-compliance failed for cert=${certificateId}:`, compErr);
-  }
+  // NOTE: Compliance is NOT run here. It runs inside autoAssignCertificateToEntity()
+  // (called from onStatusChange) after entity FKs are set on the certificate.
+  // Running it here would fail because the cert has no entity assigned yet.
 
   return {
     coverages: result.coverages.length,

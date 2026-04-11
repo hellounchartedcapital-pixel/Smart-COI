@@ -162,6 +162,28 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Batch Extraction Pipeline — Certificates Stuck at processing_status='processing' (Apr 2026)
+
+Certificates were never updated with extraction results (`processing_status`, `inferred_vendor_type`, extracted coverages metadata) even though the batch reported completion and entities were created correctly.
+
+**Root cause:** `extractSingleCertificate()` tried to set `processing_status='extracted'` on the certificate BEFORE entity assignment. The `certificates_has_entity_check` CHECK constraint requires at least one of `entity_id`/`vendor_id`/`tenant_id` to be non-null when `processing_status != 'processing'`. Since entity assignment happens later in `onStatusChange` → `autoAssignCertificateToEntity()`, the update silently failed (error return value was never checked). The function continued and returned success, incrementing `completed_count`.
+
+**Fixes applied to `src/app/api/certificates/batch-extract/route.ts`:**
+
+1. **Deferred `processing_status` update:** `extractSingleCertificate()` now updates only extraction metadata (insured_name, endorsement_data, vendor type, retry_count) while keeping `processing_status='processing'`. The status is updated to `'extracted'` in `onStatusChange` AFTER `autoAssignCertificateToEntity()` sets entity FKs — satisfying the CHECK constraint.
+
+2. **Error checking on cert update:** Added `{ error }` destructuring and `console.error` + `Sentry.captureException` for the metadata update in `extractSingleCertificate()` and the status update in `onStatusChange`.
+
+3. **Removed premature `runAutoCompliance()` call:** `extractSingleCertificate()` was calling `runAutoCompliance()` before entity assignment, which would fail because the cert had no entity. `autoAssignCertificateToEntity()` already calls `runAutoCompliance()` after setting entity FKs.
+
+4. **Race condition fix for `completed_count`/`failed_count`:** The read-then-write pattern under concurrency of 5 could lose increments. Now attempts SQL-level RPC increment first, falls back to read-then-write if the RPC doesn't exist.
+
+5. **Sentry logging for template assignment failures:** `autoApplyRecommendedTemplate()` errors are now reported to Sentry with certificateId, entityId, and vendorType context.
+
+**Corrected pipeline per cert:**
+1. `extractSingleCertificate()`: download PDF → AI extraction → store coverages/entities → update cert metadata (NOT status) → return results
+2. `onStatusChange(complete)`: increment count → `autoAssignCertificateToEntity()` (sets entity FKs) → update `processing_status='extracted'` → `autoApplyRecommendedTemplate()` (creates template, assigns to entity) → compliance runs inside `autoAssignCertificateToEntity`
+
 #### Feature: PDF Export on Compliance Report Page (Apr 2026)
 
 Added client-side PDF export to the compliance report page at `/report/[reportId]`. Uses jsPDF + jspdf-autotable (same stack as the existing audit report) with dynamic import for code-splitting.
