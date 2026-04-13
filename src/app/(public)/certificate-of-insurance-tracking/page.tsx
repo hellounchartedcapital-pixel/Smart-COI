@@ -43,7 +43,7 @@ export default function CertificateOfInsuranceTrackingPage() {
               href="/signup"
               className="inline-flex h-12 items-center rounded-xl bg-slate-950 px-8 text-sm font-semibold text-white shadow-lg shadow-slate-950/20 transition-all hover:bg-slate-800"
             >
-              Upload 50 COIs Free
+              Upload Your COIs Free
             </Link>
           </div>
         </section>
@@ -215,13 +215,13 @@ export default function CertificateOfInsuranceTrackingPage() {
             </h2>
             <p className="mt-4 text-slate-400">
               Stop spending hours on manual certificate review.
-              Start your free trial and see compliance results in seconds.
+              Upload your COIs and see compliance results in seconds — first report free.
             </p>
             <Link
               href="/signup"
               className="mt-8 inline-flex h-12 items-center rounded-xl bg-[#73E2A7] px-8 text-sm font-bold text-slate-950 shadow-lg shadow-[#73E2A7]/20 transition-all hover:bg-[#4CC78A]"
             >
-              Upload 50 COIs Free
+              Upload Your COIs Free
             </Link>
           </div>
         </section>

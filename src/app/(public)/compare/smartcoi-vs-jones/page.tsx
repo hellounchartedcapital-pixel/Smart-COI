@@ -112,8 +112,8 @@ export default function SmartCOIvsJonesPage() {
             </p>
             <p>
               <strong className="text-slate-950">No sales call required.</strong> For firms that want
-              to evaluate software on their own terms, SmartCOI&apos;s free trial lets you test
-              the full platform with your actual certificates before making a decision.
+              to evaluate software on their own terms, SmartCOI lets you upload your actual
+              certificates and get a full compliance report for free — before you pay anything.
             </p>
           </div>
         </section>

@@ -245,7 +245,7 @@ export default async function CoverageGuidePage({ params }: PageProps) {
               href="/signup"
               className="mt-8 inline-flex rounded-lg bg-[#4CC78A] px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#3db577] transition"
             >
-              Start Free Trial
+              Upload Your COIs Free
             </Link>
           </div>
         </section>

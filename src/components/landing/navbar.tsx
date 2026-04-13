@@ -15,7 +15,7 @@ const resourceLinks = [
   { label: 'Blog', href: '/blog', desc: 'Insights on COI compliance' },
   { label: 'COI Compliance Guide', href: '/blog/coi-compliance-guide-property-managers', desc: 'The complete compliance guide' },
   { label: 'Compare Solutions', href: '/compare', desc: 'See how SmartCOI stacks up' },
-  { label: 'Get a COI Audit', href: '/audit', desc: 'Full compliance report in 48 hours' },
+  { label: 'Free Compliance Report', href: '/signup', desc: 'Upload your COIs — your first report is free' },
 ];
 
 export function Navbar() {
@@ -128,7 +128,7 @@ export function Navbar() {
             href="/signup"
             className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-brand-dark"
           >
-            Get Started
+            Upload Your COIs Free
           </Link>
         </div>
 
@@ -201,7 +201,7 @@ export function Navbar() {
               onClick={() => setMobileOpen(false)}
               className="rounded-lg bg-brand px-4 py-2.5 text-center text-sm font-semibold text-slate-950"
             >
-              Get Started
+              Upload Your COIs Free
             </Link>
           </div>
         </div>

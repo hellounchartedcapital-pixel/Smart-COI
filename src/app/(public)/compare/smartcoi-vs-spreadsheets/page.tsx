@@ -241,7 +241,7 @@ export default function SmartCOIvsSpreadsheetsPage() {
               Ready to Upgrade from Spreadsheets?
             </h2>
             <p className="mt-4 text-slate-400">
-              Start your free trial and see the difference in minutes. No credit card required.
+              Upload your COIs and see the difference in minutes. First compliance report is free — no credit card required.
             </p>
             <Link
               href="/signup"
