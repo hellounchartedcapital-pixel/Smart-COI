@@ -1,6 +1,6 @@
 # SmartCOI
 
-*Last updated: April 10, 2026*
+*Last updated: April 13, 2026*
 
 SmartCOI — B2B SaaS platform automating Certificate of Insurance (COI) compliance tracking. Supports Property Management, Construction, Logistics, Healthcare, Manufacturing, Hospitality, Retail, and Other industries. Automates COI collection, AI extraction, compliance verification, and vendor/tenant follow-up notifications.
 
@@ -161,6 +161,65 @@ SmartCOI now supports 8 industries. Key architectural components:
 - Enterprise tier or custom pricing
 
 ### Recent Changes
+
+#### Feature: Freemium Landing Page Repositioning (Apr 2026)
+
+Repositioned the landing page and site-wide messaging around the new freemium model: the first compliance report is free (no credit card), paid tiers cover continuous monitoring, automation, and unlimited usage. The landing page now leads with a report preview instead of a dashboard preview.
+
+**Landing page changes (`src/app/page.tsx`):**
+- **Hero** — new headline "Upload Your COIs. See Your Compliance Gaps in Minutes." Subheadline emphasizes AI analysis of coverages, expirations, additional insured, endorsements — free for first report. Primary CTA button: "Upload Your COIs Free" → `/signup`. Secondary CTA: "See How It Works". Added "First compliance report is free — no credit card" badge above the headline. Sub-CTA microcopy updated to "No credit card. No limits on the first report. Report ready in minutes."
+- **Report preview mockup** — replaced the dashboard hero mockup with a new `ReportPreviewMockup` component that renders a styled static mock of a SmartCOI compliance report: browser chrome, header (org name, 42 entities, 38 certs analyzed), donut compliance score (67%), 4-stat grid (exposure $2.4M, gaps, expired, expiring), critical issues list with 3 sample rows (Delta Mechanical expired, Apex Roofing missing WC, Kastle $500K gap), vendor breakdown table with status pills (compliant/non-compliant/expired/expiring), and a "full report includes 42 vendors" continuation hint. Soft emerald glow backdrop matches brand palette.
+- **How It Works** — expanded from 3 steps to 4. Step 1: Upload certificates (drag & drop, any format, any quantity). Step 2: AI analyzes everything (vendor types, coverage, gaps). Step 3: Get your report (full breakdown, action items, risk exposure). Step 4 (subtle, dashed border, lighter styling): "Activate monitoring when you're ready" with link to pricing.
+- **Pricing section** — replaced the inline 3-tier pricing with a new `PricingTiers` client component that shows 4 tiers: **Free** (one compliance report, no credit card), **Monitor** $79/mo (highlighted as Most Popular, 50 certs, continuous tracking), **Automate** $149/mo (150 certs, automated renewals), **Full Platform** $249/mo (unlimited, priority support). Annual pricing toggle with 20% discount (Monthly ↔ Annual). Lead-in banner: "Your first report is free — no limits, no credit card". Value anchor line: "Manual compliance tracking costs ~15 hours/month and leaves gaps. SmartCOI does it in minutes."
+- **Founder credibility** — moved from the audit page pattern into the landing page. Updated copy to match freemium positioning: "…upload your COIs, see your exposure in minutes, and only pay when you're ready to put compliance on autopilot."
+- **Final CTA** — replaced generic trial CTA with "Your first compliance report is on us" headline, "Upload Your COIs Free" button.
+- **Metadata** — updated page title to "SmartCOI — Upload COIs, Get a Free Compliance Report in Minutes" and JSON-LD SoftwareApplication offer price to $0.
+- Removed the old "Not Ready for Software? Start With a Free Compliance Assessment" section (now redundant with the primary free-report offer).
+
+**New components:**
+- `src/components/landing/report-preview-mockup.tsx` — server component, static styled mockup of a compliance report. Includes donut score SVG, stats grid, critical issues list, vendor breakdown table, and a `StatusPill` helper for compliance status rendering.
+- `src/components/landing/pricing-tiers.tsx` — client component with monthly/annual toggle and 4-tier grid. Free tier uses a dark CTA style, Monitor uses the brand emerald "Most Popular" style with a top-center badge and shadow glow, other tiers use a neutral outline style.
+
+**Navbar changes (`src/components/landing/navbar.tsx`):**
+- Removed "Get a COI Audit" link from Resources dropdown. Replaced with "Free Compliance Report" → `/signup`.
+- Updated desktop and mobile CTA button label from "Get Started" to "Upload Your COIs Free".
+
+**Footer changes (`src/components/landing/footer.tsx`):**
+- Removed "COI Audit Service" link from the Resources column. Kept "Free Assessment" (different service).
+
+**Site-wide CTA updates** — replaced "Upload 50 COIs Free", "Start Free Trial", and "Get Started Free" CTAs with "Upload Your COIs Free" across 13 files:
+- `src/app/(public)/vendor-insurance-compliance/page.tsx`
+- `src/app/(public)/tenant-insurance-tracking/page.tsx` (plus updated subcopy "Start your free trial today." → "Your first compliance report is on us — no credit card required.")
+- `src/app/(public)/alternatives/jones/page.tsx`
+- `src/app/(public)/alternatives/mycoi/page.tsx`
+- `src/app/(public)/certificate-of-insurance-tracking/page.tsx` (plus subheader copy update)
+- `src/app/(public)/coi-tracking-software/page.tsx`
+- `src/app/(public)/ai-coi-extraction/page.tsx`
+- `src/app/(public)/for/[vertical]/page.tsx` (hero + pricing tier CTAs)
+- `src/app/(public)/insurance-requirements/page.tsx`
+- `src/app/(public)/insurance-requirements/[property]/page.tsx`
+- `src/app/(public)/insurance-requirements/[property]/[coverage]/page.tsx`
+- `src/app/(public)/insurance-requirements/coverage/[slug]/page.tsx`
+- `src/app/features/coi-tracking/page.tsx`
+- `src/app/features/compliance-automation/page.tsx`
+- `src/app/features/vendor-management/page.tsx`
+
+**Compare page messaging updates:**
+- `compare/smartcoi-vs-spreadsheets/page.tsx` — "Start your free trial and see the difference in minutes…" → "Upload your COIs and see the difference in minutes. First compliance report is free…"
+- `compare/smartcoi-vs-jones/page.tsx` — "SmartCOI's free trial lets you test the full platform…" → "SmartCOI lets you upload your actual certificates and get a full compliance report for free — before you pay anything."
+
+**Blog post CTA updates** (4 MDX files) — replaced "Start a free trial" / "try it free for 14 days" inline links with "Upload your COIs free" referencing the free first report:
+- `src/content/blog/acord-25-certificate-explained.mdx`
+- `src/content/blog/how-to-set-insurance-requirements-commercial-real-estate.mdx`
+- `src/content/blog/what-is-additional-insured-commercial-real-estate.mdx`
+- `src/content/blog/waiver-of-subrogation-property-managers.mdx`
+
+**Kept as-is per brief:**
+- `/audit` page itself still exists (only the navbar + footer links were removed). Route continues to be reachable via direct URL and middleware public routes.
+- SEO content pages, blog posts, and compare pages retain their content — only CTAs/copy were touched.
+- `free-assessment` page retained with its footer link intact.
+
+**Build verification:** `npx next build` passes cleanly after the repositioning. TypeScript and ESLint both report no errors on the new components.
 
 #### Fix: Batch Pipeline Template Edge Case + Backfill (Apr 2026)
 

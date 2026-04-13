@@ -4,6 +4,8 @@ import { Navbar } from '@/components/landing/navbar';
 import { Footer } from '@/components/landing/footer';
 import { FAQSection } from '@/components/landing/faq-section';
 import { ComparisonTable } from '@/components/landing/comparison-table';
+import { ReportPreviewMockup } from '@/components/landing/report-preview-mockup';
+import { PricingTiers } from '@/components/landing/pricing-tiers';
 import {
   Building2,
   HardHat,
@@ -19,20 +21,22 @@ import {
   Shield,
   Users,
   Layers,
-  Check,
+  FileText,
+  Sparkles,
+  Activity,
 } from 'lucide-react';
 
 export const metadata: Metadata = {
-  title: 'SmartCOI — AI-Powered COI Tracking & Compliance',
+  title: 'SmartCOI — Upload COIs, Get a Free Compliance Report in Minutes',
   description:
-    'Automate certificate of insurance tracking with AI. Upload COIs, verify compliance, and get expiration alerts. Built for property management, construction, logistics, healthcare, and more.',
+    'Upload your certificates of insurance and SmartCOI analyzes every coverage, expiration, endorsement, and additional insured. Your first compliance report is free — no credit card required.',
   alternates: {
     canonical: 'https://smartcoi.io',
   },
   openGraph: {
-    title: 'SmartCOI — AI-Powered COI Tracking & Compliance',
+    title: 'SmartCOI — Upload COIs, Get a Free Compliance Report in Minutes',
     description:
-      'Automate certificate of insurance tracking with AI. Upload COIs, verify compliance, and get expiration alerts. Built for property management, construction, logistics, healthcare, and more.',
+      'Upload your certificates of insurance and SmartCOI analyzes every coverage, expiration, endorsement, and additional insured. Your first compliance report is free — no credit card required.',
     type: 'website',
     url: 'https://smartcoi.io',
   },
@@ -58,10 +62,10 @@ const jsonLd = {
       applicationCategory: 'BusinessApplication',
       operatingSystem: 'Web',
       description:
-        'AI-powered certificate of insurance compliance tracking for any industry.',
+        'AI-powered certificate of insurance compliance tracking. Free first report, then monitor continuously.',
       offers: {
         '@type': 'Offer',
-        price: '79',
+        price: '0',
         priceCurrency: 'USD',
       },
     },
@@ -92,12 +96,6 @@ const FEATURES = [
   { icon: Upload, title: 'Bulk Upload', desc: 'Onboard your entire roster in minutes. Drop 50 PDFs and let the AI do the rest.' },
 ];
 
-const PLANS = [
-  { name: 'Starter', monthly: 79, annual: 63, certs: 'Up to 50', highlight: false },
-  { name: 'Growth', monthly: 149, annual: 119, certs: 'Up to 150', highlight: true },
-  { name: 'Professional', monthly: 249, annual: 199, certs: 'Unlimited', highlight: false },
-];
-
 // ============================================================================
 // Page
 // ============================================================================
@@ -115,32 +113,44 @@ export default function LandingPage() {
         {/* ================================================================ */}
         {/* HERO                                                             */}
         {/* ================================================================ */}
-        <section className="relative overflow-hidden bg-white pt-32 pb-20 sm:pt-40 sm:pb-28">
-          <div className="mx-auto max-w-[1200px] px-6 text-center">
-            <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-[#111827] sm:text-5xl lg:text-[56px] lg:leading-[1.1]">
-              AI-Powered COI Tracking for Every Industry
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-[#6B7280] sm:text-xl">
-              Upload certificates of insurance, let AI extract the data, track compliance automatically,
-              and get alerted before coverage lapses.
-            </p>
-            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <Link
-                href="/signup"
-                className="inline-flex items-center rounded-lg bg-[#73E2A7] px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-[#4CC78A]"
-              >
-                Start Free Trial
-              </Link>
-              <Link
-                href="/#how-it-works"
-                className="inline-flex items-center rounded-lg border border-[#E5E7EB] bg-white px-8 py-3.5 text-base font-medium text-[#374151] transition-colors hover:bg-[#F9FAFB]"
-              >
-                See How It Works
-              </Link>
+        <section className="relative overflow-hidden bg-white pt-32 pb-16 sm:pt-40 sm:pb-20">
+          <div className="mx-auto max-w-[1200px] px-6">
+            <div className="text-center">
+              <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-[#D1FADF] bg-[#E8FAF0] px-4 py-1.5 text-xs font-semibold text-[#065F46]">
+                <Sparkles className="h-3.5 w-3.5" />
+                First compliance report is free — no credit card
+              </div>
+              <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-[#111827] sm:text-5xl lg:text-[56px] lg:leading-[1.1]">
+                Upload Your COIs. See Your Compliance Gaps in Minutes.
+              </h1>
+              <p className="mx-auto mt-6 max-w-2xl text-lg text-[#6B7280] sm:text-xl">
+                AI analyzes every certificate — coverage limits, expirations, additional insured,
+                endorsements — and delivers a detailed compliance report.{' '}
+                <span className="text-[#111827] font-medium">Free for your first report.</span>
+              </p>
+              <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center rounded-lg bg-[#73E2A7] px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-[#4CC78A]"
+                >
+                  Upload Your COIs Free
+                </Link>
+                <Link
+                  href="/#how-it-works"
+                  className="inline-flex items-center rounded-lg border border-[#E5E7EB] bg-white px-8 py-3.5 text-base font-medium text-[#374151] transition-colors hover:bg-[#F9FAFB]"
+                >
+                  See How It Works
+                </Link>
+              </div>
+              <p className="mt-4 text-sm text-[#9CA3AF]">
+                No credit card. No limits on the first report. Report ready in minutes.
+              </p>
             </div>
-            <p className="mt-4 text-sm text-[#9CA3AF]">
-              14-day free trial. No credit card required.
-            </p>
+
+            {/* Report preview mockup */}
+            <div className="mt-16 sm:mt-20">
+              <ReportPreviewMockup />
+            </div>
           </div>
         </section>
 
@@ -194,35 +204,90 @@ export default function LandingPage() {
                 How it works
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-lg text-[#6B7280]">
-                Three steps to automated compliance.
+                From a pile of PDFs to a full compliance report — in minutes.
               </p>
             </div>
-            <div className="mt-16 grid gap-8 sm:grid-cols-3">
-              {[
-                {
-                  step: '1',
-                  title: 'Upload',
-                  desc: 'Drop your COIs — one at a time or in bulk. Our AI reads ACORD 25 forms instantly.',
-                },
-                {
-                  step: '2',
-                  title: 'Track',
-                  desc: 'AI extracts coverages, limits, dates, and named insureds. See compliance status at a glance.',
-                },
-                {
-                  step: '3',
-                  title: 'Stay Compliant',
-                  desc: 'Get alerts before certificates expire. Send renewal requests automatically.',
-                },
-              ].map((s) => (
-                <div key={s.step} className="text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#E8FAF0] text-lg font-bold text-[#111827]">
-                    {s.step}
+
+            <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Step 1 */}
+              <div className="rounded-2xl border border-[#E5E7EB] bg-white p-8">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E8FAF0] text-base font-bold text-[#065F46]">
+                    1
                   </div>
-                  <h3 className="mt-5 text-lg font-semibold text-[#111827]">{s.title}</h3>
-                  <p className="mt-2 text-[15px] text-[#6B7280]">{s.desc}</p>
+                  <Upload className="h-5 w-5 text-[#73E2A7]" strokeWidth={1.75} />
                 </div>
-              ))}
+                <h3 className="mt-5 text-lg font-semibold text-[#111827]">
+                  Upload your certificates
+                </h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-[#6B7280]">
+                  Drag and drop any number of COIs — ACORD 25, ACORD 28, scans, photos. One file or
+                  fifty. Any format, any quantity.
+                </p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="rounded-2xl border border-[#E5E7EB] bg-white p-8">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E8FAF0] text-base font-bold text-[#065F46]">
+                    2
+                  </div>
+                  <Sparkles className="h-5 w-5 text-[#73E2A7]" strokeWidth={1.75} />
+                </div>
+                <h3 className="mt-5 text-lg font-semibold text-[#111827]">
+                  AI analyzes everything
+                </h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-[#6B7280]">
+                  Our AI infers vendor types, extracts coverages and limits, verifies additional
+                  insured and endorsements, and flags every compliance gap.
+                </p>
+              </div>
+
+              {/* Step 3 */}
+              <div className="rounded-2xl border border-[#E5E7EB] bg-white p-8">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E8FAF0] text-base font-bold text-[#065F46]">
+                    3
+                  </div>
+                  <FileText className="h-5 w-5 text-[#73E2A7]" strokeWidth={1.75} />
+                </div>
+                <h3 className="mt-5 text-lg font-semibold text-[#111827]">
+                  Get your report
+                </h3>
+                <p className="mt-2 text-[15px] leading-relaxed text-[#6B7280]">
+                  A full compliance breakdown — score, vendor-by-vendor gaps, dollar risk exposure,
+                  and prioritized action items. Download as PDF or share.
+                </p>
+              </div>
+            </div>
+
+            {/* Step 4 — lighter / optional */}
+            <div className="mt-6 rounded-2xl border border-dashed border-[#E5E7EB] bg-white/60 p-8 sm:p-10">
+              <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F3F4F6] text-base font-bold text-[#6B7280]">
+                    4
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-semibold text-[#374151]">
+                        Activate monitoring when you&apos;re ready
+                      </h3>
+                      <Activity className="h-4 w-4 text-[#9CA3AF]" strokeWidth={1.75} />
+                    </div>
+                    <p className="mt-1 max-w-xl text-sm leading-relaxed text-[#6B7280]">
+                      Once you&apos;ve seen your first report, upgrade for continuous tracking,
+                      expiration alerts, vendor portal, and automated renewal requests.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/#pricing"
+                  className="text-sm font-medium text-[#4CC78A] transition-colors hover:text-[#3aae72]"
+                >
+                  See monitoring plans &rarr;
+                </Link>
+              </div>
             </div>
           </div>
         </section>
@@ -257,72 +322,7 @@ export default function LandingPage() {
         {/* ================================================================ */}
         {/* PRICING                                                          */}
         {/* ================================================================ */}
-        <section className="bg-[#FAFAFA] py-24 sm:py-32" id="pricing">
-          <div className="mx-auto max-w-[1200px] px-6">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-[#111827] sm:text-4xl">
-                Simple, transparent pricing
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl text-lg text-[#6B7280]">
-                All plans include all features. 14-day free trial, no credit card required.
-              </p>
-            </div>
-            <div className="mt-16 grid gap-6 sm:grid-cols-3 max-w-4xl mx-auto">
-              {PLANS.map((plan) => (
-                <div
-                  key={plan.name}
-                  className={`rounded-xl border bg-white p-8 ${
-                    plan.highlight ? 'border-[#73E2A7] ring-1 ring-[#73E2A7]' : 'border-[#E5E7EB]'
-                  }`}
-                >
-                  {plan.highlight && (
-                    <span className="inline-block rounded-full bg-[#E8FAF0] px-3 py-1 text-xs font-medium text-[#065F46] mb-4">
-                      Most Popular
-                    </span>
-                  )}
-                  <h3 className="text-lg font-semibold text-[#111827]">{plan.name}</h3>
-                  <div className="mt-3">
-                    <span className="text-4xl font-bold text-[#111827]">${plan.annual}</span>
-                    <span className="text-[#6B7280]">/mo</span>
-                  </div>
-                  <p className="mt-1 text-sm text-[#9CA3AF]">
-                    ${plan.monthly}/mo billed monthly
-                  </p>
-                  <ul className="mt-6 space-y-3 text-sm text-[#374151]">
-                    <li className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-[#73E2A7]" />
-                      {plan.certs} certificates
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-[#73E2A7]" />
-                      All features included
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-[#73E2A7]" />
-                      14-day free trial
-                    </li>
-                    {plan.name === 'Professional' && (
-                      <li className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-[#73E2A7]" />
-                        Priority support
-                      </li>
-                    )}
-                  </ul>
-                  <Link
-                    href="/signup"
-                    className={`mt-8 block w-full rounded-lg py-3 text-center text-sm font-semibold transition-colors ${
-                      plan.highlight
-                        ? 'bg-[#73E2A7] text-white hover:bg-[#4CC78A]'
-                        : 'border border-[#E5E7EB] bg-white text-[#374151] hover:bg-[#F9FAFB]'
-                    }`}
-                  >
-                    Start Free Trial
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <PricingTiers />
 
         {/* ================================================================ */}
         {/* FAQ                                                              */}
@@ -330,25 +330,28 @@ export default function LandingPage() {
         <FAQSection />
 
         {/* ================================================================ */}
-        {/* AUDIT SERVICE                                                    */}
+        {/* FOUNDER CREDIBILITY                                              */}
         {/* ================================================================ */}
         <section className="bg-[#FAFAFA] py-20 sm:py-24">
           <div className="mx-auto max-w-2xl px-6 text-center">
-            <h2 className="text-2xl font-bold text-[#111827] sm:text-3xl">
-              Not Ready for Software? Start With a Free Compliance Assessment
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-base text-[#6B7280] leading-relaxed">
-              Send us your COIs and we&apos;ll deliver a detailed compliance report showing exactly
-              where you&apos;re exposed — coverage gaps, expired policies, missing endorsements, and
-              non-compliant vendors.
-            </p>
-            <div className="mt-8">
-              <Link
-                href="/free-assessment"
-                className="inline-flex items-center rounded-lg border border-[#E5E7EB] bg-white px-8 py-3.5 text-base font-semibold text-[#374151] transition-colors hover:bg-[#F9FAFB]"
-              >
-                Get Your Free Assessment
-              </Link>
+            <div className="relative mx-auto max-w-xl rounded-2xl border border-slate-200/60 bg-white px-8 py-10 shadow-sm">
+              <div className="absolute left-0 top-6 bottom-6 w-[3px] rounded-full bg-[#73E2A7]" />
+              <p className="text-base leading-relaxed text-slate-600 italic">
+                &ldquo;I spent years chasing down expired certificates, digging through emails, and
+                fighting with outdated software. Every operator I talked to had the same
+                frustrations. So I built SmartCOI — upload your COIs, see your exposure in minutes,
+                and only pay when you&apos;re ready to put compliance on autopilot.&rdquo;
+              </p>
+              <div className="mt-6 flex items-center justify-center gap-3">
+                <div className="h-px w-6 bg-slate-200" />
+                <p className="text-sm font-medium text-slate-500">
+                  Tony
+                  <span className="mx-1.5 text-slate-300">&middot;</span>
+                  <span className="font-normal text-slate-400">
+                    Property Manager &amp; Founder of SmartCOI
+                  </span>
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -359,17 +362,18 @@ export default function LandingPage() {
         <section className="bg-white py-24 sm:py-32">
           <div className="mx-auto max-w-[1200px] px-6 text-center">
             <h2 className="text-3xl font-bold text-[#111827] sm:text-4xl">
-              Ready to automate your COI compliance?
+              Your first compliance report is on us.
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-[#6B7280]">
-              Start your 14-day free trial. No credit card required.
+              Upload your COIs, get a full compliance breakdown in minutes. No credit card. No
+              limits on the first report.
             </p>
             <div className="mt-8">
               <Link
                 href="/signup"
                 className="inline-flex items-center rounded-lg bg-[#73E2A7] px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-[#4CC78A]"
               >
-                Get Started Free
+                Upload Your COIs Free
               </Link>
             </div>
           </div>

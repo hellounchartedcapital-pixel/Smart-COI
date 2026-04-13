@@ -248,7 +248,7 @@ export default function ComplianceAutomationPage() {
               href="/signup"
               className="mt-8 inline-flex h-12 items-center rounded-xl bg-[#73E2A7] px-8 text-sm font-bold text-slate-950 shadow-lg shadow-[#73E2A7]/20 transition-all hover:bg-[#4CC78A]"
             >
-              Get Started Free
+              Upload Your COIs Free
             </Link>
           </div>
         </section>

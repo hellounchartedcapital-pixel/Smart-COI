@@ -118,7 +118,7 @@ export default function InsuranceRequirementsIndex() {
               href="/signup"
               className="mt-8 inline-flex rounded-lg bg-[#4CC78A] px-8 py-3 text-sm font-semibold text-white shadow-sm hover:bg-[#3db577] transition"
             >
-              Upload 50 COIs Free
+              Upload Your COIs Free
             </Link>
           </div>
         </section>
