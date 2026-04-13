@@ -3,12 +3,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
+import { PRICE_IDS } from '@/lib/stripe-prices';
 
-interface Plan {
+type PlanKey = 'free' | 'monitor' | 'automate' | 'full_platform';
+
+interface PlanConfig {
+  key: PlanKey;
   name: string;
   tagline: string;
   monthly: number;
   annual: number;
+  monthlyPriceId: string;
+  annualPriceId: string;
   isFree?: boolean;
   highlight?: boolean;
   highlightLabel?: string;
@@ -16,12 +22,15 @@ interface Plan {
   features: string[];
 }
 
-const PLANS: Plan[] = [
+const PLANS: PlanConfig[] = [
   {
+    key: 'free',
     name: 'Free',
     tagline: 'Your first compliance report',
     monthly: 0,
     annual: 0,
+    monthlyPriceId: '',
+    annualPriceId: '',
     isFree: true,
     ctaLabel: 'Upload Your COIs Free',
     features: [
@@ -34,10 +43,13 @@ const PLANS: Plan[] = [
     ],
   },
   {
+    key: 'monitor',
     name: 'Monitor',
     tagline: 'Continuous compliance tracking',
     monthly: 79,
     annual: 63,
+    monthlyPriceId: PRICE_IDS.MONITOR_MONTHLY,
+    annualPriceId: PRICE_IDS.MONITOR_ANNUAL,
     highlight: true,
     highlightLabel: 'Most Popular',
     ctaLabel: 'Start Monitoring',
@@ -46,41 +58,62 @@ const PLANS: Plan[] = [
       'Continuous compliance tracking',
       'Expiration alerts (60/30/14 days)',
       'Dashboard & portfolio health',
-      'Self-service vendor portal',
       'Everything in Free',
     ],
   },
   {
+    key: 'automate',
     name: 'Automate',
     tagline: 'Hands-off renewal workflow',
     monthly: 149,
     annual: 119,
+    monthlyPriceId: PRICE_IDS.AUTOMATE_MONTHLY,
+    annualPriceId: PRICE_IDS.AUTOMATE_ANNUAL,
     ctaLabel: 'Start Automating',
     features: [
       'Up to 150 certificates monitored',
-      'Automated renewal requests',
-      'Bulk operations & templates',
-      'Custom requirement templates',
+      'Self-service vendor portal',
+      'Automated renewal follow-ups',
       'Lease-based requirement extraction',
+      'Custom requirement overrides',
       'Everything in Monitor',
     ],
   },
   {
+    key: 'full_platform',
     name: 'Full Platform',
     tagline: 'Unlimited + priority support',
     monthly: 249,
     annual: 199,
+    monthlyPriceId: PRICE_IDS.FULL_PLATFORM_MONTHLY,
+    annualPriceId: PRICE_IDS.FULL_PLATFORM_ANNUAL,
     ctaLabel: 'Get Full Access',
     features: [
       'Unlimited certificates',
+      'Custom templates from scratch',
+      'Bulk operations & team workflows',
       'Priority support',
-      'Advanced analytics & exports',
       'Compliance audit PDF reports',
-      'Risk quantification engine',
       'Everything in Automate',
     ],
   },
 ];
+
+/**
+ * Build the /signup URL for a paid-tier CTA. We route through signup rather
+ * than directly into Stripe Checkout because unauthenticated prospects can't
+ * create a checkout session. The signup page reads the `plan` and `price_id`
+ * query params and forwards the user to /dashboard/settings/billing with
+ * the same query params after account creation, where the billing page
+ * immediately kicks off checkout for that price.
+ */
+function ctaHref(plan: PlanConfig, billing: 'monthly' | 'annual'): string {
+  if (plan.isFree) return '/signup';
+  const priceId = billing === 'annual' ? plan.annualPriceId : plan.monthlyPriceId;
+  const params = new URLSearchParams({ plan: plan.key });
+  if (priceId) params.set('price_id', priceId);
+  return `/signup?${params.toString()}`;
+}
 
 export function PricingTiers() {
   const [billing, setBilling] = useState<'monthly' | 'annual'>('annual');
@@ -138,7 +171,7 @@ export function PricingTiers() {
             const price = billing === 'annual' ? plan.annual : plan.monthly;
             return (
               <div
-                key={plan.name}
+                key={plan.key}
                 className={`relative flex flex-col rounded-2xl border bg-white p-6 ${
                   plan.highlight
                     ? 'border-[#73E2A7] shadow-[0_8px_30px_-8px_rgba(115,226,167,0.35)] ring-1 ring-[#73E2A7]'
@@ -196,7 +229,7 @@ export function PricingTiers() {
                 </ul>
 
                 <Link
-                  href="/signup"
+                  href={ctaHref(plan, billing)}
                   className={`mt-6 block w-full rounded-lg py-3 text-center text-sm font-semibold transition-colors ${
                     plan.highlight
                       ? 'bg-[#73E2A7] text-white hover:bg-[#4CC78A]'
@@ -213,8 +246,8 @@ export function PricingTiers() {
         </div>
 
         <p className="mx-auto mt-10 max-w-xl text-center text-xs text-[#9CA3AF]">
-          All paid plans include every feature. Cancel anytime. Month-to-month available on monthly
-          billing.
+          All paid plans include every feature for their tier. Cancel anytime. Month-to-month
+          available on monthly billing.
         </p>
       </div>
     </section>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { checkExtractionLimit } from '@/lib/plan-limits';
+import { checkFeatureAccess } from '@/lib/require-active-plan';
 import { extractLeaseRequirements } from '@/lib/ai/lease-extraction';
 
 export async function POST(request: NextRequest) {
@@ -22,6 +23,15 @@ export async function POST(request: NextRequest) {
 
     if (!profile?.organization_id) {
       return NextResponse.json({ error: 'No organization' }, { status: 403 });
+    }
+
+    // Feature gate — lease extraction is an Automate-tier feature.
+    const featureCheck = await checkFeatureAccess('lease_extraction');
+    if ('error' in featureCheck) {
+      return NextResponse.json(
+        { error: featureCheck.error, upgrade: true, feature: 'lease_extraction' },
+        { status: 403 },
+      );
     }
 
     // Extraction limit check (counts against plan credits)
