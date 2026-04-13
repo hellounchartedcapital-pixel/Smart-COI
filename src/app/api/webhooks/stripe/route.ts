@@ -61,8 +61,13 @@ export async function POST(request: Request) {
         const priceId = subscription.items.data[0]?.price?.id;
         const plan = priceId ? planForPriceId(priceId) : null;
 
+        // Default new subscriptions to 'monitor' if the price ID mapping fails —
+        // this preserves the previous behavior where unmapped prices fell through
+        // to the entry-level paid tier instead of dropping the user to Free.
+        const planValue = plan ?? 'monitor';
+
         // Idempotency: skip if already applied
-        if (org.stripe_subscription_id === subscriptionId && org.plan === (plan ?? 'starter')) {
+        if (org.stripe_subscription_id === subscriptionId && org.plan === planValue) {
           console.log(`[Stripe Webhook] checkout.session.completed — org ${org.id} already up to date, skipping`);
           break;
         }
@@ -70,15 +75,15 @@ export async function POST(request: Request) {
         await supabase
           .from('organizations')
           .update({
-            plan: plan ?? 'starter',
+            plan: planValue,
             stripe_subscription_id: subscriptionId,
             trial_ends_at: null,
             payment_failed: false,
           })
           .eq('id', org.id);
 
-        captureServerEvent(org.id, 'subscription_started', { plan: plan ?? 'starter' });
-        console.log(`[Stripe Webhook] checkout.session.completed — org ${org.id} → plan ${plan}`);
+        captureServerEvent(org.id, 'subscription_started', { plan: planValue });
+        console.log(`[Stripe Webhook] checkout.session.completed — org ${org.id} → plan ${planValue}`);
         break;
       }
 

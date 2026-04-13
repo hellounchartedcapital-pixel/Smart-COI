@@ -1,6 +1,6 @@
 'use server';
 
-import { stripe, PRICE_IDS, planForPriceId } from '@/lib/stripe';
+import { stripe, getConfiguredPriceIds, planForPriceId } from '@/lib/stripe';
 import { createClient } from '@/lib/supabase/server';
 import { captureServerEvent } from '@/lib/posthog-server';
 
@@ -9,10 +9,12 @@ import { captureServerEvent } from '@/lib/posthog-server';
 // ---------------------------------------------------------------------------
 
 export async function createCheckoutSession(priceId: string): Promise<{ url: string }> {
-  // Validate price ID
-  const validPriceIds = Object.values(PRICE_IDS) as string[];
-  if (!validPriceIds.includes(priceId)) {
-    throw new Error('Invalid price ID');
+  // Validate price ID against the env-configured list. An empty string or any
+  // unknown price ID is rejected — this prevents callers from passing in
+  // arbitrary Stripe prices from the client.
+  const validPriceIds = getConfiguredPriceIds();
+  if (!priceId || !validPriceIds.includes(priceId)) {
+    throw new Error('Invalid price ID — this tier is not configured yet.');
   }
 
   // Use the authenticated client — RLS ensures the user can only read/write their own org

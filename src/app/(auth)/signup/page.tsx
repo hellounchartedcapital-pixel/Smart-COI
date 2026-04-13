@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -8,6 +8,11 @@ import { createOrgAfterSignup } from '@/lib/actions/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+// Session-storage key used to carry a pending Stripe price ID from the
+// landing-page pricing CTAs through signup/setup to the billing page. The
+// billing page reads this once and immediately initiates Stripe checkout.
+const PENDING_PRICE_ID_KEY = 'smartcoi-pending-price-id';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -23,6 +28,27 @@ export default function SignUpPage() {
   const [confirmedEmail, setConfirmedEmail] = useState('');
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+
+  // Capture ?price_id=... from the landing pricing CTA and park it in
+  // sessionStorage. The billing page will pick it up after onboarding
+  // completes and auto-start checkout.
+  //
+  // Read from window.location directly rather than useSearchParams so the
+  // page can still be statically prerendered (useSearchParams would force
+  // a Suspense boundary).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const priceId = params.get('price_id');
+    if (priceId) {
+      try {
+        sessionStorage.setItem(PENDING_PRICE_ID_KEY, priceId);
+      } catch {
+        // sessionStorage can throw in private mode — degrade silently,
+        // the user will just land on the billing page without auto-checkout.
+      }
+    }
+  }, []);
 
   async function handleGoogleSignUp() {
     setError(null);

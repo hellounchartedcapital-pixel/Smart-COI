@@ -162,6 +162,117 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Feature: Freemium Pricing Infrastructure — Tiers, Gates & Checkout Wiring (Apr 2026)
+
+Wired the new four-tier pricing structure through the entire codebase: env-driven Stripe price IDs, renamed plans, feature gates, Free-tier dashboard gate, and server-side tier enforcement on Automate-only features.
+
+**New plan naming** (replaces starter/growth/professional):
+
+| Plan | Monthly | Annual | Certificate limit |
+|---|---|---|---|
+| Free | $0 | — | one compliance report, no dashboard |
+| Monitor | $79 | $63/mo ($758.40/yr) | up to 50 monitored |
+| Automate | $149 | $119/mo ($1,430.40/yr) | up to 150 monitored |
+| Full Platform | $249 | $199/mo ($2,390.40/yr) | unlimited |
+
+**Env-driven Stripe price IDs** (`src/lib/stripe-prices.ts`):
+- Rewrote `PRICE_IDS` as `NEXT_PUBLIC_`-prefixed env vars: `NEXT_PUBLIC_STRIPE_PRICE_MONITOR_MONTHLY`, `MONITOR_ANNUAL`, `AUTOMATE_MONTHLY`, `AUTOMATE_ANNUAL`, `FULL_PLATFORM_MONTHLY`, `FULL_PLATFORM_ANNUAL`.
+- `planForPriceId()` now builds the map at call time so blank env vars don't collide at key `''`.
+- New `getConfiguredPriceIds()` returns the list of non-blank configured price IDs for `createCheckoutSession` validation — replaces the hardcoded `Object.values(PRICE_IDS)`.
+- New `normalizePlan()` maps legacy plan strings (`starter`/`growth`/`professional`) to modern ones (`monitor`/`automate`/`full_platform`) on read. Legacy DB values are NEVER rewritten — they resolve correctly through the mapping layer until the next Stripe webhook event rewrites them naturally.
+- New `Plan` union type covers both modern and legacy names.
+- `.env.example` — documented the 6 new Stripe price ID env vars.
+
+**Feature gating system** (`src/lib/plan-features.ts` — new):
+- `Feature` type with 11 gated capabilities (dashboard_access, continuous_monitoring, expiration_alerts, vendor_portal, auto_follow_ups, lease_extraction, custom_requirement_overrides, custom_templates_from_scratch, bulk_operations, team_workflows, priority_support).
+- `canAccessFeature(plan, feature)` — normalizes the plan and compares a numeric `PLAN_RANK` against the feature's `FEATURE_MIN_PLAN`. Trial rank = Monitor rank so trials can evaluate everything the entry-level paid tier unlocks.
+- `hasDashboardAccess()` / `isFreeTier()` convenience helpers.
+- `getUpgradePromptCopy(feature)` — returns rich upgrade copy per feature (title, description, 4 value bullets, CTA label, target plan). Used by the `UpgradePrompt` component and inline toast upgrade prompts.
+- `planLabel(plan)` — human-readable plan name for display.
+- `FEATURE_LOCKED_TAG` / `isFeatureLockedError()` — machine-readable tag embedded in server-action error messages so clients can distinguish tier-gates from expired-subscription errors.
+
+**Plan limits rewrite** (`src/lib/plan-limits.ts`):
+- `PLAN_LIMITS` now keyed on modern names (`free`/`monitor`/`automate`/`full_platform`) with legacy aliases (`starter`/`growth`/`professional`) pointing at the same limits.
+- Free tier: 0 monitored entities, 100 extractions/month for the free report.
+- New `upgradeSuggestion()` helper generates tier-aware upgrade copy (Free→Monitor, Monitor→Automate, Automate→Full Platform).
+- `checkVendorTenantLimit()` now short-circuits with a friendly Free-tier message before counting — no DB reads for free users.
+
+**Server-side tier gate** (`src/lib/require-active-plan.ts`):
+- New `checkFeatureAccess(feature)` function — returns `{ userId, orgId, plan }` on success or `{ error: '[FEATURE_LOCKED] ...' }` when the caller's plan can't use the feature. Still throws for auth/org lookup errors (not plan errors).
+- Follows the same non-throwing pattern as `checkActivePlan()` so error messages survive Next.js server-action serialization.
+
+**Shared error handler** (`src/lib/handle-action-error.ts`):
+- `handleActionError()` / `handleActionResult()` now recognize `FEATURE_LOCKED_TAG` in addition to `PLAN_INACTIVE_TAG`.
+- Tier-gated errors surface as a rich toast with "Upgrade" action button that routes to `/dashboard/settings/billing`.
+- Subscription-gated errors still open the `UpgradeModal`.
+
+**Automate-tier server actions gated:**
+- `src/lib/actions/notifications.ts` — `generatePortalLink()` now uses `checkFeatureAccess('vendor_portal')`; `sendManualFollowUp()` uses `checkFeatureAccess('auto_follow_ups')`.
+- `src/app/api/leases/extract/route.ts` — added `checkFeatureAccess('lease_extraction')` gate that returns `{ error, upgrade: true, feature: 'lease_extraction' }` with status 403 so the existing `extract-lease-dialog.tsx` upgrade modal path fires.
+
+**Free-tier dashboard gate** (`src/components/dashboard/dashboard-access-gate.tsx` — new, client component):
+- Wraps `{children}` inside `src/app/(dashboard)/layout.tsx`.
+- Uses `usePathname()` to allow Free users onto `/dashboard/settings/billing` (so they can upgrade) but block every other dashboard route.
+- When blocked, renders `FreeTierDashboardGate` (below) instead of the real page.
+
+**Upgrade prompt components** (`src/components/dashboard/upgrade-prompt.tsx` — new):
+- `UpgradePrompt` — general-purpose upgrade card, accepts an `UpgradePromptCopy` object, supports `card` or `page` variant.
+- `FreeTierDashboardGate` — full-page prompt shown to Free users; explains Monitor's value, CTAs to billing and to the user's free report (`/report/latest`).
+- Styled with brand emerald palette and soft shadow; matches the landing page design system.
+
+**Pricing page CTA wiring** (`src/components/landing/pricing-tiers.tsx`):
+- Free tier CTA → `/signup` as before.
+- Paid tier CTAs → `/signup?plan=<key>&price_id=<stripe_id>` (monthly or annual based on the toggle).
+- `ctaHref()` helper builds the URL; missing env var (unconfigured price) still routes but with an empty `price_id`.
+
+**Signup → checkout deep-link** (`src/app/(auth)/signup/page.tsx`):
+- Reads `?price_id=` from `window.location.search` inside a `useEffect` (direct read rather than `useSearchParams` so static prerendering still works without a Suspense boundary).
+- Parks the price ID in `sessionStorage` under `smartcoi-pending-price-id` so it survives the email-confirmation + onboarding trip to the dashboard.
+
+**Billing page** (`src/app/(dashboard)/dashboard/settings/billing/billing-client.tsx`):
+- Rewrote the hardcoded Starter/Growth/Professional cards into a new `TIERS` array (Monitor/Automate/Full Platform) driven by the env-based `PRICE_IDS`.
+- `PlanCard` accepts a `configured` flag — when the env var is blank the CTA renders as "Coming Soon" (disabled) instead of a broken subscribe button.
+- Savings label now computed dynamically from monthly × 12 − annual × 12.
+- `useEffect` on mount picks up `?price_id=` query OR the `sessionStorage` pending price and auto-starts `createCheckoutSession()`. The pending key is consumed (removed) so refreshing the billing page doesn't retrigger checkout.
+- `planDisplayName` now derives via `normalizePlan() + planLabel()` so legacy `starter`/`growth`/`professional` still render as "Monitor"/"Automate"/"Full Platform".
+- Handles Free-tier current plan case with its own copy: "You've got your free compliance report. Upgrade to Monitor to track compliance continuously."
+
+**Stripe webhook** (`src/app/api/webhooks/stripe/route.ts`):
+- `checkout.session.completed` handler now defaults unmapped price IDs to `monitor` (was `starter`). Uses a single `planValue` local to keep the idempotency check, DB update, and PostHog event in sync.
+
+**Checkout action** (`src/lib/actions/billing.ts`):
+- `createCheckoutSession()` now calls `getConfiguredPriceIds()` for validation rather than `Object.values(PRICE_IDS)` — gracefully handles the case where only some tiers are configured.
+
+**Files created:**
+- `src/lib/plan-features.ts` — feature matrix, gating helpers, upgrade prompt copy
+- `src/components/dashboard/dashboard-access-gate.tsx` — client-side dashboard gate
+- `src/components/dashboard/upgrade-prompt.tsx` — upgrade prompt components
+
+**Files modified:**
+- `src/lib/stripe-prices.ts` — env-driven, added `normalizePlan()`, `getConfiguredPriceIds()`, `Plan` type
+- `src/lib/stripe.ts` — re-export surface updated
+- `src/lib/plan-limits.ts` — new tier limits, Free-tier short-circuit
+- `src/lib/require-active-plan.ts` — added `checkFeatureAccess()`, `featureMinPlanLabel()`
+- `src/lib/handle-action-error.ts` — recognize `FEATURE_LOCKED_TAG`, upgrade-toast helper
+- `src/lib/actions/billing.ts` — env-driven price ID validation
+- `src/lib/actions/notifications.ts` — feature gates on portal + manual follow-ups
+- `src/app/api/leases/extract/route.ts` — feature gate on lease extraction
+- `src/app/api/webhooks/stripe/route.ts` — default to `monitor` on unmapped prices
+- `src/app/(dashboard)/layout.tsx` — wrap children with `DashboardAccessGate`
+- `src/app/(dashboard)/dashboard/settings/billing/billing-client.tsx` — full rewrite for new tiers
+- `src/app/(auth)/signup/page.tsx` — capture `?price_id` into sessionStorage
+- `src/components/landing/pricing-tiers.tsx` — deep-link paid CTAs through signup
+- `.env.example` — documented new price ID vars
+
+**Build verification:** `npx next build` passes cleanly. TypeScript and ESLint both report no new errors on the changed files.
+
+⚠️ ACTION REQUIRED:
+1. Create the three new Stripe products (Monitor, Automate, Full Platform) and their six prices (monthly + annual each) in the Stripe dashboard.
+2. Add the six resulting `price_*` IDs to `.env.local` and to production env vars under the `NEXT_PUBLIC_STRIPE_PRICE_*` keys.
+3. Deactivate the old Starter/Growth/Professional products/prices in the Stripe dashboard so they can't be checked out.
+4. Deactivate the $299 audit Stripe payment link (`buy.stripe.com/00weVf3TwfSkbUocpmaZi00`) in the Stripe dashboard.
+5. Existing orgs on `starter`/`growth`/`professional` plan values will keep working — the mapping layer resolves them as Monitor/Automate/Full Platform. No DB migration required.
+
 #### Feature: Freemium Landing Page Repositioning (Apr 2026)
 
 Repositioned the landing page and site-wide messaging around the new freemium model: the first compliance report is free (no credit card), paid tiers cover continuous monitoring, automation, and unlimited usage. The landing page now leads with a report preview instead of a dashboard preview.

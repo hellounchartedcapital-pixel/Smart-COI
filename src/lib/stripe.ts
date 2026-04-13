@@ -1,8 +1,13 @@
 import Stripe from 'stripe';
 
 // Re-export price constants so server code can import everything from here
-export { PRICE_IDS, planForPriceId } from './stripe-prices';
-export type { PriceId } from './stripe-prices';
+export {
+  PRICE_IDS,
+  planForPriceId,
+  getConfiguredPriceIds,
+  normalizePlan,
+} from './stripe-prices';
+export type { Plan, PriceIdKey } from './stripe-prices';
 
 // ---------------------------------------------------------------------------
 // Stripe client — lazily initialized so importing this module doesn't throw

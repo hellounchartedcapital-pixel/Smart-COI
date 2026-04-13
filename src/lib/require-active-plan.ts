@@ -3,6 +3,8 @@
 import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getActivePlanStatus, PLAN_INACTIVE_TAG } from '@/lib/plan-status';
+import { canAccessFeature, planLabel, type Feature } from '@/lib/plan-features';
+import { normalizePlan } from '@/lib/stripe-prices';
 
 /**
  * Guard for server actions — throws if the caller's org does not have an
@@ -111,4 +113,92 @@ export async function checkActivePlan(
   }
 
   return { userId: user.id, orgId: profile.organization_id };
+}
+
+/**
+ * Feature-gate helper for server actions / route handlers.
+ *
+ * Returns `{ userId, orgId, plan }` when the caller's plan entitles them
+ * to the requested feature, or `{ error }` when it doesn't. The error
+ * message is tagged so clients can detect plan-gated errors and surface
+ * an upgrade prompt.
+ *
+ * Use from a server action like:
+ *   const check = await checkFeatureAccess('vendor_portal');
+ *   if ('error' in check) return check;
+ *   const { orgId } = check;
+ */
+export async function checkFeatureAccess(
+  feature: Feature,
+): Promise<{ userId: string; orgId: string; plan: string } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  const service = createServiceClient();
+
+  const { data: profile, error: profileError } = await service
+    .from('users')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError || !profile?.organization_id) {
+    throw new Error('No organization found');
+  }
+
+  const { data: org, error: orgError } = await service
+    .from('organizations')
+    .select('plan, trial_ends_at, payment_failed')
+    .eq('id', profile.organization_id)
+    .single();
+
+  if (orgError || !org) {
+    throw new Error('Organization not found');
+  }
+
+  // Active plan check first — expired trials, canceled, and payment
+  // failures all block regardless of tier.
+  const status = getActivePlanStatus(org);
+  if (!status.isActive) {
+    return { error: `${PLAN_INACTIVE_TAG} Your plan is inactive. Please subscribe to continue.` };
+  }
+
+  // Feature gate — normalize the plan name and check capability.
+  const plan = normalizePlan(org.plan);
+  if (!canAccessFeature(plan, feature)) {
+    // We don't embed PLAN_INACTIVE_TAG because the plan IS active — this is
+    // a tier-gate, not a subscription-gate. Client code should check for
+    // the "[FEATURE_LOCKED]" prefix instead and show an inline upgrade
+    // prompt rather than the "subscription expired" modal. The tag itself
+    // lives in plan-features.ts so it can be imported by client code
+    // without pulling in the `'use server'` file.
+    return {
+      error: `[FEATURE_LOCKED] This feature requires the ${featureMinPlanLabel(feature)} plan or higher.`,
+    };
+  }
+
+  return { userId: user.id, orgId: profile.organization_id, plan };
+}
+
+function featureMinPlanLabel(feature: Feature): string {
+  // Manual mapping to keep this file free of a cyclic import with plan-features.
+  // The labels must stay in sync with the matrix in plan-features.ts.
+  const automateFeatures: Feature[] = [
+    'vendor_portal',
+    'auto_follow_ups',
+    'lease_extraction',
+    'custom_requirement_overrides',
+  ];
+  const fullPlatformFeatures: Feature[] = [
+    'custom_templates_from_scratch',
+    'bulk_operations',
+    'team_workflows',
+    'priority_support',
+  ];
+  if (fullPlatformFeatures.includes(feature)) return planLabel('full_platform');
+  if (automateFeatures.includes(feature)) return planLabel('automate');
+  return planLabel('monitor');
 }

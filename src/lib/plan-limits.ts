@@ -1,8 +1,16 @@
 import { createServiceClient } from '@/lib/supabase/service';
 import { getActivePlanStatus } from '@/lib/plan-status';
+import { normalizePlan } from '@/lib/stripe-prices';
 
 // ---------------------------------------------------------------------------
-// Plan limits
+// Plan limits (Apr 2026 freemium repositioning)
+//
+//   free           — no monitoring, no entities. Can upload COIs for the
+//                    free report but the dashboard is gated.
+//   monitor        — up to 50 certificates monitored continuously
+//   automate       — up to 150 certificates monitored
+//   full_platform  — unlimited certificates (10k cap to prevent runaway costs)
+//   trial          — same as monitor for evaluation
 // ---------------------------------------------------------------------------
 
 export interface PlanLimits {
@@ -11,17 +19,42 @@ export interface PlanLimits {
 }
 
 const PLAN_LIMITS: Record<string, PlanLimits> = {
+  // Modern plan names
+  free: { maxVendorsTenants: 0, maxExtractionsPerMonth: 100 },
+  monitor: { maxVendorsTenants: 50, maxExtractionsPerMonth: 50 },
+  automate: { maxVendorsTenants: 150, maxExtractionsPerMonth: 150 },
+  full_platform: { maxVendorsTenants: 10000, maxExtractionsPerMonth: 10000 },
+  // Trial mirrors the old "starter with 50 COIs" experience
   trial: { maxVendorsTenants: 50, maxExtractionsPerMonth: 50 },
+  // Legacy plan names — same limits as their modern equivalents
   starter: { maxVendorsTenants: 50, maxExtractionsPerMonth: 50 },
   growth: { maxVendorsTenants: 150, maxExtractionsPerMonth: 150 },
-  // Professional plan: effectively unlimited (marketing says "Unlimited")
   professional: { maxVendorsTenants: 10000, maxExtractionsPerMonth: 10000 },
   canceled: { maxVendorsTenants: 0, maxExtractionsPerMonth: 0 },
 };
 
-/** Get the limits for a plan. Unknown plans get starter limits. */
+/** Get the limits for a plan. Unknown plans get Free-tier limits. */
 export function getOrgLimits(plan: string): PlanLimits {
-  return PLAN_LIMITS[plan] ?? PLAN_LIMITS.starter;
+  return PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
+}
+
+// ---------------------------------------------------------------------------
+// Upgrade messaging — points Free users to Monitor, Monitor users to Automate,
+// Automate users to Full Platform.
+// ---------------------------------------------------------------------------
+
+function upgradeSuggestion(plan: string, currentLimit: number): string {
+  const normalized = normalizePlan(plan);
+  if (normalized === 'free' || normalized === 'trial') {
+    return ` Upgrade to Monitor for continuous tracking of up to 50 certificates.`;
+  }
+  if (normalized === 'monitor') {
+    return ` Upgrade to Automate for up to 150 certificates and the vendor portal.`;
+  }
+  if (normalized === 'automate') {
+    return ` Upgrade to Full Platform for unlimited certificates and priority support.`;
+  }
+  return ` You're on the highest tier (${currentLimit} limit).`;
 }
 
 // ---------------------------------------------------------------------------
@@ -47,13 +80,27 @@ export async function checkVendorTenantLimit(
   const planStatus = getActivePlanStatus(org ?? { plan, trial_ends_at: null });
   if (!planStatus.isActive) {
     const messages: Record<string, string> = {
-      canceled: 'Your subscription has been canceled. Please resubscribe to add vendors or tenants.',
-      trial_expired: 'Your free trial has expired. Subscribe to add vendors or tenants.',
-      payment_failed: 'Your last payment failed. Please update your payment method to add vendors or tenants.',
+      canceled:
+        'Your subscription has been canceled. Please resubscribe to add vendors or tenants.',
+      trial_expired:
+        'Your free trial has expired. Subscribe to add vendors or tenants.',
+      payment_failed:
+        'Your last payment failed. Please update your payment method to add vendors or tenants.',
     };
     return {
       allowed: false,
-      error: messages[planStatus.reason] ?? 'Your plan is inactive. Please subscribe to continue.',
+      error:
+        messages[planStatus.reason] ??
+        'Your plan is inactive. Please subscribe to continue.',
+    };
+  }
+
+  // Free tier has no monitored entities at all
+  if (normalizePlan(plan) === 'free') {
+    return {
+      allowed: false,
+      error:
+        "Your free report doesn't include continuous monitoring. Upgrade to Monitor to track vendors and tenants on an ongoing basis.",
     };
   }
 
@@ -75,15 +122,9 @@ export async function checkVendorTenantLimit(
   const total = (vendorCount ?? 0) + (tenantCount ?? 0);
 
   if (total >= limits.maxVendorsTenants) {
-    const upgrade =
-      plan === 'starter' || plan === 'trial'
-        ? ' Upgrade to Growth for up to 150 vendors & tenants.'
-        : plan === 'growth'
-          ? ' Upgrade to Professional for unlimited vendors & tenants.'
-          : '';
     return {
       allowed: false,
-      error: `You've reached the vendor/tenant limit for your plan (${limits.maxVendorsTenants}).${upgrade}`,
+      error: `You've reached the vendor/tenant limit for your plan (${limits.maxVendorsTenants}).${upgradeSuggestion(plan, limits.maxVendorsTenants)}`,
     };
   }
 
@@ -107,7 +148,8 @@ export async function checkExtractionLimit(
   if (plan === 'canceled') {
     return {
       allowed: false,
-      error: 'Your subscription has been canceled. Please resubscribe to extract COIs.',
+      error:
+        'Your subscription has been canceled. Please resubscribe to extract COIs.',
     };
   }
 
@@ -126,15 +168,9 @@ export async function checkExtractionLimit(
     .gte('uploaded_at', startOfMonth);
 
   if ((count ?? 0) >= limits.maxExtractionsPerMonth) {
-    const upgrade =
-      plan === 'starter' || plan === 'trial'
-        ? ' Upgrade to Growth for 150 extractions per month.'
-        : plan === 'growth'
-          ? ' Upgrade to Professional for unlimited extractions.'
-          : '';
     return {
       allowed: false,
-      error: `You've reached the monthly extraction limit for your plan (${limits.maxExtractionsPerMonth}).${upgrade}`,
+      error: `You've reached the monthly extraction limit for your plan (${limits.maxExtractionsPerMonth}).${upgradeSuggestion(plan, limits.maxExtractionsPerMonth)}`,
     };
   }
 

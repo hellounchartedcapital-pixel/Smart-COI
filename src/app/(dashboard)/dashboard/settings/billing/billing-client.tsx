@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -12,7 +12,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { createCheckoutSession, createPortalSession, resetTrial } from '@/lib/actions/billing';
-import { PRICE_IDS } from '@/lib/stripe-prices';
+import { PRICE_IDS, normalizePlan, type Plan } from '@/lib/stripe-prices';
+import { planLabel } from '@/lib/plan-features';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,6 +27,69 @@ interface BillingClientProps {
 }
 
 type BillingInterval = 'monthly' | 'annual';
+
+interface TierDef {
+  key: Plan;
+  name: string;
+  monthly: number;
+  annual: number;
+  monthlyPriceId: string;
+  annualPriceId: string;
+  popular?: boolean;
+  features: string[];
+}
+
+const TIERS: TierDef[] = [
+  {
+    key: 'monitor',
+    name: 'Monitor',
+    monthly: 79,
+    annual: 63,
+    monthlyPriceId: PRICE_IDS.MONITOR_MONTHLY,
+    annualPriceId: PRICE_IDS.MONITOR_ANNUAL,
+    features: [
+      'Up to 50 certificates monitored',
+      'Continuous compliance tracking',
+      'Full dashboard & portfolio health',
+      'Expiration alerts (60/30/14 days)',
+      'AI extraction for every upload',
+      'Compliance templates',
+    ],
+  },
+  {
+    key: 'automate',
+    name: 'Automate',
+    monthly: 149,
+    annual: 119,
+    monthlyPriceId: PRICE_IDS.AUTOMATE_MONTHLY,
+    annualPriceId: PRICE_IDS.AUTOMATE_ANNUAL,
+    popular: true,
+    features: [
+      'Up to 150 certificates monitored',
+      'Self-service vendor portal',
+      'Automated renewal follow-ups',
+      'Lease-based requirement extraction',
+      'Custom requirement overrides',
+      'Everything in Monitor',
+    ],
+  },
+  {
+    key: 'full_platform',
+    name: 'Full Platform',
+    monthly: 249,
+    annual: 199,
+    monthlyPriceId: PRICE_IDS.FULL_PLATFORM_MONTHLY,
+    annualPriceId: PRICE_IDS.FULL_PLATFORM_ANNUAL,
+    features: [
+      'Unlimited certificates',
+      'Custom templates from scratch',
+      'Bulk operations & team workflows',
+      'Priority support',
+      'Compliance audit PDF reports',
+      'Everything in Automate',
+    ],
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Component
@@ -41,25 +105,12 @@ export function BillingClient({
   const [loading, setLoading] = useState<string | null>(null);
   const [interval, setInterval] = useState<BillingInterval>('annual');
 
-  // Show toasts for success/canceled query params
-  useEffect(() => {
-    if (searchParams.get('success') === 'true') {
-      toast.success('Subscription activated!');
-    }
-    if (searchParams.get('canceled') === 'true') {
-      toast.info('Checkout canceled — no charges were made.');
-    }
-  }, [searchParams]);
-
-  const isTrialOrCanceled = plan === 'trial' || plan === 'canceled';
+  const normalized = normalizePlan(plan);
+  const isTrialOrCanceled =
+    normalized === 'trial' || normalized === 'canceled' || normalized === 'free';
   const showPlanCards = isTrialOrCanceled || !hasSubscription;
 
-  const planDisplayName =
-    plan === 'trial'
-      ? 'Free Trial'
-      : plan === 'canceled'
-        ? 'Canceled'
-        : plan.charAt(0).toUpperCase() + plan.slice(1);
+  const planDisplayName = planLabel(normalized);
 
   const trialEndsDate = trialEndsAt
     ? new Date(trialEndsAt).toLocaleDateString('en-US', {
@@ -80,6 +131,10 @@ export function BillingClient({
   // ---- Handlers ----
 
   async function handleSubscribe(priceId: string) {
+    if (!priceId) {
+      toast.error("This tier isn't configured yet — please try again later.");
+      return;
+    }
     setLoading(priceId);
     try {
       const { url } = await createCheckoutSession(priceId);
@@ -113,30 +168,60 @@ export function BillingClient({
     }
   }
 
-  // ---- Price map ----
+  // Show toasts for success/canceled query params, and auto-start checkout
+  // when the user arrives with ?price_id=... (from signup → billing deep link)
+  // or with a pending price_id stashed in sessionStorage by the signup flow.
+  const autoCheckoutStarted = useRef(false);
+  useEffect(() => {
+    if (searchParams.get('success') === 'true') {
+      toast.success('Subscription activated!');
+    }
+    if (searchParams.get('canceled') === 'true') {
+      toast.info('Checkout canceled — no charges were made.');
+    }
 
-  const starterPriceId =
-    interval === 'monthly' ? PRICE_IDS.STARTER_MONTHLY : PRICE_IDS.STARTER_ANNUAL;
-  const growthPriceId =
-    interval === 'monthly' ? PRICE_IDS.GROWTH_MONTHLY : PRICE_IDS.GROWTH_ANNUAL;
-  const proPriceId =
-    interval === 'monthly'
-      ? PRICE_IDS.PROFESSIONAL_MONTHLY
-      : PRICE_IDS.PROFESSIONAL_ANNUAL;
+    if (autoCheckoutStarted.current) return;
+
+    let deepLinkPriceId = searchParams.get('price_id');
+    if (!deepLinkPriceId) {
+      try {
+        deepLinkPriceId = sessionStorage.getItem('smartcoi-pending-price-id');
+      } catch {
+        deepLinkPriceId = null;
+      }
+    }
+
+    if (
+      deepLinkPriceId &&
+      !hasSubscription &&
+      normalized !== 'canceled'
+    ) {
+      autoCheckoutStarted.current = true;
+      // Consume the pending price ID so refreshing the billing page doesn't
+      // retrigger checkout.
+      try {
+        sessionStorage.removeItem('smartcoi-pending-price-id');
+      } catch {
+        // ignore
+      }
+      handleSubscribe(deepLinkPriceId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const isAnnual = interval === 'annual';
-  const starterPrice = isAnnual ? '$63' : '$79';
-  const starterPer = '/mo';
-  const starterSavings = isAnnual ? 'Save $192/year' : null;
-  const starterBilledLabel = isAnnual ? 'billed annually' : null;
-  const growthPrice = isAnnual ? '$119' : '$149';
-  const growthPer = '/mo';
-  const growthSavings = isAnnual ? 'Save $360/year' : null;
-  const growthBilledLabel = isAnnual ? 'billed annually' : null;
-  const proPrice = isAnnual ? '$199' : '$249';
-  const proPer = '/mo';
-  const proSavings = isAnnual ? 'Save $600/year' : null;
-  const proBilledLabel = isAnnual ? 'billed annually' : null;
+
+  function priceIdForTier(tier: TierDef): string {
+    return isAnnual ? tier.annualPriceId : tier.monthlyPriceId;
+  }
+
+  function savingsLabel(tier: TierDef): string | null {
+    if (!isAnnual) return null;
+    const annualTotal = tier.annual * 12;
+    const monthlyTotal = tier.monthly * 12;
+    const savings = monthlyTotal - annualTotal;
+    return `Save $${savings}/year`;
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -177,19 +262,25 @@ export function BillingClient({
           <div className="flex-1">
             <h2 className="text-sm font-semibold text-foreground">Current Plan</h2>
             <p className="mt-1 text-lg font-bold text-foreground">{planDisplayName}</p>
-            {plan === 'trial' && trialEndsDate && (
+            {normalized === 'trial' && trialEndsDate && (
               <p className="mt-0.5 text-sm text-muted-foreground">
                 {isTrialExpired ? 'Expired on' : `${trialDaysRemaining} days remaining — ends`}{' '}
                 <span className="font-medium text-foreground">{trialEndsDate}</span>
               </p>
             )}
-            {plan === 'canceled' && (
+            {normalized === 'free' && (
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                You&apos;ve got your free compliance report. Upgrade to Monitor to track
+                compliance continuously.
+              </p>
+            )}
+            {normalized === 'canceled' && (
               <p className="mt-0.5 text-sm text-muted-foreground">
                 Your subscription has been canceled. Your data is safe — resubscribe anytime.
               </p>
             )}
           </div>
-          {hasSubscription && plan !== 'canceled' && (
+          {hasSubscription && normalized !== 'canceled' && (
             <Button
               variant="outline"
               onClick={handleManageSubscription}
@@ -202,7 +293,7 @@ export function BillingClient({
         </div>
       </div>
 
-      {/* Plan cards — shown on trial, canceled, or no subscription */}
+      {/* Plan cards — shown on free, trial, canceled, or no subscription */}
       {showPlanCards && (
         <>
           {/* Interval toggle */}
@@ -240,74 +331,30 @@ export function BillingClient({
           </div>
 
           <div className="grid gap-6 sm:grid-cols-3">
-            {/* Starter */}
-            <PlanCard
-              name="Starter"
-              price={starterPrice}
-              per={starterPer}
-              billedLabel={starterBilledLabel}
-              savings={starterSavings}
-              features={[
-                'Up to 50 certificates',
-                'Unlimited properties',
-                'AI-powered COI extraction',
-                'Compliance templates',
-                'Self-service vendor/tenant portal',
-                'Automated notifications',
-                'Real-time dashboard',
-              ]}
-              isCurrent={plan === 'starter'}
-              loading={loading === starterPriceId}
-              onSubscribe={() => handleSubscribe(starterPriceId)}
-            />
-
-            {/* Growth */}
-            <PlanCard
-              name="Growth"
-              price={growthPrice}
-              per={growthPer}
-              billedLabel={growthBilledLabel}
-              savings={growthSavings}
-              popular
-              features={[
-                'Up to 150 certificates',
-                'Unlimited properties',
-                'AI-powered COI extraction',
-                'Compliance templates',
-                'Self-service vendor/tenant portal',
-                'Automated notifications',
-                'Real-time dashboard',
-              ]}
-              isCurrent={plan === 'growth'}
-              loading={loading === growthPriceId}
-              onSubscribe={() => handleSubscribe(growthPriceId)}
-            />
-
-            {/* Professional */}
-            <PlanCard
-              name="Professional"
-              price={proPrice}
-              per={proPer}
-              billedLabel={proBilledLabel}
-              savings={proSavings}
-              features={[
-                'Unlimited certificates',
-                'Unlimited properties',
-                'AI-powered COI extraction',
-                'Compliance templates',
-                'Self-service vendor/tenant portal',
-                'Automated notifications',
-                'Real-time dashboard',
-                'Priority support',
-              ]}
-              isCurrent={plan === 'professional'}
-              loading={loading === proPriceId}
-              onSubscribe={() => handleSubscribe(proPriceId)}
-            />
+            {TIERS.map((tier) => {
+              const priceId = priceIdForTier(tier);
+              const price = isAnnual ? tier.annual : tier.monthly;
+              return (
+                <PlanCard
+                  key={tier.key}
+                  name={tier.name}
+                  price={`$${price}`}
+                  per="/mo"
+                  billedLabel={isAnnual ? 'billed annually' : null}
+                  savings={savingsLabel(tier)}
+                  popular={tier.popular}
+                  features={tier.features}
+                  isCurrent={normalized === tier.key}
+                  configured={Boolean(priceId)}
+                  loading={loading === priceId}
+                  onSubscribe={() => handleSubscribe(priceId)}
+                />
+              );
+            })}
           </div>
 
           <p className="text-center text-xs text-muted-foreground">
-            All plans include a 14-day free trial. No credit card required.
+            Cancel anytime. Annual plans save 20%. Month-to-month available on monthly billing.
           </p>
         </>
       )}
@@ -320,6 +367,8 @@ export function BillingClient({
           </p>
           <p className="mt-1 text-xs text-slate-500">
             plan: <code className="font-mono text-slate-700">{plan}</code>{' '}
+            &middot; normalized:{' '}
+            <code className="font-mono text-slate-700">{normalized}</code>{' '}
             &middot; trial_ends_at:{' '}
             <code className="font-mono text-slate-700">{trialEndsAt ?? 'null'}</code>
           </p>
@@ -349,6 +398,7 @@ function PlanCard({
   features,
   popular,
   isCurrent,
+  configured,
   loading,
   onSubscribe,
 }: {
@@ -360,6 +410,7 @@ function PlanCard({
   features: string[];
   popular?: boolean;
   isCurrent: boolean;
+  configured: boolean;
   loading: boolean;
   onSubscribe: () => void;
 }) {
@@ -411,8 +462,8 @@ function PlanCard({
       ) : (
         <button
           onClick={onSubscribe}
-          disabled={loading}
-          className={`mt-6 flex h-10 w-full items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 ${
+          disabled={loading || !configured}
+          className={`mt-6 flex h-10 w-full items-center justify-center rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
             popular
               ? 'bg-brand-dark text-white shadow-sm hover:bg-[#3BB87A]'
               : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -420,6 +471,8 @@ function PlanCard({
         >
           {loading ? (
             <Sparkles className="h-4 w-4 animate-pulse" />
+          ) : !configured ? (
+            'Coming Soon'
           ) : (
             'Subscribe'
           )}

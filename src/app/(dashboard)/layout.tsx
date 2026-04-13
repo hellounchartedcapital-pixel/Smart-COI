@@ -8,6 +8,7 @@ import { UpgradeModalProvider } from '@/components/dashboard/upgrade-modal';
 import { SessionGuard } from '@/components/dashboard/session-guard';
 import { PostHogProvider } from '@/components/posthog-provider';
 import { CrispChat } from '@/components/crisp-chat';
+import { DashboardAccessGate } from '@/components/dashboard/dashboard-access-gate';
 
 export default async function DashboardLayout({
   children,
@@ -81,7 +82,7 @@ export default async function DashboardLayout({
             plan={orgPlan}
             topBanner={<TrialBanner plan={orgPlan} trialEndsAt={trialEndsAt} paymentFailed={paymentFailed} />}
           >
-            {children}
+            <DashboardAccessGate plan={orgPlan}>{children}</DashboardAccessGate>
           </DashboardShell>
         </div>
       </UpgradeModalProvider>

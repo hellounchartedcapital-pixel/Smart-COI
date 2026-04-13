@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { checkActivePlan } from '@/lib/require-active-plan';
+import { checkFeatureAccess } from '@/lib/require-active-plan';
 import { sendNotificationEmail } from '@/lib/notifications/email-sender';
 import {
   gapNotification,
@@ -61,8 +61,9 @@ export async function generatePortalLink(
   entityType: 'vendor' | 'tenant',
   entityId: string
 ): Promise<string | { error: string }> {
-  const planCheck = await checkActivePlan('Subscribe to use the upload portal.');
-  if ('error' in planCheck) return { error: planCheck.error };
+  // Vendor portal is an Automate-tier feature.
+  const featureCheck = await checkFeatureAccess('vendor_portal');
+  if ('error' in featureCheck) return { error: featureCheck.error };
   const { supabase, orgId } = await getAuthContext();
 
   // Verify entity belongs to org
@@ -123,8 +124,11 @@ export async function sendManualFollowUp(
   entityType: 'vendor' | 'tenant',
   entityId: string
 ): Promise<{ devMode?: boolean } | { error: string }> {
-  const planCheck = await checkActivePlan('Subscribe to send notifications.');
-  if ('error' in planCheck) return { error: planCheck.error };
+  // Auto follow-ups are an Automate-tier feature — gate manual follow-ups
+  // behind the same capability so Monitor users get a consistent upgrade
+  // prompt for "send email to vendor".
+  const featureCheck = await checkFeatureAccess('auto_follow_ups');
+  if ('error' in featureCheck) return { error: featureCheck.error };
   const { supabase, userId, orgId, pmName, pmEmail, orgName, terms } = await getAuthContext();
 
   // Fetch entity
