@@ -105,17 +105,35 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh the auth token — this must be called to keep the session alive
+  // Refresh the auth token — this must be called to keep the session alive.
+  // Calling getUser() (not getSession()) forces Supabase to validate the JWT
+  // against the auth server and rotate the refresh token if needed. Any
+  // newly-rotated cookies land on `supabaseResponse` via the setAll callback
+  // above. CRITICAL: those cookies must be propagated to whatever response
+  // we ultimately return (including redirects) — otherwise the rotated
+  // refresh token is dropped on the floor and the next request comes in
+  // with a stale token, which Supabase rejects → infinite login bounce.
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  /**
+   * Copy any cookies that the Supabase client wrote onto an arbitrary
+   * response (e.g., a redirect) so the browser actually receives them.
+   */
+  function withRefreshedCookies(response: NextResponse): NextResponse {
+    for (const cookie of supabaseResponse.cookies.getAll()) {
+      response.cookies.set(cookie);
+    }
+    return response;
+  }
 
   // Authenticated user trying to visit login/signup → redirect to dashboard
   // (but allow /reset-password since user needs a session to update their password)
   if (user && isAuthPage && pathname !== '/reset-password') {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
-    return NextResponse.redirect(url);
+    return withRefreshedCookies(NextResponse.redirect(url));
   }
 
   // Unauthenticated user trying to visit a protected route → redirect to login
@@ -124,7 +142,7 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('next', pathname);
-    return NextResponse.redirect(url);
+    return withRefreshedCookies(NextResponse.redirect(url));
   }
 
   return supabaseResponse;
