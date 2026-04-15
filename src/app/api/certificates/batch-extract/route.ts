@@ -294,6 +294,7 @@ export async function POST(req: NextRequest) {
           // Gather compliance stats for the email
           const stats = await gatherBatchStats(bgService, certificateIds as string[]);
           try {
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://smartcoi.io';
             await sendBatchCompleteEmail({
               to: userEmail,
               orgName,
@@ -302,7 +303,9 @@ export async function POST(req: NextRequest) {
               failedCount: finalCounts.failed,
               complianceGaps: stats.complianceGaps,
               vendorCount: stats.vendorCount,
-              dashboardUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://smartcoi.io'}/dashboard`,
+              expiredVendorCount: stats.expiredVendorCount,
+              expiringSoonCount: stats.expiringSoonCount,
+              reportUrl: `${baseUrl}/report/latest`,
             });
             console.log(`[batch-extract] Completion email sent to ${userEmail}`);
           } catch (emailErr) {
@@ -659,7 +662,12 @@ async function autoApplyRecommendedTemplate(
 async function gatherBatchStats(
   client: ReturnType<typeof createServiceClient>,
   certificateIds: string[],
-): Promise<{ complianceGaps: number; vendorCount: number }> {
+): Promise<{
+  complianceGaps: number;
+  vendorCount: number;
+  expiredVendorCount: number;
+  expiringSoonCount: number;
+}> {
   try {
     // Count compliance gaps
     const { count: gapCount } = await client
@@ -681,13 +689,36 @@ async function gatherBatchStats(
       else if (c.tenant_id) entityIds.add(c.tenant_id);
     });
 
+    // Teaser stats — vendors with expired or expiring-soon coverage. Used
+    // to drive open + click-through on the report email.
+    let expiredVendorCount = 0;
+    let expiringSoonCount = 0;
+    if (entityIds.size > 0) {
+      const idArray = [...entityIds];
+      const { data: entityRows } = await client
+        .from('entities')
+        .select('id, compliance_status')
+        .in('id', idArray);
+      for (const e of entityRows ?? []) {
+        if (e.compliance_status === 'expired') expiredVendorCount++;
+        if (e.compliance_status === 'expiring_soon') expiringSoonCount++;
+      }
+    }
+
     return {
       complianceGaps: gapCount ?? 0,
       vendorCount: entityIds.size,
+      expiredVendorCount,
+      expiringSoonCount,
     };
   } catch (err) {
     console.error('[batch-extract] Failed to gather stats:', err);
-    return { complianceGaps: 0, vendorCount: 0 };
+    return {
+      complianceGaps: 0,
+      vendorCount: 0,
+      expiredVendorCount: 0,
+      expiringSoonCount: 0,
+    };
   }
 }
 

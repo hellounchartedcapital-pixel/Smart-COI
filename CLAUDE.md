@@ -162,6 +162,60 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Feature: Freemium Email Templates — Welcome, Report-Ready & Nurture Sequence (Apr 2026)
+
+Reworked the transactional and lifecycle email stack to match the freemium positioning. Three pieces:
+
+**1. Welcome email** (`src/lib/notifications/email-templates.ts → welcomeEmail()`):
+- New subject: `"Welcome to SmartCOI — upload your COIs to get your free compliance report"`.
+- Body rewritten around the free first report — no mention of trials, time limits, or 14-day windows.
+- CTA changed from "Go to Dashboard" → "Upload Your COIs", linking to the `/setup` upload page (already the call-site URL in `auth.ts` and `api/auth/callback/route.ts`).
+- Signed off as "Tony, Founder of SmartCOI" to match the conversational tone of the nurture/lifecycle emails.
+
+**2. Report-ready email** (`src/lib/emails/batch-complete.ts`):
+- Subject now templated by `buildSubject()` to include the gap teaser:
+  - With gaps: `"Your compliance report is ready — N gaps found across X vendors"`
+  - No gaps: `"Your compliance report is ready — no gaps found across X vendors"`
+- Added `buildTeaser()` helper that picks the most attention-grabbing stat for the body (expired vendors → expiring-soon → general gap count → all clear).
+- New params: `expiredVendorCount`, `expiringSoonCount`, plus `reportUrl` (renamed from `dashboardUrl`).
+- CTA button now reads "View Your Report" and points at `/report/latest` (was "View Your Dashboard" → `/dashboard`).
+- `gatherBatchStats()` in `src/app/api/certificates/batch-extract/route.ts` extended to query the `entities` table for compliance status and return `expiredVendorCount` + `expiringSoonCount`.
+
+**3. Post-report nurture sequence** (`src/lib/emails/post-report-nurture.ts` — new):
+- Three-email drip targeting Free-tier orgs only, dispatched daily from `/api/cron/daily-check`:
+  - **Day 3 — `nurture_day3_report_issues`** — subject derives from the report data (`"Your compliance report found N issues. Here's what's at risk."`). Body recaps expired/expiring counts pulled live from the entities table, explains why ongoing monitoring matters, and CTAs to billing.
+  - **Day 7 — `nurture_day7_silent_gaps`** — subject `"Certificates expire. Without monitoring, new gaps appear silently."`. Frames the one-time report as a snapshot that goes stale, pitches Monitor's continuous tracking and 60/30/14-day alerts, $79/mo CTA.
+  - **Day 14 — `nurture_day14_final`** — subject `"Still tracking compliance manually? Your SmartCOI data is ready when you are."`. Soft, no-pressure final touch. Notes explicitly that this is the last nurture email so we don't keep pestering them.
+- All three emails use the same conversational personal-wrapper template style as the trial-lifecycle emails (Tony as sender, SITE_URL footer).
+- **Scheduling logic:** `processPostReportNurtureEmails()` queries every org with `plan === 'free'`, computes `daysSinceReport` from the earliest non-failed certificate upload (proxy for "report generated"), and picks the next email key the org hasn't received yet (one email per cron run, never doubles up).
+- **Tracking:** Reuses the existing `organizations.trial_emails_sent` JSONB column with distinct keys (`nurture_day3_report_issues`, `nurture_day7_silent_gaps`, `nurture_day14_final`) so the trial-lifecycle and post-report flows can't collide. **No new migration needed.**
+- **Snapshot helper:** `getReportSnapshot()` queries the entities table for non-deleted/non-archived rows and counts `non_compliant`, `expired`, and `expiring_soon` to drive the Day 3 email body's contextual breakdown.
+
+**4. Trial-lifecycle email cleanup** (`src/lib/emails/trial-lifecycle.ts`):
+- Footer copy updated from "you signed up for a SmartCOI trial" → "you signed up for SmartCOI" (matches freemium framing).
+- Day 1 subject changed to `"Welcome to SmartCOI — let me know what you need"` to avoid clashing with the new welcome email subject.
+- Day 12 ("trial ends soon") rewritten to surface the new tier names and prices: Monitor ($79/mo), Automate ($149/mo), Full Platform ($249/mo). Removed the generic "Plans start at $79/month" line.
+- Day 14 ("trial expired") simplified to point at Monitor specifically — no more "30-day data preservation" copy that made the new freemium model sound time-bound.
+- Day 3 + Day 7 copy lightly tightened — replaced "trial" / "halfway through your trial" framing with neutral check-in language.
+
+**5. Daily cron wiring** (`src/app/api/cron/daily-check/route.ts`):
+- Added Step 5: `processPostReportNurtureEmails()` runs after the trial-lifecycle pass.
+- Response JSON now includes a `nurtureEmails` block with `{ sent, skipped, errors }` for observability.
+
+**Files created:**
+- `src/lib/emails/post-report-nurture.ts` — nurture sequence dispatcher and templates
+
+**Files modified:**
+- `src/lib/notifications/email-templates.ts` — new welcome email copy + subject
+- `src/lib/emails/batch-complete.ts` — gap-teaser subject, expired/expiring teaser stats, `reportUrl` parameter
+- `src/lib/emails/trial-lifecycle.ts` — freemium-aligned copy, new tier names, fixed welcome subject collision
+- `src/app/api/certificates/batch-extract/route.ts` — `gatherBatchStats()` returns expired/expiring counts; call site passes them + `reportUrl: /report/latest`
+- `src/app/api/cron/daily-check/route.ts` — added nurture Step 5
+
+**Build verification:** `npx next build` passes cleanly. TypeScript and ESLint both report no new errors on the changed files.
+
+⚠️ ACTION REQUIRED: None — the post-report nurture system reuses the existing `organizations.trial_emails_sent` JSONB column. No DB migration, no new env vars.
+
 #### Feature: Freemium Pricing Infrastructure — Tiers, Gates & Checkout Wiring (Apr 2026)
 
 Wired the new four-tier pricing structure through the entire codebase: env-driven Stripe price IDs, renamed plans, feature gates, Free-tier dashboard gate, and server-side tier enforcement on Automate-only features.

@@ -253,18 +253,22 @@ export function welcomeEmail(fields: WelcomeEmailFields): EmailTemplate {
   const body = `
 <h1 style="margin:0 0 16px;font-size:24px;font-weight:700;color:#111827;">Welcome to SmartCOI</h1>
 <p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 20px;">
-  Hi ${name}, your account is ready. Upload your first certificate and let our AI handle the extraction, compliance checking, and follow-ups.
+  Hi ${name}, your account is ready. Upload your certificates of insurance and we'll
+  build you a full compliance report &mdash; coverages, expirations, additional insured,
+  endorsements, and dollar-value risk exposure.
 </p>
 <p style="font-size:16px;color:#374151;line-height:1.6;margin:0 0 4px;">
-  You have 14 days to try everything free — up to 50 certificates, no credit card required.
+  <strong style="color:#111827;">Your first compliance report is on us.</strong> No
+  credit card, no time limits &mdash; just upload your COIs and we'll do the rest.
 </p>
-${ctaButton(fields.setup_link, 'Go to Dashboard')}
+${ctaButton(fields.setup_link, 'Upload Your COIs')}
 <p style="font-size:14px;color:#6B7280;margin-top:28px;">
-  Questions? Just reply to this email.
+  Questions? Just reply to this email &mdash; it goes straight to me.<br>
+  &mdash; Tony, Founder of SmartCOI
 </p>`;
 
   return {
-    subject: 'Welcome to SmartCOI',
+    subject: 'Welcome to SmartCOI — upload your COIs to get your free compliance report',
     html: emailShell(body),
   };
 }
