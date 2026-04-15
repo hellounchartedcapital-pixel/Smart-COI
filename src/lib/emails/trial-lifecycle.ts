@@ -275,7 +275,7 @@ function personalWrapper(body: string): string {
 ${body}
   </td></tr>
   <tr><td style="padding-top:32px;font-size:13px;color:#9CA3AF;border-top:1px solid #F3F4F6;margin-top:32px;">
-    You're receiving this because you signed up for a SmartCOI trial.<br>
+    You're receiving this because you signed up for SmartCOI.<br>
     <a href="${SITE_URL}" style="color:#9CA3AF;text-decoration:none;">smartcoi.io</a>
   </td></tr>
 </table>
@@ -300,16 +300,16 @@ function day1Welcome(firstName: string, industry: Industry | null): { subject: s
 
 <p style="margin:0 0 20px;">I'm Tony, the founder of SmartCOI. Welcome aboard.</p>
 
-<p style="margin:0 0 20px;">I built SmartCOI because I got tired of chasing people for updated certificates. ${valueProp} — without the spreadsheets and manual follow-ups.</p>
+<p style="margin:0 0 20px;">I built SmartCOI because I got tired of chasing people for updated certificates. ${valueProp} &mdash; without the spreadsheets and manual follow-ups.</p>
 
-<p style="margin:0 0 20px;">Quick question — what's the biggest COI headache you're hoping to solve? Reply and let me know. It helps me make sure you get the most out of your trial.</p>
+<p style="margin:0 0 20px;">Quick question &mdash; what's the biggest COI headache you're hoping to solve? Reply and let me know. It helps me make sure you get the most out of SmartCOI.</p>
 
 ${trialCtaButton(APP_URL + '/dashboard', 'Go to Dashboard')}
 
 <p style="margin:0;">Tony<br><span style="color:#6B7280;">Founder, SmartCOI</span></p>`;
 
   return {
-    subject: 'Welcome to SmartCOI',
+    subject: 'Welcome to SmartCOI — let me know what you need',
     html: personalWrapper(body),
   };
 }
@@ -319,13 +319,13 @@ function day3Feature(firstName: string, industry: Industry | null): { subject: s
   const body = `
 <p style="margin:0 0 20px;">Hi ${firstName},</p>
 
-<p style="margin:0 0 20px;">How's it going? Most teams start with the bulk upload — drag and drop up to 50 certificate PDFs at once, and the AI builds your ${terms.entity.toLowerCase()} compliance roster automatically.</p>
+<p style="margin:0 0 20px;">How's it going? Most teams start with the bulk upload &mdash; drag and drop your certificate PDFs and the AI builds your ${terms.entity.toLowerCase()} compliance roster automatically.</p>
 
-<p style="margin:0 0 20px;">No typing names or coverage limits. Most teams have everything loaded in about 10 minutes.</p>
+<p style="margin:0 0 20px;">No typing names or coverage limits. Most teams have everything loaded in about 10 minutes &mdash; and your first compliance report is on us.</p>
 
 ${trialCtaButton(APP_URL + '/dashboard', 'Upload Your First COI')}
 
-<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">Already started? Great — ignore this. Need help? Just reply.</p>
+<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">Already started? Great &mdash; ignore this. Need help? Just reply.</p>
 
 <p style="margin:0;">Tony</p>`;
 
@@ -350,19 +350,19 @@ function day7Checkin(firstName: string, stats: OrgStats): { subject: string; htm
 </table>`;
   } else {
     statsBlock = `
-<p style="margin:0 0 20px;">It looks like you haven't uploaded certificates yet. Want me to help? I can do a quick 10-minute walkthrough — just reply with a time that works.</p>`;
+<p style="margin:0 0 20px;">It looks like you haven't uploaded certificates yet. Want me to help? I can do a quick 10-minute walkthrough &mdash; just reply with a time that works.</p>`;
   }
 
   const body = `
 <p style="margin:0 0 20px;">Hi ${firstName},</p>
 
-<p style="margin:0 0 20px;">You're halfway through your trial — how's it going?</p>
+<p style="margin:0 0 20px;">Quick check-in &mdash; how's SmartCOI working out for you?</p>
 
 ${statsBlock}
 
 ${trialCtaButton(APP_URL + '/dashboard', 'View Dashboard')}
 
-<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">You still have 7 days of full access. Questions? Just reply.</p>
+<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">Questions? Just reply &mdash; I read every email.</p>
 
 <p style="margin:0;">Tony</p>`;
 
@@ -378,20 +378,19 @@ function day12Ending(firstName: string): { subject: string; html: string } {
 
 <p style="margin:0 0 20px;">Your SmartCOI trial ends in 2 days.</p>
 
-<p style="margin:0 0 16px;">If it's saving you time, upgrade to keep everything running:</p>
+<p style="margin:0 0 16px;">If SmartCOI is saving you time, upgrade to keep everything running:</p>
 
 <ul style="padding-left:20px;margin:0 0 20px;color:#374151;line-height:1.8;">
-  <li>Automated COI collection and follow-ups</li>
-  <li>AI-powered compliance checking</li>
-  <li>Self-service portal for your third parties</li>
-  <li>All your data, templates, and settings carry over</li>
+  <li><strong>Monitor</strong> &mdash; continuous compliance tracking + expiration alerts ($79/mo, up to 50 certificates)</li>
+  <li><strong>Automate</strong> &mdash; adds the vendor portal, automated renewal follow-ups, and lease extraction ($149/mo, up to 150 certificates)</li>
+  <li><strong>Full Platform</strong> &mdash; unlimited certificates, custom templates, bulk operations, and priority support ($249/mo)</li>
 </ul>
 
-<p style="margin:0 0 20px;">Plans start at $79/month.</p>
+<p style="margin:0 0 20px;">All your data, templates, and settings carry over the moment you upgrade.</p>
 
 ${trialCtaButton(APP_URL + '/dashboard/settings/billing', 'See Plans')}
 
-<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">Need more time or want to discuss? Just reply to this email.</p>
+<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">Need more time or want to talk through which plan fits? Just reply.</p>
 
 <p style="margin:0;">Tony</p>`;
 
@@ -407,11 +406,11 @@ function day14Expired(firstName: string): { subject: string; html: string } {
 
 <p style="margin:0 0 20px;">Your 14-day trial has ended.</p>
 
-<p style="margin:0 0 20px;">Your data is saved for 30 days. Upgrade to pick up right where you left off — same entities, same templates, same compliance status.</p>
+<p style="margin:0 0 20px;">Your data is saved &mdash; entities, templates, compliance status, all of it. Upgrade to <strong>Monitor</strong> ($79/mo) and you'll pick up right where you left off, with continuous compliance tracking from then on.</p>
 
-${trialCtaButton(APP_URL + '/dashboard/settings/billing', 'Upgrade Now')}
+${trialCtaButton(APP_URL + '/dashboard/settings/billing', 'Upgrade to Monitor')}
 
-<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">Not the right fit? I'd appreciate knowing why — just reply with a sentence or two.</p>
+<p style="margin:0 0 20px;color:#6B7280;font-size:14px;">Not the right fit? I'd appreciate knowing why &mdash; just reply with a sentence or two.</p>
 
 <p style="margin:0;">Tony</p>`;
 

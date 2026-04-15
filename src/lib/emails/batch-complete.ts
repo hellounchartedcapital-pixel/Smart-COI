@@ -1,11 +1,15 @@
 // ============================================================================
 // SmartCOI — Batch Processing Complete Email
-// Sent when background COI extraction finishes and the user has left the page.
+//
+// Sent when background COI extraction finishes and the user has navigated
+// away from the upload page. Designed to drive a click through to the
+// freshly-generated compliance report.
 // ============================================================================
 
 import { sendNotificationEmail } from '@/lib/notifications/email-sender';
 
 const FONT_STACK = "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+const SITE_URL = 'https://smartcoi.io';
 
 interface BatchCompleteEmailParams {
   to: string;
@@ -15,7 +19,12 @@ interface BatchCompleteEmailParams {
   failedCount: number;
   complianceGaps: number;
   vendorCount: number;
-  dashboardUrl: string;
+  /** Number of vendors with expired coverage (used as a teaser stat) */
+  expiredVendorCount?: number;
+  /** Number of vendors expiring within the next 30 days */
+  expiringSoonCount?: number;
+  /** URL the CTA button points at — should be the report page, not the dashboard */
+  reportUrl: string;
 }
 
 function emailShell(body: string): string {
@@ -45,7 +54,7 @@ function emailShell(body: string): string {
       &copy; ${new Date().getFullYear()} SmartCOI. All rights reserved.
     </p>
     <p style="margin:0;font-size:13px;color:#9CA3AF;">
-      <a href="https://smartcoi.io" style="color:#9CA3AF;text-decoration:none;">smartcoi.io</a>
+      <a href="${SITE_URL}" style="color:#9CA3AF;text-decoration:none;">smartcoi.io</a>
     </p>
   </td></tr>
 </table>
@@ -64,6 +73,49 @@ function ctaButton(href: string, label: string): string {
 </table>`;
 }
 
+/**
+ * Build the email subject line. We want the user to see at a glance how
+ * many compliance issues their report flagged, so they actually open it.
+ */
+function buildSubject(complianceGaps: number, vendorCount: number): string {
+  if (complianceGaps === 0) {
+    return `Your compliance report is ready — no gaps found across ${vendorCount} vendor${vendorCount !== 1 ? 's' : ''}`;
+  }
+  return `Your compliance report is ready — ${complianceGaps} gap${complianceGaps !== 1 ? 's' : ''} found across ${vendorCount} vendor${vendorCount !== 1 ? 's' : ''}`;
+}
+
+/**
+ * Pick the most attention-grabbing teaser stat for the body. Order of
+ * preference: expired vendors → expiring soon → general gap count.
+ */
+function buildTeaser(params: {
+  complianceGaps: number;
+  expiredVendorCount: number;
+  expiringSoonCount: number;
+}): { color: string; text: string } | null {
+  const { complianceGaps, expiredVendorCount, expiringSoonCount } = params;
+
+  if (expiredVendorCount > 0) {
+    return {
+      color: '#DC2626',
+      text: `<strong>${expiredVendorCount} vendor${expiredVendorCount !== 1 ? 's have' : ' has'} expired coverage</strong> right now.`,
+    };
+  }
+  if (expiringSoonCount > 0) {
+    return {
+      color: '#D97706',
+      text: `<strong>${expiringSoonCount} vendor${expiringSoonCount !== 1 ? 's have' : ' has'} coverage expiring in the next 30 days.</strong>`,
+    };
+  }
+  if (complianceGaps > 0) {
+    return {
+      color: '#DC2626',
+      text: `<strong>${complianceGaps} compliance gap${complianceGaps !== 1 ? 's' : ''}</strong> found that may need attention.`,
+    };
+  }
+  return null;
+}
+
 export async function sendBatchCompleteEmail(params: BatchCompleteEmailParams) {
   const {
     to,
@@ -73,10 +125,12 @@ export async function sendBatchCompleteEmail(params: BatchCompleteEmailParams) {
     failedCount,
     complianceGaps,
     vendorCount,
-    dashboardUrl,
+    expiredVendorCount = 0,
+    expiringSoonCount = 0,
+    reportUrl,
   } = params;
 
-  const subject = 'Your SmartCOI compliance report is ready';
+  const subject = buildSubject(complianceGaps, vendorCount);
 
   const statsRows = [
     { label: 'Certificates analyzed', value: String(completedCount) },
@@ -93,23 +147,23 @@ export async function sendBatchCompleteEmail(params: BatchCompleteEmailParams) {
         `<tr>
           <td style="padding:10px 12px;font-size:14px;color:#374151;border-bottom:1px solid #F3F4F6;">${row.label}</td>
           <td style="padding:10px 12px;font-size:14px;font-weight:600;color:#111827;text-align:right;border-bottom:1px solid #F3F4F6;">${row.value}</td>
-        </tr>`
+        </tr>`,
     )
     .join('');
 
-  const gapNote =
-    complianceGaps > 0
-      ? `<p style="font-size:14px;color:#DC2626;margin:20px 0 0;">
-          <strong>${complianceGaps} compliance gap${complianceGaps !== 1 ? 's' : ''}</strong> found that may need attention.
-        </p>`
-      : `<p style="font-size:14px;color:#059669;margin:20px 0 0;">
-          <strong>No compliance gaps found</strong> — all uploaded certificates meet requirements.
-        </p>`;
+  const teaser = buildTeaser({ complianceGaps, expiredVendorCount, expiringSoonCount });
+  const teaserHtml = teaser
+    ? `<p style="font-size:15px;color:${teaser.color};margin:20px 0 0;line-height:1.5;">
+        ${teaser.text}
+      </p>`
+    : `<p style="font-size:14px;color:#059669;margin:20px 0 0;">
+        <strong>No compliance gaps found</strong> &mdash; all uploaded certificates meet requirements.
+      </p>`;
 
   const body = `
     <h1 style="font-size:22px;font-weight:700;color:#111827;margin:0 0 8px;">Your compliance report is ready</h1>
     <p style="font-size:15px;color:#6B7280;margin:0 0 24px;line-height:1.6;">
-      We've finished processing ${totalCerts} certificate${totalCerts !== 1 ? 's' : ''} for ${orgName}. Here's a quick summary:
+      We've finished analyzing ${totalCerts} certificate${totalCerts !== 1 ? 's' : ''} for ${orgName}. Here's a quick summary:
     </p>
 
     <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #E5E7EB;border-radius:8px;overflow:hidden;">
@@ -124,12 +178,12 @@ export async function sendBatchCompleteEmail(params: BatchCompleteEmailParams) {
       </tbody>
     </table>
 
-    ${gapNote}
+    ${teaserHtml}
 
-    ${ctaButton(dashboardUrl, 'View Your Dashboard')}
+    ${ctaButton(reportUrl, 'View Your Report')}
 
     <p style="font-size:13px;color:#9CA3AF;margin:0;text-align:center;">
-      You're receiving this email because your COI upload batch was completed while you were away.
+      You're receiving this email because your COI upload finished while you were away.
     </p>
   `;
 

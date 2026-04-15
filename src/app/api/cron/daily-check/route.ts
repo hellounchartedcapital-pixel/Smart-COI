@@ -8,6 +8,7 @@ import { checkAndScheduleNotifications } from '@/lib/notifications/scheduler';
 import { processScheduledNotifications } from '@/lib/notifications/scheduler';
 import { takeComplianceSnapshots } from '@/lib/actions/compliance-snapshots';
 import { processTrialLifecycleEmails } from '@/lib/emails/trial-lifecycle';
+import { processPostReportNurtureEmails } from '@/lib/emails/post-report-nurture';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // Allow up to 60 seconds
@@ -48,6 +49,10 @@ export async function POST(request: Request) {
     const trialEmails = await processTrialLifecycleEmails();
     console.log(`[daily-check] Trial emails: sent ${trialEmails.sent}, skipped ${trialEmails.skipped}, errors ${trialEmails.errors}`);
 
+    // Step 5: Process post-report nurture emails for free-tier orgs
+    const nurtureEmails = await processPostReportNurtureEmails();
+    console.log(`[daily-check] Nurture emails: sent ${nurtureEmails.sent}, skipped ${nurtureEmails.skipped}, errors ${nurtureEmails.errors}`);
+
     const duration = Date.now() - startTime;
 
     return NextResponse.json({
@@ -57,6 +62,7 @@ export async function POST(request: Request) {
       sent,
       failed,
       trialEmails,
+      nurtureEmails,
       durationMs: duration,
     });
   } catch (err) {
