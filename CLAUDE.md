@@ -162,6 +162,40 @@ SmartCOI now supports 8 industries. Key architectural components:
 
 ### Recent Changes
 
+#### Fix: Auth Session Bouncing — Refreshed Cookies Lost on Redirect (Apr 2026)
+
+Fixed the "log in, see the dashboard for a second, get kicked back to /login" loop. Three real bugs in the SSR auth handling:
+
+**Bug 1 (CRITICAL) — Middleware dropped refreshed Supabase cookies on redirect** (`src/middleware.ts`):
+- `supabase.auth.getUser()` validates the JWT and rotates the refresh token if it's stale. The new tokens land on `supabaseResponse.cookies` via the `setAll` callback.
+- When the middleware then decided to redirect (e.g., logged-in user hits `/login` → redirect to `/dashboard`), it returned a fresh `NextResponse.redirect()` and dropped `supabaseResponse` entirely. The newly-rotated refresh token was never sent to the browser.
+- Supabase had already invalidated the old refresh token server-side (rotation is one-shot), so the next request came in with a stale token, refresh failed, user was bounced to `/login` — exactly the symptom users were reporting.
+- **Fix:** Added a `withRefreshedCookies(response)` helper that copies every cookie from `supabaseResponse.cookies.getAll()` onto an arbitrary response. Wrapped both redirect branches (auth-page-with-session → dashboard, and protected-without-session → login) so the rotated tokens always reach the browser.
+
+**Bug 2 (HIGH) — Auth callback's `setAll` didn't mirror to `request.cookies`** (`src/app/api/auth/callback/route.ts`):
+- The custom cookie handler only pushed new cookies into `pendingCookies` for the redirect response. It didn't update `request.cookies`.
+- After `exchangeCodeForSession()`, the handler called `getUser()` to read the user. `getUser()` invokes `getAll()` again, which re-read `request.cookies.getAll()` — still the original (pre-exchange) cookie state — and returned `null` for the new session under certain conditions, especially the OAuth code-exchange path.
+- **Fix:** The `setAll` callback now also calls `request.cookies.set(name, value)` for each cookie, so subsequent `getAll()` calls in the same handler see the freshly-exchanged session tokens.
+
+**Bug 3 (MEDIUM) — `secure` flag derivation was fragile** (`src/app/api/auth/callback/route.ts`):
+- `secure: new URL(destination).protocol === 'https:'` derived the flag from a constructed URL. On Vercel behind a load balancer, `request.url` can be inconsistent.
+- **Fix:** Use `request.nextUrl.protocol === 'https:'`, which is the canonical Next.js way to read the public protocol (honors `X-Forwarded-Proto`).
+- Also added explicit `httpOnly: false` on the `smartcoi-session` cookie so it's clear that `session.ts` reads it via `document.cookie` client-side. The behavior is unchanged (was already not httpOnly by default), the comment just makes the contract explicit.
+
+**Cookie attributes verified:**
+- `smartcoi-session`: `path=/`, `sameSite=lax`, `secure` matches request protocol, `httpOnly=false`. Lax is REQUIRED for the OAuth flow — strict would block the cookie when the browser follows the 302 redirect from `/api/auth/callback`.
+- Supabase auth cookies (`sb-*`): managed entirely by `@supabase/ssr` via the `cookies` callbacks. The middleware now propagates them onto every response.
+
+**Files modified:**
+- `src/middleware.ts` — `withRefreshedCookies()` helper, applied to both redirect branches
+- `src/app/api/auth/callback/route.ts` — `setAll` mirrors writes to `request.cookies`; `secure` derived from `request.nextUrl.protocol`; explicit `httpOnly: false` on session cookie
+
+**Build verification:** `npx next build` passes cleanly. TypeScript and ESLint both report no new errors on the changed files.
+
+⚠️ ACTION REQUIRED:
+1. After deploying, ask any users who experienced the bounce loop to clear cookies for `smartcoi.io` and log in again — their refresh token chain is broken from before the fix and Supabase will reject it.
+2. Verify in the Supabase dashboard (Authentication → URL Configuration) that the Site URL is `https://smartcoi.io` and the Redirect URLs include `https://smartcoi.io/api/auth/callback` and the Vercel preview URL pattern. Mismatches between the dashboard and the code can also break the OAuth callback.
+
 #### Feature: Freemium Email Templates — Welcome, Report-Ready & Nurture Sequence (Apr 2026)
 
 Reworked the transactional and lifecycle email stack to match the freemium positioning. Three pieces:

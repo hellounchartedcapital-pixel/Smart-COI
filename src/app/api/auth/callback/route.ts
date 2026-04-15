@@ -29,7 +29,10 @@ export async function GET(request: NextRequest) {
   // null → redirect to /login with "session expired".
   //
   // Instead we capture every cookie Supabase wants to set and replay them onto
-  // whatever redirect response we eventually return.
+  // whatever redirect response we eventually return. We ALSO mirror the writes
+  // into `request.cookies` so any subsequent calls in this handler (e.g.
+  // `getUser()` after `exchangeCodeForSession()`) see the freshly-set tokens
+  // via `getAll()` instead of re-reading the original empty cookie state.
   // ---------------------------------------------------------------------------
 
   const pendingCookies: { name: string; value: string; options: Record<string, unknown> }[] = [];
@@ -43,7 +46,15 @@ export async function GET(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach((cookie) => pendingCookies.push(cookie));
+          for (const cookie of cookiesToSet) {
+            // Stash for the redirect response so the browser receives them.
+            pendingCookies.push(cookie);
+            // Also mutate the in-memory request.cookies so the next call to
+            // getAll() inside this handler sees the freshly-set value. Without
+            // this mirror, `getUser()` after `exchangeCodeForSession()` would
+            // re-read the original (pre-exchange) cookies and may return null.
+            request.cookies.set(cookie.name, cookie.value);
+          }
         },
       },
     }
@@ -77,12 +88,20 @@ export async function GET(request: NextRequest) {
       res.cookies.set(name, value, options as any);
     }
 
-    // Set our own session marker cookie
+    // Derive `secure` from the canonical Next.js public protocol. On Vercel
+    // this honors the X-Forwarded-Proto header from the load balancer, so a
+    // production https request never accidentally drops the Secure flag.
+    const isHttps = request.nextUrl.protocol === 'https:';
+
+    // Set our own session marker cookie. SameSite=lax is REQUIRED for the
+    // OAuth redirect flow — strict would block the cookie from being sent
+    // when the browser follows the 302 from /api/auth/callback.
     res.cookies.set(SESSION_COOKIE_NAME, '1', {
       path: '/',
       maxAge: DEFAULT_SESSION_MAX_AGE,
       sameSite: 'lax',
-      secure: new URL(destination).protocol === 'https:',
+      secure: isHttps,
+      httpOnly: false, // session.ts reads this cookie client-side via document.cookie
     });
 
     return res;
